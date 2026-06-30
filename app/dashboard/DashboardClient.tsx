@@ -176,7 +176,7 @@ export default function DashboardClient({ club, userEmail }: { club: Club; userE
                 </div>
               </div>
 
-              <div className="bg-white rounded-[26px] border border-gray-100 p-5 space-y-4">
+              <div className="bg-white rounded-[26px] p-5 space-y-4 shadow-sm">
                 <div>
                   <p className="text-xs font-bold uppercase tracking-[0.25em] text-gray-400">Vue rapide</p>
                   <h2 className="text-lg font-extrabold text-[#1a1a2e] mt-2">Le club en un coup d'oeil</h2>
@@ -190,7 +190,7 @@ export default function DashboardClient({ club, userEmail }: { club: Club; userE
             </div>
 
             <div className="grid grid-cols-1 xl:grid-cols-[1.05fr_0.95fr] gap-4">
-              <div className="bg-white rounded-[26px] border border-gray-100 p-5 space-y-4">
+              <div className="bg-white rounded-[26px] p-5 space-y-4 shadow-sm">
                 <div className="flex items-center justify-between gap-4">
                   <div>
                     <p className="text-xs font-bold uppercase tracking-[0.25em] text-gray-400">Reseaux sociaux</p>
@@ -202,7 +202,7 @@ export default function DashboardClient({ club, userEmail }: { club: Club; userE
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   {socialStats.map(stat => (
-                    <div key={stat.label} className="rounded-2xl border border-gray-100 bg-gray-50/80 p-4">
+                    <div key={stat.label} className="rounded-2xl bg-gray-50/80 p-4">
                       <div className="w-9 h-1.5 rounded-full" style={{ background: stat.accent }} />
                       <p className="text-sm text-gray-500 mt-4">{stat.label}</p>
                       <p className="text-3xl font-black text-[#1a1a2e] mt-1">{stat.value}</p>
@@ -210,7 +210,7 @@ export default function DashboardClient({ club, userEmail }: { club: Club; userE
                     </div>
                   ))}
                 </div>
-                <div className="rounded-2xl border border-dashed border-gray-200 p-4 flex items-center justify-between gap-4">
+                <div className="rounded-2xl bg-gray-50 p-4 flex items-center justify-between gap-4">
                   <div>
                     <p className="font-semibold text-[#1a1a2e]">Instagram, Facebook et WhatsApp</p>
                     <p className="text-sm text-gray-500 mt-1">Les cartes afficheront la portee, l'engagement et les meilleurs formats des que les comptes seront relies.</p>
@@ -224,13 +224,13 @@ export default function DashboardClient({ club, userEmail }: { club: Club; userE
                 </div>
               </div>
 
-              <div className="bg-white rounded-[26px] border border-gray-100 p-5 space-y-4">
+              <div className="bg-white rounded-[26px] p-5 space-y-4 shadow-sm">
                 <div>
                   <p className="text-xs font-bold uppercase tracking-[0.25em] text-gray-400">Activite recente</p>
                   <h2 className="text-lg font-extrabold text-[#1a1a2e] mt-2">Derniers matchs</h2>
                 </div>
                 {recentMatches.length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-gray-200 p-5 text-sm text-gray-500">
+                  <div className="rounded-2xl bg-gray-50 p-5 text-sm text-gray-500">
                     Aucun match enregistre pour le moment. Commence par generer ton premier contenu pour alimenter ce dashboard.
                   </div>
                 ) : (
@@ -246,7 +246,7 @@ export default function DashboardClient({ club, userEmail }: { club: Club; userE
                           : 'bg-slate-100 text-slate-600'
 
                       return (
-                        <div key={match.id} className="rounded-2xl bg-gray-50 border border-gray-100 p-4 flex items-start justify-between gap-4">
+                        <div key={match.id} className="rounded-2xl bg-gray-50 p-4 flex items-start justify-between gap-4">
                           <div>
                             <div className="flex items-center gap-2 flex-wrap">
                               <p className="font-bold text-[#1a1a2e]">{club.name} {clubScore} - {oppScore} {match.opponent}</p>
@@ -311,7 +311,7 @@ export default function DashboardClient({ club, userEmail }: { club: Club; userE
 
 function StatCard({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 p-5">
+    <div className="bg-gray-50 rounded-2xl p-5">
       <p className="text-sm text-gray-500">{label}</p>
       <p className="text-2xl font-extrabold text-[#1a1a2e] mt-1">{value}</p>
     </div>
