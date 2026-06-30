@@ -86,23 +86,33 @@ function darkenHex(hex: string, factor: number): string {
 function formatPlayerName(raw: string, format: TennisVisualConfig['namesFormat']): string {
   if (format === 'upper') return raw.toUpperCase()
   if (format === 'as-is') return raw
-  // smart : mots tout-caps → NOM DE FAMILLE, reste → Prénom
   const words = raw.trim().split(/\s+/)
   if (words.length === 1) return raw.toUpperCase()
-  const allUpper = words.every(w => w === w.toUpperCase() && /[A-ZÀÂÉÈÊËÎÏÔÙÛÜÆŒ]/.test(w))
-  if (allUpper) {
-    // Toutes les lettres sont caps (ex : vient d'un PDF tout-majuscules)
-    // → dernier mot = prénom (title-case), le reste = nom (uppercase)
-    const lastIdx = words.length - 1
-    return words.slice(0, lastIdx).join(' ') + ' '
-      + words[lastIdx].charAt(0).toUpperCase() + words[lastIdx].slice(1).toLowerCase()
+  // Un mot est considéré "tout-caps" s'il est ≥2 chars et entièrement en majuscules
+  const isUpperWord = (w: string) => w.length >= 2 && /^[A-ZÀÂÉÈÊËÎÏÔÙÛÜÆŒ0-9\-']+$/.test(w)
+  // Compte les mots all-caps en tête (= nom de famille en format FFT)
+  let lastNameEnd = 0
+  for (let i = 0; i < words.length; i++) {
+    if (isUpperWord(words[i])) lastNameEnd = i + 1
+    else break
   }
-  // Format FFT standard : "DUPONT Alice" → garder tel quel
-  return words.map(w =>
-    /^[A-ZÀÂÉÈÊËÎÏÔÙÛÜÆŒ\-']+$/.test(w)
-      ? w
-      : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()
+  if (lastNameEnd === 0) {
+    // Aucun mot tout-caps : "martin thomas" ou "Martin Thomas"
+    // → premier mot = nom (uppercase), reste = prénom (title-case)
+    return words[0].toUpperCase() + ' ' +
+      words.slice(1).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')
+  }
+  if (lastNameEnd === words.length) {
+    // Tous tout-caps : "MARTIN THOMAS" → "MARTIN Thomas"
+    return words.slice(0, -1).join(' ') + ' ' +
+      words[words.length - 1].charAt(0).toUpperCase() + words[words.length - 1].slice(1).toLowerCase()
+  }
+  // Format FFT standard "DUPONT Alice" → garder NOM, title-case prénom
+  const lastName = words.slice(0, lastNameEnd).join(' ')
+  const firstName = words.slice(lastNameEnd).map(w =>
+    w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()
   ).join(' ')
+  return lastName + ' ' + firstName
 }
 
 // ── Pixel-accurate truncation ──────────────────────────────────────────────
