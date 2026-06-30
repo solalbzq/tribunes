@@ -1,0 +1,147 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Sport {
+  TENNIS
+  PADEL
+  FOOTBALL
+  HANDBALL
+  BASKETBALL
+  VOLLEYBALL
+  OTHER
+}
+
+enum MatchType {
+  INTERCLUB
+  TOURNAMENT
+}
+
+enum HomeAway {
+  DOMICILE
+  EXTERIEUR
+}
+
+model WaitlistEntry {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  sport     String?
+  clubName  String?
+  createdAt DateTime @default(now())
+  source    String   @default("landing")
+  converted Boolean  @default(false)
+}
+
+model Organization {
+  id               String               @id @default(cuid())
+  name             String
+  plan             String               @default("FREE") // FREE | PRO | STRUCTURE
+  stripeCustomerId String?
+  stripeSubId      String?
+  suspended        Boolean              @default(false)
+  createdAt        DateTime             @default(now())
+  members          OrganizationMember[]
+  clubs            Club[]
+}
+
+model OrganizationMember {
+  id        String       @id @default(cuid())
+  orgId     String
+  org       Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  userId    String
+  role      String       @default("MEMBER") // OWNER | MEMBER
+  createdAt DateTime     @default(now())
+
+  @@unique([orgId, userId])
+}
+
+model Club {
+  id                  String               @id @default(cuid())
+  userId              String               @unique
+  orgId               String?
+  org                 Organization?        @relation(fields: [orgId], references: [id])
+  name                String
+  sport               String
+  primaryColor        String               @default("#1a1a2e")
+  secondaryColor      String               @default("#e94560")
+  logoUrl             String?
+  visualConfig        Json?
+  tennisVisualConfig  Json?
+  suspended           Boolean              @default(false)
+  createdAt           DateTime             @default(now())
+  matches             MatchResult[]
+  tournamentSchedules TournamentSchedule[]
+  weeklySchedules     WeeklySchedule[]
+}
+
+model MatchResult {
+  id          String      @id @default(cuid())
+  clubId      String
+  club        Club        @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  date        DateTime
+  opponent    String
+  homeScore   Int
+  awayScore   Int
+  isHome      Boolean     @default(true)
+  competition String?
+  notes       String?
+  extraData   Json?
+  // Tennis / Padel interclub fields
+  sport       String?
+  matchType   MatchType?
+  teamName    String?
+  homeAway    HomeAway?
+  scoreDetail Json?
+  globalScore String?
+  division    String?
+  round       String?
+  createdAt   DateTime    @default(now())
+  posts       GeneratedPost[]
+}
+
+model TournamentSchedule {
+  id             String          @id @default(cuid())
+  clubId         String
+  club           Club            @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  sport          Sport
+  pdfUrl         String?
+  rawText        String          @db.Text
+  matchDate      DateTime
+  tournamentName String
+  venue          String          @default("")
+  parsedData     Json
+  createdAt      DateTime        @default(now())
+  posts          GeneratedPost[]
+}
+
+model WeeklySchedule {
+  id        String          @id @default(cuid())
+  clubId    String
+  club      Club            @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  sport     Sport
+  weekStart DateTime
+  weekEnd   DateTime
+  matches   Json
+  createdAt DateTime        @default(now())
+  posts     GeneratedPost[]
+}
+
+model GeneratedPost {
+  id                   String              @id @default(cuid())
+  matchId              String?
+  match                MatchResult?        @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  tournamentScheduleId String?
+  tournamentSchedule   TournamentSchedule? @relation(fields: [tournamentScheduleId], references: [id], onDelete: Cascade)
+  weeklyScheduleId     String?
+  weeklySchedule       WeeklySchedule?     @relation(fields: [weeklyScheduleId], references: [id], onDelete: Cascade)
+  platform             String
+  content              String              @db.Text
+  postType             String              @default("MATCH_RESULT")
+  status               String              @default("DRAFT")
+  createdAt            DateTime            @default(now())
+}

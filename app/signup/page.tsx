@@ -1,0 +1,235 @@
+'use client'
+
+import { useState } from 'react'
+import { createClient } from '@/lib/supabase/client'
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+
+const SPORTS = ['Football', 'Rugby', 'Basketball', 'Handball', 'Volleyball', 'Tennis', 'Badminton', 'Padel', 'Autre']
+
+export default function SignupPage() {
+  const router = useRouter()
+  const [step, setStep] = useState<'account' | 'club'>('account')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [clubName, setClubName] = useState('')
+  const [sport, setSport] = useState('')
+  const [structureName, setStructureName] = useState('')
+  const [createStructure, setCreateStructure] = useState(false)
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [oauthLoading, setOauthLoading] = useState<'google' | 'apple' | null>(null)
+
+  async function handleOAuth(provider: 'google' | 'apple') {
+    setOauthLoading(provider)
+    const supabase = createClient()
+    await supabase.auth.signInWithOAuth({
+      provider,
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
+    })
+  }
+
+  function handleAccount(e: React.FormEvent) {
+    e.preventDefault()
+    if (password.length < 8) { setError('Le mot de passe doit faire au moins 8 caractères.'); return }
+    setStep('club')
+    setError('')
+  }
+
+  async function handleClub(e: React.FormEvent) {
+    e.preventDefault()
+    setLoading(true)
+    setError('')
+    const supabase = createClient()
+
+    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({ email, password })
+    if (signUpError) { setError(signUpError.message); setLoading(false); return }
+
+    const token = signUpData.session?.access_token
+    if (!token) {
+      sessionStorage.setItem('pending_club', JSON.stringify({ name: clubName, sport, structureName: createStructure ? structureName : undefined }))
+      router.push('/login?confirm=1')
+      return
+    }
+
+    // Create club
+    const clubRes = await fetch('/api/clubs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ name: clubName, sport }),
+    })
+    if (!clubRes.ok) { setError('Erreur lors de la création du club.'); setLoading(false); return }
+
+    // Optionally create structure (organization)
+    if (createStructure && structureName.trim()) {
+      await fetch('/api/organization', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ name: structureName.trim() }),
+      })
+    }
+
+    router.push('/dashboard')
+    router.refresh()
+  }
+
+  return (
+    <div className="min-h-screen bg-[#f8f8f8] flex items-center justify-center px-4">
+      <div className="w-full max-w-md">
+        <div className="text-center mb-8">
+          <Link href="/" className="text-2xl font-extrabold text-[#1a1a2e]">⚡ Tribunes</Link>
+          <p className="mt-2 text-gray-600">Crée ton compte gratuitement</p>
+        </div>
+
+        {/* Stepper */}
+        <div className="flex items-center justify-center gap-2 mb-6">
+          {['Compte', 'Club'].map((label, i) => (
+            <div key={label} className="flex items-center gap-2">
+              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
+                (i === 0 && step === 'account') || (i === 1 && step === 'club')
+                  ? 'bg-[#e94560] text-white'
+                  : i === 0 && step === 'club'
+                  ? 'bg-[#10b981] text-white'
+                  : 'bg-gray-200 text-gray-500'
+              }`}>{i === 0 && step === 'club' ? '✓' : i + 1}</div>
+              <span className="text-sm text-gray-500">{label}</span>
+              {i === 0 && <div className="w-8 h-px bg-gray-200" />}
+            </div>
+          ))}
+        </div>
+
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
+          {step === 'account' ? (
+            <div className="space-y-5">
+              {/* OAuth */}
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => handleOAuth('google')}
+                  disabled={oauthLoading !== null}
+                  className="flex items-center justify-center gap-2 rounded-xl border border-gray-200 px-4 py-3 text-sm font-semibold text-[#1a1a2e] transition hover:bg-gray-50 disabled:opacity-60"
+                >
+                  <GoogleIcon />
+                  {oauthLoading === 'google' ? '...' : 'Google'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleOAuth('apple')}
+                  disabled={oauthLoading !== null}
+                  className="flex items-center justify-center gap-2 rounded-xl bg-[#1a1a2e] px-4 py-3 text-sm font-semibold text-white transition hover:bg-black disabled:opacity-60"
+                >
+                  <AppleIcon />
+                  {oauthLoading === 'apple' ? '...' : 'Apple'}
+                </button>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div className="flex-1 h-px bg-gray-100" />
+                <span className="text-xs text-gray-400">ou par email</span>
+                <div className="flex-1 h-px bg-gray-100" />
+              </div>
+
+              <form onSubmit={handleAccount} className="space-y-5">
+                <div>
+                  <label className="block text-sm font-semibold text-[#1a1a2e] mb-1">Email</label>
+                  <input
+                    type="email" required value={email} onChange={e => setEmail(e.target.value)}
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#e94560]/30"
+                    placeholder="ton@email.com"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-[#1a1a2e] mb-1">Mot de passe</label>
+                  <input
+                    type="password" required value={password} onChange={e => setPassword(e.target.value)}
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#e94560]/30"
+                    placeholder="8 caractères minimum"
+                  />
+                </div>
+                {error && <p className="text-sm text-red-500">{error}</p>}
+                <button type="submit" className="w-full bg-[#e94560] text-white font-bold py-3 rounded-xl hover:bg-[#d63a52] transition">
+                  Continuer →
+                </button>
+                <p className="text-center text-sm text-gray-500">
+                  Déjà un compte ?{' '}
+                  <Link href="/login" className="text-[#e94560] font-semibold hover:underline">Se connecter</Link>
+                </p>
+              </form>
+            </div>
+          ) : (
+            <form onSubmit={handleClub} className="space-y-5">
+              <div>
+                <label className="block text-sm font-semibold text-[#1a1a2e] mb-1">Nom du club</label>
+                <input
+                  type="text" required value={clubName} onChange={e => setClubName(e.target.value)}
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#e94560]/30"
+                  placeholder="Ex: AS Beauvoisin"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-[#1a1a2e] mb-1">Sport</label>
+                <select
+                  required value={sport} onChange={e => setSport(e.target.value)}
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#e94560]/30"
+                >
+                  <option value="">Choisir un sport</option>
+                  {SPORTS.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
+
+              {/* Structure optionnelle */}
+              <div className="rounded-xl border border-gray-100 bg-[#f8f8f8] p-4">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={createStructure}
+                    onChange={e => setCreateStructure(e.target.checked)}
+                    className="w-4 h-4 accent-[#e94560]"
+                  />
+                  <div>
+                    <p className="text-sm font-semibold text-[#1a1a2e]">Créer une structure sportive</p>
+                    <p className="text-xs text-gray-500">Pour inviter d'autres coachs ou bénévoles</p>
+                  </div>
+                </label>
+                {createStructure && (
+                  <input
+                    type="text"
+                    value={structureName}
+                    onChange={e => setStructureName(e.target.value)}
+                    placeholder="Nom de votre structure"
+                    className="mt-3 w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#e94560]/30"
+                  />
+                )}
+              </div>
+
+              {error && <p className="text-sm text-red-500">{error}</p>}
+              <button type="submit" disabled={loading} className="w-full bg-[#e94560] text-white font-bold py-3 rounded-xl hover:bg-[#d63a52] transition disabled:opacity-60">
+                {loading ? 'Création en cours...' : 'Créer mon compte ✓'}
+              </button>
+            </form>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function GoogleIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+      <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908C16.608 14.177 17.64 11.9 17.64 9.2z" fill="#4285F4"/>
+      <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z" fill="#34A853"/>
+      <path d="M3.964 10.71c-.18-.54-.282-1.117-.282-1.71s.102-1.17.282-1.71V4.958H.957C.347 6.173 0 7.548 0 9s.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
+      <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
+    </svg>
+  )
+}
+
+function AppleIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor">
+      <path d="M14.25 9.56c-.024-2.55 2.083-3.787 2.178-3.847-1.186-1.732-3.03-1.97-3.688-1.993-1.571-.16-3.069.93-3.866.93-.796 0-2.027-.91-3.333-.884-1.716.026-3.301 1.004-4.183 2.545-1.79 3.097-.457 7.68 1.286 10.196.855 1.228 1.872 2.605 3.207 2.555 1.29-.05 1.777-.828 3.338-.828 1.56 0 2.006.828 3.371.8 1.385-.022 2.26-1.247 3.102-2.48.988-1.42 1.392-2.81 1.41-2.882-.032-.013-2.696-1.032-2.722-4.112z"/>
+      <path d="M11.714 2.68C12.404 1.84 12.87.7 12.74-.44c-.966.04-2.137.645-2.848 1.474-.626.728-1.173 1.89-1.025 3.004 1.079.084 2.177-.548 2.847-1.358z"/>
+    </svg>
+  )
+}
