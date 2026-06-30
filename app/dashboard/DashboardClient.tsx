@@ -95,7 +95,7 @@ export default function DashboardClient({ club, userEmail }: { club: Club; userE
     <div className="min-h-screen bg-[#f8f8f8]">
       {/* Navbar */}
       <nav className="bg-white border-b border-gray-100 px-6 py-4">
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <span className="text-xl font-extrabold text-[#1a1a2e]">⚡ Tribunes</span>
             <span className="text-gray-300">|</span>
@@ -114,7 +114,7 @@ export default function DashboardClient({ club, userEmail }: { club: Club; userE
         </div>
       </nav>
 
-      <div className="max-w-5xl mx-auto px-6 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 xl:px-8 py-8">
         {/* Tabs */}
         <div className="flex gap-2 mb-8">
           {[
