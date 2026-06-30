@@ -3,12 +3,8 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import GenerateForm from './GenerateForm'
-import PostsResult from './PostsResult'
-import VisualGenerator from './VisualGenerator'
 import ClubSettings from './ClubSettings'
-import ProgrammeTab from './ProgrammeTab'
-import TennisPadelTab from './posts/TennisPadelTab'
+import ContentTab from './ContentTab'
 
 type Club = {
   id: string
@@ -31,22 +27,10 @@ type Club = {
   }>
 } | null
 
-type MatchData = {
-  opponent: string
-  homeScore: number
-  awayScore: number
-  isHome: boolean
-  competition: string
-  extraData?: Record<string, unknown>
-}
-
 export default function DashboardClient({ club, userEmail }: { club: Club; userEmail: string }) {
   const router = useRouter()
   const isTennisPadel = club?.sport === 'Tennis' || club?.sport === 'Padel'
-  const [view, setView] = useState<'home' | 'generate' | 'history' | 'programme' | 'settings' | 'tennis'>('home')
-  const [generatedPosts, setGeneratedPosts] = useState<{ instagram: string; facebook: string; whatsapp: string } | null>(null)
-  const [generatedMatch, setGeneratedMatch] = useState<MatchData | null>(null)
-  const [generatedPhoto, setGeneratedPhoto] = useState<File | null>(null)
+  const [view, setView] = useState<'home' | 'content' | 'history' | 'settings'>('home')
 
   // Finalise la création du club si elle était en attente (email confirm flow)
   useEffect(() => {
@@ -111,19 +95,17 @@ export default function DashboardClient({ club, userEmail }: { club: Club; userE
         {/* Tabs */}
         <div className="flex gap-2 mb-8">
           {[
-            { key: 'home', label: '🏠 Accueil' },
-            { key: 'generate', label: '✨ Générer' },
-            ...(isTennisPadel ? [{ key: 'tennis', label: club!.sport === 'Padel' ? '🏸 Padel' : '🎾 Tennis' }] : []),
-            { key: 'programme', label: '📅 Programme' },
-            { key: 'history', label: '📋 Historique' },
-            { key: 'settings', label: '🎨 Mon club' },
-          ].map(tab => (
-            <button
-              key={tab.key}
-              onClick={() => { setView(tab.key as typeof view); setGeneratedPosts(null) }}
-              className={`px-4 py-2 rounded-xl text-sm font-semibold transition ${
-                view === tab.key
-                  ? 'bg-[#1a1a2e] text-white'
+             { key: 'home', label: '🏠 Accueil' },
+             { key: 'content', label: isTennisPadel ? '✨ Generer du contenu' : '✨ Generer' },
+             { key: 'history', label: '📋 Historique' },
+             { key: 'settings', label: '🎨 Mon club' },
+           ].map(tab => (
+             <button
+               key={tab.key}
+               onClick={() => setView(tab.key as typeof view)}
+               className={`px-4 py-2 rounded-xl text-sm font-semibold transition ${
+                 view === tab.key
+                   ? 'bg-[#1a1a2e] text-white'
                   : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-100'
               }`}
             >
@@ -139,14 +121,14 @@ export default function DashboardClient({ club, userEmail }: { club: Club; userE
               <h1 className="text-2xl font-extrabold text-[#1a1a2e] mb-1">
                 Bonjour, {club.name} 👋
               </h1>
-              <p className="text-gray-500 mb-6">Génère tes posts réseaux sociaux en 2 minutes.</p>
-              <button
-                onClick={() => setView('generate')}
-                className="bg-[#e94560] text-white font-bold px-6 py-3 rounded-xl hover:bg-[#d63a52] transition"
-              >
-                ✨ Générer un post maintenant
-              </button>
-            </div>
+                <p className="text-gray-500 mb-6">Génère tes posts réseaux sociaux en 2 minutes.</p>
+                <button
+                  onClick={() => setView('content')}
+                  className="bg-[#e94560] text-white font-bold px-6 py-3 rounded-xl hover:bg-[#d63a52] transition"
+                >
+                  ✨ Generer du contenu
+                </button>
+              </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <StatCard label="Posts générés" value={club.matches.reduce((acc, m) => acc + m.posts.length, 0)} />
@@ -156,52 +138,7 @@ export default function DashboardClient({ club, userEmail }: { club: Club; userE
           </div>
         )}
 
-        {/* Generate */}
-        {view === 'generate' && !generatedPosts && !generatedMatch && (
-          <GenerateForm
-            club={club}
-            onSuccess={(posts, match, photo) => {
-              setGeneratedPosts(posts)
-              setGeneratedMatch(match)
-              setGeneratedPhoto(photo)
-            }}
-            onVisualOnly={(match, photo) => {
-              setGeneratedMatch(match)
-              setGeneratedPhoto(photo)
-            }}
-          />
-        )}
-
-        {/* Visuel seul (sans posts IA) */}
-        {view === 'generate' && !generatedPosts && generatedMatch && (
-          <div className="max-w-2xl space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-extrabold text-[#1a1a2e]">Ton visuel est prêt 🖼️</h2>
-              <button
-                onClick={() => { setGeneratedMatch(null); setGeneratedPhoto(null) }}
-                className="text-sm text-gray-500 hover:text-[#e94560] transition"
-              >
-                ← Nouveau match
-              </button>
-            </div>
-            <VisualGenerator club={club} match={generatedMatch} photoFile={generatedPhoto} />
-          </div>
-        )}
-
-        {/* Posts + Visuel */}
-        {view === 'generate' && generatedPosts && generatedMatch && (
-          <PostsResult
-            posts={generatedPosts}
-            club={club}
-            match={generatedMatch}
-            photoFile={generatedPhoto}
-            onReset={() => {
-              setGeneratedPosts(null)
-              setGeneratedMatch(null)
-              setGeneratedPhoto(null)
-            }}
-          />
-        )}
+        {view === 'content' && <ContentTab club={club} />}
 
         {/* History */}
         {view === 'history' && (
@@ -233,27 +170,11 @@ export default function DashboardClient({ club, userEmail }: { club: Club; userE
           </div>
         )}
 
-        {/* Programme */}
-        {view === 'programme' && (
-          <ProgrammeTab club={club} />
-        )}
-
         {/* Settings */}
         {view === 'settings' && (
           <ClubSettings club={club} />
         )}
 
-        {view === 'tennis' && isTennisPadel && (
-          <TennisPadelTab club={{
-            name: club.name,
-            sport: club.sport,
-            primaryColor: club.primaryColor,
-            secondaryColor: club.secondaryColor,
-            logoUrl: club.logoUrl,
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            tennisVisualConfig: (club.tennisVisualConfig as any) ?? null,
-          }} />
-        )}
       </div>
     </div>
   )

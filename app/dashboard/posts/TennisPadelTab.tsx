@@ -2,6 +2,10 @@
 
 import { useState, useRef } from 'react'
 import type { TournamentMatch } from '@/lib/services/fft-pdf-parser'
+import GenerateForm from '../GenerateForm'
+import PostsResult from '../PostsResult'
+import ProgrammeTab from '../ProgrammeTab'
+import VisualGenerator from '../VisualGenerator'
 import TennisVisualGenerator, { type TennisVisualConfig, DEFAULT_TENNIS_CONFIG } from './TennisVisualGenerator'
 
 type Club = {
@@ -9,10 +13,18 @@ type Club = {
   sport: string
   primaryColor: string
   secondaryColor: string
-  logoUrl?: string | null
+  logoUrl: string | null
   tennisVisualConfig?: TennisVisualConfig | null
 }
 type Platform = 'instagram' | 'facebook' | 'whatsapp'
+type MatchData = {
+  opponent: string
+  homeScore: number
+  awayScore: number
+  isHome: boolean
+  competition: string
+  extraData?: Record<string, unknown>
+}
 
 const PLATFORMS: { key: Platform; label: string; emoji: string }[] = [
   { key: 'instagram', label: 'Instagram', emoji: '📸' },
@@ -48,6 +60,70 @@ function PostDisplay({ posts }: { posts: Record<string, string> }) {
       <pre className="whitespace-pre-wrap text-sm text-gray-700 bg-gray-50 rounded-xl p-4 max-h-80 overflow-y-auto font-sans">
         {posts[tab]}
       </pre>
+    </div>
+  )
+}
+
+function MatchSection({ club }: { club: Club }) {
+  const [generatedPosts, setGeneratedPosts] = useState<{ instagram: string; facebook: string; whatsapp: string } | null>(null)
+  const [generatedMatch, setGeneratedMatch] = useState<MatchData | null>(null)
+  const [generatedPhoto, setGeneratedPhoto] = useState<File | null>(null)
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-white rounded-2xl border border-gray-100 p-6">
+        <h3 className="font-bold text-[#1a1a2e]">🏟️ Post de match</h3>
+        <p className="text-sm text-gray-500 mt-1">
+          Cree rapidement un post de resultat avec son visuel pour ton club.
+        </p>
+      </div>
+
+      {!generatedPosts && !generatedMatch && (
+        <GenerateForm
+          club={club}
+          onSuccess={(posts, match, photo) => {
+            setGeneratedPosts(posts)
+            setGeneratedMatch(match)
+            setGeneratedPhoto(photo)
+          }}
+          onVisualOnly={(match, photo) => {
+            setGeneratedMatch(match)
+            setGeneratedPhoto(photo)
+          }}
+        />
+      )}
+
+      {!generatedPosts && generatedMatch && (
+        <div className="max-w-2xl space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-extrabold text-[#1a1a2e]">Ton visuel est pret 🖼️</h2>
+            <button
+              onClick={() => {
+                setGeneratedMatch(null)
+                setGeneratedPhoto(null)
+              }}
+              className="text-sm text-gray-500 hover:text-[#e94560] transition"
+            >
+              ← Nouveau match
+            </button>
+          </div>
+          <VisualGenerator club={club} match={generatedMatch} photoFile={generatedPhoto} />
+        </div>
+      )}
+
+      {generatedPosts && generatedMatch && (
+        <PostsResult
+          posts={generatedPosts}
+          club={club}
+          match={generatedMatch}
+          photoFile={generatedPhoto}
+          onReset={() => {
+            setGeneratedPosts(null)
+            setGeneratedMatch(null)
+            setGeneratedPhoto(null)
+          }}
+        />
+      )}
     </div>
   )
 }
@@ -417,23 +493,25 @@ function ResultsSection({ club }: { club: Club }) {
 // ── Main component ─────────────────────────────────────────────────────────
 
 export default function TennisPadelTab({ club }: { club: Club }) {
-  const [section, setSection] = useState<'tournament' | 'weekly' | 'results'>('tournament')
+  const [section, setSection] = useState<'match' | 'programme' | 'tournament' | 'weekly' | 'results'>('match')
   const sport = club.sport === 'Padel' ? 'Padel' : 'Tennis'
   const emoji = sport === 'Padel' ? '🏸' : '🎾'
 
   return (
-    <div className="max-w-3xl space-y-6">
+    <div className="max-w-5xl space-y-6">
       <div className="flex items-center gap-3">
         <span className="text-2xl">{emoji}</span>
         <div>
-          <h2 className="text-xl font-extrabold text-[#1a1a2e]">Posts {sport}</h2>
-          <p className="text-sm text-gray-500">Tournois FFT · Interclubs semaine · Résultats</p>
+          <h2 className="text-xl font-extrabold text-[#1a1a2e]">Generer du contenu {sport}</h2>
+          <p className="text-sm text-gray-500">Choisis le type de contenu adapte a ton club.</p>
         </div>
       </div>
 
       {/* Sub-nav */}
       <div className="flex gap-2 p-1 bg-gray-100 rounded-xl w-fit">
         {[
+          { key: 'match', label: '🏟️ Post match' },
+          { key: 'programme', label: '📅 Programme' },
           { key: 'tournament', label: `📄 Tournoi FFT` },
           { key: 'weekly',     label: `📅 Semaine` },
           { key: 'results',    label: `🏆 Résultats` },
@@ -445,6 +523,8 @@ export default function TennisPadelTab({ club }: { club: Club }) {
         ))}
       </div>
 
+      {section === 'match'      && <MatchSection      club={club} />}
+      {section === 'programme'  && <ProgrammeTab      club={club} />}
       {section === 'tournament' && <TournamentSection club={club} />}
       {section === 'weekly'     && <WeeklySection     club={club} />}
       {section === 'results'    && <ResultsSection    club={club} />}
