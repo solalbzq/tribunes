@@ -85,25 +85,10 @@ export default function DashboardClient({ club, userEmail }: { club: Club; userE
   const draws = club.matches.length - wins - losses
   const winRate = club.matches.length ? Math.round((wins / club.matches.length) * 100) : 0
   const lastGeneratedAt = recentMatches[0]?.date
-  const quickActions = [
-    {
-      label: 'Generer du contenu',
-      description: isTennisPadel ? `Posts, programmes et formats ${club.sport.toLowerCase()}.` : 'Posts de match et visuels en quelques clics.',
-      cta: 'Ouvrir',
-      onClick: () => setView('content' as const),
-    },
-    {
-      label: 'Personnaliser mon club',
-      description: 'Couleurs, logo et templates de visuels.',
-      cta: 'Configurer',
-      onClick: () => setView('settings' as const),
-    },
-    {
-      label: 'Consulter l\'historique',
-      description: 'Retrouve les posts deja generes et les derniers matchs.',
-      cta: 'Voir',
-      onClick: () => setView('history' as const),
-    },
+  const socialStats = [
+    { label: 'Audience totale', value: '0', helper: 'Connexion reseaux bientot', accent: '#7c3aed' },
+    { label: 'Engagement moyen', value: '0%', helper: 'Likes, commentaires, partages', accent: '#e94560' },
+    { label: 'Posts ce mois', value: String(totalPosts), helper: 'Base sur les contenus generes', accent: '#10b981' },
   ]
 
   return (
@@ -155,17 +140,17 @@ export default function DashboardClient({ club, userEmail }: { club: Club; userE
         {/* Home */}
         {view === 'home' && (
           <div className="space-y-6">
-            <div className="grid grid-cols-1 xl:grid-cols-[1.7fr_1fr] gap-6">
-              <div className="rounded-[28px] p-8 text-white relative overflow-hidden" style={{ background: `linear-gradient(135deg, ${club.primaryColor} 0%, #111827 100%)` }}>
+            <div className="grid grid-cols-1 xl:grid-cols-[1.75fr_0.95fr] gap-4">
+              <div className="rounded-[26px] p-6 sm:p-7 text-white relative overflow-hidden" style={{ background: `linear-gradient(135deg, ${club.primaryColor} 0%, #111827 100%)` }}>
                 <div className="absolute inset-0 opacity-20" style={{ background: `radial-gradient(circle at top right, ${club.secondaryColor} 0%, transparent 45%)` }} />
-                <div className="relative space-y-6">
+                <div className="relative space-y-5">
                   <div className="flex items-center gap-3">
                     <span className="text-xs font-bold uppercase tracking-[0.3em] text-white/70">Dashboard club</span>
                     <span className="text-xs px-3 py-1 rounded-full border border-white/15 bg-white/10">{club.sport}</span>
                   </div>
-                  <div className="space-y-3 max-w-2xl">
-                    <h1 className="text-3xl sm:text-4xl font-black leading-tight">Bonjour, {club.name}</h1>
-                    <p className="text-sm sm:text-base text-white/75">
+                  <div className="space-y-2 max-w-2xl">
+                    <h1 className="text-3xl sm:text-[2.6rem] font-black leading-tight">Bonjour, {club.name}</h1>
+                    <p className="text-sm sm:text-[15px] text-white/75 max-w-xl">
                       Pilote ta communication depuis un seul espace avec des contenus prets a poster, des visuels de match et bientot les connexions reseaux sociaux du club.
                     </p>
                   </div>
@@ -183,7 +168,7 @@ export default function DashboardClient({ club, userEmail }: { club: Club; userE
                       🎨 Personnaliser le club
                     </button>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
                     <HighlightCard label="Posts generes" value={String(totalPosts)} helper={lastGeneratedAt ? `Dernier le ${formatDate(lastGeneratedAt)}` : 'Aucun post genere pour le moment'} />
                     <HighlightCard label="Matchs suivis" value={String(club.matches.length)} helper={club.matches.length ? `${wins} victoire${wins > 1 ? 's' : ''} sur la periode` : 'Commence par enregistrer un match'} />
                     <HighlightCard label="Taux de victoire" value={`${winRate}%`} helper={club.matches.length ? `${losses} defaite${losses > 1 ? 's' : ''} · ${draws} nul${draws > 1 ? 's' : ''}` : 'Les stats apparaitront ici'} />
@@ -191,12 +176,12 @@ export default function DashboardClient({ club, userEmail }: { club: Club; userE
                 </div>
               </div>
 
-              <div className="bg-white rounded-[28px] border border-gray-100 p-6 space-y-5">
+              <div className="bg-white rounded-[26px] border border-gray-100 p-5 space-y-4">
                 <div>
                   <p className="text-xs font-bold uppercase tracking-[0.25em] text-gray-400">Vue rapide</p>
-                  <h2 className="text-xl font-extrabold text-[#1a1a2e] mt-2">Le club en un coup d'oeil</h2>
+                  <h2 className="text-lg font-extrabold text-[#1a1a2e] mt-2">Le club en un coup d'oeil</h2>
                 </div>
-                <div className="space-y-4">
+                <div className="space-y-3">
                   <StatCard label="Sport" value={club.sport} />
                   <StatCard label="Posts par match" value={club.matches.length ? (totalPosts / club.matches.length).toFixed(1) : '0'} />
                   <StatCard label="Adresse connectee" value={userEmail.split('@')[0]} />
@@ -204,39 +189,48 @@ export default function DashboardClient({ club, userEmail }: { club: Club; userE
               </div>
             </div>
 
-            <div className="grid grid-cols-1 xl:grid-cols-[1.1fr_0.9fr] gap-6">
-              <div className="bg-white rounded-[28px] border border-gray-100 p-6 space-y-5">
+            <div className="grid grid-cols-1 xl:grid-cols-[1.05fr_0.95fr] gap-4">
+              <div className="bg-white rounded-[26px] border border-gray-100 p-5 space-y-4">
                 <div className="flex items-center justify-between gap-4">
                   <div>
-                    <p className="text-xs font-bold uppercase tracking-[0.25em] text-gray-400">Actions</p>
-                    <h2 className="text-xl font-extrabold text-[#1a1a2e] mt-2">Raccourcis utiles</h2>
+                    <p className="text-xs font-bold uppercase tracking-[0.25em] text-gray-400">Reseaux sociaux</p>
+                    <h2 className="text-lg font-extrabold text-[#1a1a2e] mt-2">Stats a connecter</h2>
                   </div>
-                  <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ background: `${club.secondaryColor}20`, color: club.primaryColor }}>
-                    ⚡
+                  <div className="px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-500">
+                    Bientot en direct
                   </div>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {quickActions.map(action => (
-                    <button
-                      key={action.label}
-                      onClick={action.onClick}
-                      className="text-left rounded-2xl border border-gray-100 p-5 hover:border-gray-200 hover:shadow-sm transition"
-                    >
-                      <p className="font-bold text-[#1a1a2e]">{action.label}</p>
-                      <p className="text-sm text-gray-500 mt-2 min-h-12">{action.description}</p>
-                      <span className="inline-flex mt-4 text-sm font-semibold" style={{ color: club.primaryColor }}>{action.cta} →</span>
-                    </button>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  {socialStats.map(stat => (
+                    <div key={stat.label} className="rounded-2xl border border-gray-100 bg-gray-50/80 p-4">
+                      <div className="w-9 h-1.5 rounded-full" style={{ background: stat.accent }} />
+                      <p className="text-sm text-gray-500 mt-4">{stat.label}</p>
+                      <p className="text-3xl font-black text-[#1a1a2e] mt-1">{stat.value}</p>
+                      <p className="text-xs text-gray-400 mt-2">{stat.helper}</p>
+                    </div>
                   ))}
+                </div>
+                <div className="rounded-2xl border border-dashed border-gray-200 p-4 flex items-center justify-between gap-4">
+                  <div>
+                    <p className="font-semibold text-[#1a1a2e]">Instagram, Facebook et WhatsApp</p>
+                    <p className="text-sm text-gray-500 mt-1">Les cartes afficheront la portee, l'engagement et les meilleurs formats des que les comptes seront relies.</p>
+                  </div>
+                  <button
+                    onClick={() => setView('settings')}
+                    className="shrink-0 px-4 py-2 rounded-xl text-sm font-semibold bg-[#1a1a2e] text-white hover:bg-[#2a2a4e] transition"
+                  >
+                    Preparer
+                  </button>
                 </div>
               </div>
 
-              <div className="bg-white rounded-[28px] border border-gray-100 p-6 space-y-5">
+              <div className="bg-white rounded-[26px] border border-gray-100 p-5 space-y-4">
                 <div>
                   <p className="text-xs font-bold uppercase tracking-[0.25em] text-gray-400">Activite recente</p>
-                  <h2 className="text-xl font-extrabold text-[#1a1a2e] mt-2">Derniers matchs</h2>
+                  <h2 className="text-lg font-extrabold text-[#1a1a2e] mt-2">Derniers matchs</h2>
                 </div>
                 {recentMatches.length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-gray-200 p-6 text-sm text-gray-500">
+                  <div className="rounded-2xl border border-dashed border-gray-200 p-5 text-sm text-gray-500">
                     Aucun match enregistre pour le moment. Commence par generer ton premier contenu pour alimenter ce dashboard.
                   </div>
                 ) : (
