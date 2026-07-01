@@ -3,6 +3,8 @@ import { createClient } from '@/lib/supabase/server'
 import { prisma } from '@/lib/prisma'
 import { openai } from '@/lib/openai'
 import { getSportVocab, formatExtraForPrompt } from '@/lib/sports'
+import { splitPlatformPosts } from '@/lib/prompts/splitPlatforms'
+import { logAiUsage } from '@/lib/usage'
 
 export async function POST(req: Request) {
   const supabase = createClient()
@@ -73,19 +75,9 @@ Format exact attendu :
     messages: [{ role: 'user', content: prompt }],
     temperature: 0.8,
   })
+  await logAiUsage(club.id, completion, 'gpt-4o', { route: 'generate' })
 
-  const raw = completion.choices[0].message.content ?? ''
-  const parts = raw.split('---PLATFORM---')
-
-  function extract(block: string) {
-    return block.replace(/\[(INSTAGRAM|FACEBOOK|WHATSAPP)\]\n?/i, '').trim()
-  }
-
-  const posts = {
-    instagram: extract(parts[0] ?? ''),
-    facebook: extract(parts[1] ?? ''),
-    whatsapp: extract(parts[2] ?? ''),
-  }
+  const posts = splitPlatformPosts(completion.choices[0].message.content ?? '')
 
   const match = await prisma.matchResult.create({
     data: {

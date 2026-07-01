@@ -78,6 +78,36 @@ model Club {
   matches             MatchResult[]
   tournamentSchedules TournamentSchedule[]
   weeklySchedules     WeeklySchedule[]
+  tenupSchedules      TenupSchedule[]
+  usageEvents         UsageEvent[]
+}
+
+model TenupSchedule {
+  id        String   @id @default(cuid())
+  clubId    String
+  club      Club     @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  weekStart DateTime
+  matches   Json
+  clubName  String?
+  scrapedAt DateTime @default(now())
+
+  @@unique([clubId, weekStart])
+}
+
+model UsageEvent {
+  id        String   @id @default(cuid())
+  clubId    String
+  club      Club     @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  kind      String // 'ai_generation' | 'tenup_scrape'
+  model     String?
+  tokensIn  Int?
+  tokensOut Int?
+  credits   Int?
+  meta      Json?
+  createdAt DateTime @default(now())
+
+  @@index([clubId, createdAt])
+  @@index([kind, createdAt])
 }
 
 model MatchResult {

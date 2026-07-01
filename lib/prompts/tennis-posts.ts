@@ -1,4 +1,5 @@
 import type { TournamentMatch } from '../services/fft-pdf-parser'
+import { MULTI_PLATFORM_FORMAT } from './splitPlatforms'
 
 function formatMatchList(matches: TournamentMatch[]): string {
   return matches.map(m => {
@@ -11,8 +12,7 @@ function formatMatchList(matches: TournamentMatch[]): string {
 
 // ── TOURNAMENT SCHEDULE ────────────────────────────────────────────────────
 
-export function tournamentSchedulePrompt(
-  platform: 'instagram' | 'facebook' | 'whatsapp',
+export function tournamentSchedulePromptAll(
   clubName: string,
   tournamentName: string,
   matchDate: Date,
@@ -21,9 +21,10 @@ export function tournamentSchedulePrompt(
 ): string {
   const dateStr = matchDate.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
   const matchList = formatMatchList(clubMatches)
+  const tag = clubName.toLowerCase().replace(/\s/g, '')
 
-  const base = `Tu es le community manager du club de tennis "${clubName}".
-Rédige un post ${platform === 'instagram' ? 'Instagram' : platform === 'facebook' ? 'Facebook' : 'WhatsApp'} pour annoncer la programmation de nos joueurs au tournoi "${tournamentName}".
+  return `Tu es le community manager du club de tennis "${clubName}".
+Rédige les posts réseaux sociaux pour annoncer la programmation de nos joueurs au tournoi "${tournamentName}".
 
 Informations :
 - Date : ${dateStr}
@@ -31,33 +32,18 @@ Informations :
 - Nos matchs programmés :
 ${matchList}
 
-Consignes générales :
+Consignes générales (valables pour les 3 posts) :
 - Utilise le vocabulaire tennis exact : set, jeu, ace, break, tie-break (pas "manche", pas "point" pour les sets)
 - Cite chaque joueur/joueuse nominalement et son horaire précis
 - Mentionne la catégorie du match (ex: Hommes 15/1, Dames 4/6)
 - Ton enthousiaste et fédérateur, appelle les supporters à venir
-${platform === 'instagram' ? `
-Contraintes Instagram :
-- Maximum 2200 caractères
-- Commence par un emoji accrocheur 🎾
-- 5 à 8 hashtags pertinents en fin de post (#tennis #tournoi #${clubName.toLowerCase().replace(/\s/g, '')} #fft)
-- Une ligne par joueur pour la lisibilité` : ''}
-${platform === 'facebook' ? `
-Contraintes Facebook :
-- Structuré avec des sauts de ligne clairs
-- Plus informatif que Instagram, peut être plus long
-- Pas de hashtags en excès (2-3 max)
-- Inclure un appel à partager la publication` : ''}
-${platform === 'whatsapp' ? `
-Contraintes WhatsApp :
-- Court et direct, maximum 300 caractères
-- Sans hashtags
-- Ton SMS/chat entre amis, informel mais enthousiaste
-- L'essentiel : qui joue, quand, où` : ''}
 
-Réponds uniquement avec le texte du post, sans guillemets ni introduction.`
+Contraintes par plateforme :
+- Instagram : max 2200 caractères, commence par 🎾, une ligne par joueur, 5 à 8 hashtags en fin (#tennis #tournoi #${tag} #fft)
+- Facebook : plus informatif, sauts de ligne clairs, 2-3 hashtags max, inclure un appel à partager
+- WhatsApp : court (max 300 caractères), sans hashtags, ton SMS entre amis : qui joue, quand, où
 
-  return base
+${MULTI_PLATFORM_FORMAT}`
 }
 
 // ── WEEKLY INTERCLUB SCHEDULE ──────────────────────────────────────────────
@@ -72,34 +58,36 @@ export type WeeklyMatch = {
   venue?: string
 }
 
-export function weeklySchedulePrompt(
-  platform: 'instagram' | 'facebook' | 'whatsapp',
+export function weeklySchedulePromptAll(
   clubName: string,
   weekStart: Date,
   weekEnd: Date,
   matches: WeeklyMatch[]
 ): string {
   const weekStr = `du ${weekStart.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })} au ${weekEnd.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}`
-
+  const tag = clubName.toLowerCase().replace(/\s/g, '')
   const matchList = matches.map(m =>
     `${m.homeAway === 'DOMICILE' ? '🏠' : '✈️'} ${m.teamName} vs ${m.opponent} · ${m.day} ${m.time} · ${m.division}${m.venue ? ` · ${m.venue}` : ''}`
   ).join('\n')
 
   return `Tu es le community manager du club de tennis "${clubName}".
-Rédige un post ${platform} pour annoncer le programme des matchs interclubs de la semaine ${weekStr}.
+Rédige les posts réseaux sociaux pour annoncer le programme des matchs interclubs de la semaine ${weekStr}.
 
 Matchs à venir :
 ${matchList}
 
-Consignes :
+Consignes générales (valables pour les 3 posts) :
 - Vocabulaire interclubs tennis : "rencontre", "équipe", "capitaine", "journée"
 - Un match par ligne avec l'emoji 🏠 domicile ou ✈️ extérieur
 - Mentionne la division pour chaque équipe
 - Ton mobilisateur : appelle à venir soutenir
-${platform === 'instagram' ? '- 4 à 6 hashtags : #tennis #interclubs #${clubName.toLowerCase().replace(/\\s/g, "")} #fft' : ''}
-${platform === 'whatsapp' ? '- Court, sans hashtags, style groupe de supporters' : ''}
 
-Réponds uniquement avec le texte du post.`
+Contraintes par plateforme :
+- Instagram : dynamique, 4 à 6 hashtags (#tennis #interclubs #${tag} #fft)
+- Facebook : narratif et communautaire, peu de hashtags
+- WhatsApp : court, sans hashtags, style groupe de supporters
+
+${MULTI_PLATFORM_FORMAT}`
 }
 
 // ── INTERCLUB RESULT ───────────────────────────────────────────────────────
@@ -112,8 +100,7 @@ export type ScoreDetail = {
   type: 'SIMPLE' | 'DOUBLE'
 }
 
-export function interclubResultPrompt(
-  platform: 'instagram' | 'facebook' | 'whatsapp',
+export function interclubResultPromptAll(
   clubName: string,
   teamName: string,
   opponent: string,
@@ -125,6 +112,7 @@ export function interclubResultPrompt(
 ): string {
   const [us, them] = globalScore.split('-').map(Number)
   const outcome = us > them ? 'victoire' : us < them ? 'défaite' : 'match nul'
+  const tag = clubName.toLowerCase().replace(/\s/g, '')
 
   const detailList = scoreDetail.map(s =>
     `${s.type === 'DOUBLE' ? '(Double) ' : ''}${s.player} vs ${s.opponent} : ${s.score} → ${s.won ? 'Victoire' : 'Défaite'}`
@@ -137,7 +125,7 @@ export function interclubResultPrompt(
   }[outcome]
 
   return `Tu es le community manager du club de tennis "${clubName}".
-Rédige un post ${platform} pour communiquer sur ce résultat interclubs.
+Rédige les posts réseaux sociaux pour communiquer sur ce résultat interclubs.
 
 Résultat : ${teamName} ${globalScore} ${opponent} (${homeAway.toLowerCase()})
 Division : ${division}
@@ -146,14 +134,16 @@ ${round ? `Journée : ${round}` : ''}
 Détail des matchs joués :
 ${detailList}
 
-Consignes :
+Consignes générales (valables pour les 3 posts) :
 - ${toneInstruction}
 - Cite le score global en évidence (${globalScore})
 - Vocabulaire tennis précis : "simple", "double", "set", "jeu"
 - Mention de l'adversaire respectueusement
-${platform === 'instagram' ? `- 4-6 hashtags : #tennis #interclubs #${outcome} #fft #${clubName.toLowerCase().replace(/\s/g, '')}` : ''}
-${platform === 'whatsapp' ? '- Très court (3-4 lignes max), style message groupe' : ''}
-${platform === 'facebook' ? '- Plus narratif, peut mentionner le contexte de championnat' : ''}
 
-Réponds uniquement avec le texte du post.`
+Contraintes par plateforme :
+- Instagram : dynamique, 4-6 hashtags (#tennis #interclubs #${outcome} #fft #${tag})
+- Facebook : plus narratif, peut mentionner le contexte de championnat
+- WhatsApp : très court (3-4 lignes max), style message groupe
+
+${MULTI_PLATFORM_FORMAT}`
 }

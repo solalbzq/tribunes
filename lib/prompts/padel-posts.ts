@@ -1,4 +1,5 @@
 import type { TournamentMatch } from '../services/fft-pdf-parser'
+import { MULTI_PLATFORM_FORMAT } from './splitPlatforms'
 
 const PADEL_GRADES = ['P25', 'P100', 'P250', 'P500', 'P1000', 'Open']
 
@@ -23,8 +24,7 @@ function formatMatchList(matches: TournamentMatch[]): string {
 
 // ── TOURNAMENT SCHEDULE (PADEL) ────────────────────────────────────────────
 
-export function padelTournamentSchedulePrompt(
-  platform: 'instagram' | 'facebook' | 'whatsapp',
+export function padelTournamentSchedulePromptAll(
   clubName: string,
   tournamentName: string,
   grade: string,
@@ -35,9 +35,10 @@ export function padelTournamentSchedulePrompt(
   const dateStr = matchDate.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
   const matchList = formatMatchList(clubMatches)
   const gradeLabel = grade ? ` (${formatGrade(grade)})` : ''
+  const tag = clubName.toLowerCase().replace(/\s/g, '')
 
   return `Tu es le community manager du club de padel "${clubName}".
-Rédige un post ${platform === 'instagram' ? 'Instagram' : platform === 'facebook' ? 'Facebook' : 'WhatsApp'} pour annoncer la programmation de nos joueurs au tournoi "${tournamentName}"${gradeLabel}.
+Rédige les posts réseaux sociaux pour annoncer la programmation de nos joueurs au tournoi "${tournamentName}"${gradeLabel}.
 
 Informations :
 - Date : ${dateStr}
@@ -46,22 +47,17 @@ ${grade ? `- Grade du tournoi : ${formatGrade(grade)}` : ''}
 - Nos matchs programmés :
 ${matchList}
 
-Vocabulaire padel obligatoire :
-- "duo" ou "paire" (jamais "équipe" pour un double)
-- "partenaire" (jamais "coéquipier")
-- "smash", "bandeja", "vibora" pour les coups si pertinent
-- "couloir", "grille", "fond de court" pour les zones
-- "grade ${grade || 'P100'}" pour situer le niveau du tournoi
+Vocabulaire padel obligatoire (pour les 3 posts) :
+- "duo" ou "paire" (jamais "équipe" pour un double), "partenaire" (jamais "coéquipier")
+- "smash", "bandeja", "vibora" si pertinent ; "couloir", "grille", "fond de court" pour les zones
+- Cite chaque paire nominalement (Joueur1 / Joueur2), avec horaire et court
 
-Consignes :
-- Cite chaque paire nominalement (Joueur1 / Joueur2)
-- Mentionne l'horaire et le court pour chaque duo
-- Ton enthousiaste, appelle à soutenir les duos
-${platform === 'instagram' ? `- Commence par un emoji accrocheur 🎾 ou 🏸\n- 5-7 hashtags : #padel #padelfrance #${clubName.toLowerCase().replace(/\s/g, '')} #${(grade || 'tournoi').toLowerCase()} #fft` : ''}
-${platform === 'whatsapp' ? '- Court, sans hashtags, style groupe de joueurs\n- Maximum 200 caractères' : ''}
-${platform === 'facebook' ? '- Structuré avec une ligne par duo\n- Peut inclure un appel à partager' : ''}
+Contraintes par plateforme :
+- Instagram : commence par 🎾 ou 🏸, 5-7 hashtags (#padel #padelfrance #${tag} #${(grade || 'tournoi').toLowerCase()} #fft)
+- Facebook : une ligne par duo, appel à partager
+- WhatsApp : court (max 200 caractères), sans hashtags, style groupe de joueurs
 
-Réponds uniquement avec le texte du post.`
+${MULTI_PLATFORM_FORMAT}`
 }
 
 // ── WEEKLY INTERCLUB SCHEDULE (PADEL) ─────────────────────────────────────
@@ -76,38 +72,33 @@ export type PadelWeeklyMatch = {
   venue?: string
 }
 
-export function padelWeeklySchedulePrompt(
-  platform: 'instagram' | 'facebook' | 'whatsapp',
+export function padelWeeklySchedulePromptAll(
   clubName: string,
   weekStart: Date,
   weekEnd: Date,
   matches: PadelWeeklyMatch[]
 ): string {
   const weekStr = `du ${weekStart.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })} au ${weekEnd.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}`
-
   const matchList = matches.map(m =>
     `${m.homeAway === 'DOMICILE' ? '🏠' : '✈️'} ${m.teamName} vs ${m.opponent} · ${m.day} ${m.time} · ${m.division}${m.venue ? ` · ${m.venue}` : ''}`
   ).join('\n')
 
   return `Tu es le community manager du club de padel "${clubName}".
-Rédige un post ${platform} pour le programme interclubs padel de la semaine ${weekStr}.
+Rédige les posts réseaux sociaux pour le programme interclubs padel de la semaine ${weekStr}.
 
 Matchs :
 ${matchList}
 
-Vocabulaire padel interclubs :
-- "rencontre par équipes" ou "interclubs"
-- "capitaine de piste"
-- "division" (pas "poule" ni "championnat")
+Vocabulaire padel interclubs (pour les 3 posts) :
+- "rencontre par équipes" ou "interclubs", "capitaine de piste", "division" (pas "poule")
+- Un match par ligne, emoji domicile 🏠 / extérieur ✈️, mentionne la division
 
-Consignes :
-- Un match par ligne, emoji domicile/extérieur
-- Mentionne la division pour chaque équipe
-- Ton mobilisateur
-${platform === 'instagram' ? '- 4-6 hashtags : #padel #interclubs #padelfrance #fft' : ''}
-${platform === 'whatsapp' ? '- Court, sans hashtags, direct' : ''}
+Contraintes par plateforme :
+- Instagram : 4-6 hashtags (#padel #interclubs #padelfrance #fft)
+- Facebook : narratif et communautaire
+- WhatsApp : court, sans hashtags, direct
 
-Réponds uniquement avec le texte du post.`
+${MULTI_PLATFORM_FORMAT}`
 }
 
 // ── INTERCLUB RESULT (PADEL) ───────────────────────────────────────────────
@@ -119,8 +110,7 @@ export type PadelScoreDetail = {
   won: boolean
 }
 
-export function padelInterclubResultPrompt(
-  platform: 'instagram' | 'facebook' | 'whatsapp',
+export function padelInterclubResultPromptAll(
   clubName: string,
   teamName: string,
   opponent: string,
@@ -144,7 +134,7 @@ export function padelInterclubResultPrompt(
   }[outcome]
 
   return `Tu es le community manager du club de padel "${clubName}".
-Rédige un post ${platform} pour ce résultat interclubs.
+Rédige les posts réseaux sociaux pour ce résultat interclubs.
 
 Résultat : ${teamName} ${globalScore} ${opponent} (${homeAway.toLowerCase()})
 Division : ${division}
@@ -153,14 +143,15 @@ ${round ? `Journée : ${round}` : ''}
 Détail (par duo) :
 ${detailList}
 
-Vocabulaire padel :
-- "paire" ou "duo" (pas "équipe" pour un binôme)
-- "partenaire" pour désigner l'associé
+Vocabulaire padel (pour les 3 posts) :
+- "paire" ou "duo" (pas "équipe" pour un binôme), "partenaire" pour l'associé
 - "set" et "jeu" pour le score (ex: 6-4, 7-5)
+- ${toneInstruction}
 
-${toneInstruction}
-${platform === 'instagram' ? `- 4-5 hashtags : #padel #interclubs #${outcome} #padelfrance` : ''}
-${platform === 'whatsapp' ? '- 3-4 lignes max, style message de groupe' : ''}
+Contraintes par plateforme :
+- Instagram : 4-5 hashtags (#padel #interclubs #${outcome} #padelfrance)
+- Facebook : narratif, contexte de championnat
+- WhatsApp : 3-4 lignes max, style message de groupe
 
-Réponds uniquement avec le texte du post.`
+${MULTI_PLATFORM_FORMAT}`
 }

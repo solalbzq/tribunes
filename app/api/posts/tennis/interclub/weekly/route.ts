@@ -2,8 +2,10 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { prisma } from '@/lib/prisma'
 import { openai } from '@/lib/openai'
-import { weeklySchedulePrompt } from '@/lib/prompts/tennis-posts'
-import { padelWeeklySchedulePrompt } from '@/lib/prompts/padel-posts'
+import { weeklySchedulePromptAll } from '@/lib/prompts/tennis-posts'
+import { padelWeeklySchedulePromptAll } from '@/lib/prompts/padel-posts'
+import { splitPlatformPosts } from '@/lib/prompts/splitPlatforms'
+import { logAiUsage } from '@/lib/usage'
 
 export async function POST(req: Request) {
   const supabase = createClient()
@@ -47,21 +49,22 @@ export async function POST(req: Request) {
     division: m.division ?? '',
   }))
 
+  // Un seul appel IA pour les 3 plateformes (puis découpage).
+  const prompt = isPadel
+    ? padelWeeklySchedulePromptAll(club.name, weekStart, weekEnd, weeklyMatches)
+    : weeklySchedulePromptAll(club.name, weekStart, weekEnd, weeklyMatches)
+
+  const completion = await openai.chat.completions.create({
+    model: 'gpt-4o',
+    messages: [{ role: 'user', content: prompt }],
+    temperature: 0.8,
+  })
+  await logAiUsage(club.id, completion, 'gpt-4o')
+
+  const all = splitPlatformPosts(completion.choices[0].message.content ?? '')
+  const requested = platforms as Array<'instagram' | 'facebook' | 'whatsapp'>
   const posts: Record<string, string> = {}
-
-  for (const platform of platforms as Array<'instagram' | 'facebook' | 'whatsapp'>) {
-    const prompt = isPadel
-      ? padelWeeklySchedulePrompt(platform, club.name, weekStart, weekEnd, weeklyMatches)
-      : weeklySchedulePrompt(platform, club.name, weekStart, weekEnd, weeklyMatches)
-
-    const res = await openai.chat.completions.create({
-      model: 'gpt-4o',
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.8,
-      max_tokens: 1200,
-    })
-    posts[platform] = res.choices[0].message.content ?? ''
-  }
+  for (const platform of requested) posts[platform] = all[platform]
 
   // Save WeeklySchedule + posts
   const weekly = await prisma.weeklySchedule.create({
