@@ -39,3 +39,4 @@ pnpm-debug.log*
 
 # Dump temporaire de debug Ten'Up (contient des tokens tiers)
 scripts/.tenup-dump.html
+scripts/.tenup-prev.html
