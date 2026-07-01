@@ -7,6 +7,7 @@ import TennisVisualEditor from './TennisVisualEditor'
 import type { VisualConfig } from '@/lib/visualLayout'
 import { parseVisualConfig } from '@/lib/visualLayout'
 import type { TennisVisualConfig } from './posts/TennisVisualGenerator'
+import { Segmented } from './ui'
 
 type Club = {
   id: string
@@ -187,24 +188,14 @@ export default function ClubSettings({ club }: { club: Club }) {
 
   return (
     <div className="max-w-7xl space-y-6">
-      <div className="flex gap-2 flex-wrap">
-        {[
-          { key: 'management', label: '🏟️ Gestion du club' },
-          { key: 'art', label: '🎨 Direction artistique' },
-        ].map(tab => (
-          <button
-            key={tab.key}
-            onClick={() => setMainTab(tab.key as typeof mainTab)}
-            className={`px-4 py-2 rounded-xl text-sm font-semibold transition ${
-              mainTab === tab.key
-                ? 'bg-[#111827] text-white'
-                : 'bg-white text-gray-600 border border-gray-100 hover:bg-gray-50'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      <Segmented
+        value={mainTab}
+        onChange={setMainTab}
+        items={[
+          { key: 'management', label: 'Gestion du club', icon: 'sliders' },
+          { key: 'art', label: 'Direction artistique', icon: 'palette' },
+        ]}
+      />
 
       {mainTab === 'management' && (
         <div className="grid grid-cols-1 xl:grid-cols-[1.35fr_0.9fr] gap-6">
@@ -381,25 +372,15 @@ export default function ClubSettings({ club }: { club: Club }) {
 
       {mainTab === 'art' && (
         <div className="space-y-6">
-          <div className="flex gap-2 flex-wrap">
-            {[
-              { key: 'identity', label: '🪄 Identite visuelle' },
-              { key: 'result', label: '🖼️ Visuel resultat' },
-              ...(isTennisPadel ? [{ key: 'tennis', label: `${sport === 'Padel' ? '🏸' : '🎾'} Visuels ${sport}` }] : []),
-            ].map(tab => (
-              <button
-                key={tab.key}
-                onClick={() => setArtTab(tab.key as typeof artTab)}
-                className={`px-4 py-2 rounded-xl text-sm font-semibold transition ${
-                  artTab === tab.key
-                    ? 'bg-[#111827] text-white'
-                    : 'bg-white text-gray-600 border border-gray-100 hover:bg-gray-50'
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
+          <Segmented
+            value={artTab}
+            onChange={setArtTab}
+            items={[
+              { key: 'identity', label: 'Identité visuelle', icon: 'palette' },
+              { key: 'result', label: 'Visuel résultat', icon: 'image' },
+              ...(isTennisPadel ? [{ key: 'tennis' as const, label: `Visuels ${sport}`, icon: 'trophy' as const }] : []),
+            ]}
+          />
 
           {artTab === 'identity' && (
             <div className="grid grid-cols-1 xl:grid-cols-[1.1fr_0.9fr] gap-6">

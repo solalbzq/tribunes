@@ -7,6 +7,7 @@ import PostsResult from '../PostsResult'
 import VisualGenerator from '../VisualGenerator'
 import TennisProgrammeSection from './TennisProgrammeSection'
 import TennisVisualGenerator, { type TennisVisualConfig, DEFAULT_TENNIS_CONFIG } from './TennisVisualGenerator'
+import { PageHeader, Segmented } from '../ui'
 
 type Club = {
   name: string
@@ -430,32 +431,25 @@ function ResultsSection({ club }: { club: Club }) {
 export default function TennisPadelTab({ club }: { club: Club }) {
   const [section, setSection] = useState<'match' | 'programme' | 'tournament' | 'results'>('match')
   const sport = club.sport === 'Padel' ? 'Padel' : 'Tennis'
-  const emoji = sport === 'Padel' ? '🏸' : '🎾'
 
   return (
     <div className="max-w-5xl space-y-6">
-      <div className="flex items-center gap-3">
-        <span className="text-2xl">{emoji}</span>
-        <div>
-          <h2 className="text-xl font-extrabold text-[#111827]">Generer du contenu {sport}</h2>
-          <p className="text-sm text-gray-500">Choisis le type de contenu adapte a ton club.</p>
-        </div>
-      </div>
+      <PageHeader
+        icon="sparkles"
+        title={`Générer du contenu ${sport}`}
+        subtitle="Choisissez le type de contenu adapté à votre club."
+      />
 
-      {/* Sub-nav */}
-      <div className="flex gap-2 p-1 bg-gray-100 rounded-xl w-fit">
-        {[
-          { key: 'match', label: '🏟️ Post match' },
-          { key: 'programme', label: '📅 Programme' },
-          { key: 'tournament', label: `📄 Tournoi FFT` },
-          { key: 'results',    label: `🏆 Résultats` },
-        ].map(s => (
-          <button key={s.key} onClick={() => setSection(s.key as typeof section)}
-            className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${section === s.key ? 'bg-white text-[#111827] shadow-sm' : 'text-gray-600 hover:text-[#111827]'}`}>
-            {s.label}
-          </button>
-        ))}
-      </div>
+      <Segmented
+        value={section}
+        onChange={setSection}
+        items={[
+          { key: 'match', label: 'Post de match', icon: 'target' },
+          { key: 'programme', label: 'Programme', icon: 'calendar' },
+          { key: 'tournament', label: 'Tournoi FFT', icon: 'fileText' },
+          { key: 'results', label: 'Résultats', icon: 'trophy' },
+        ]}
+      />
 
       {section === 'match'      && <MatchSection            club={club} />}
       {section === 'programme'  && <TennisProgrammeSection  club={club} />}

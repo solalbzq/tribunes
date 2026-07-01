@@ -14,6 +14,17 @@ export type IconName =
   | 'trending'
   | 'users'
   | 'heart'
+  | 'image'
+  | 'upload'
+  | 'refresh'
+  | 'check'
+  | 'arrowLeft'
+  | 'arrowRight'
+  | 'target'
+  | 'sliders'
+  | 'copy'
+  | 'download'
+  | 'link'
 
 const PATHS: Record<IconName, ReactNode> = {
   home: <path d="M3 10.5 12 3l9 7.5M5 9.5V20h14V9.5" />,
@@ -76,6 +87,34 @@ const PATHS: Record<IconName, ReactNode> = {
     </>
   ),
   heart: <path d="M12 19.5S4.5 15 4.5 9.7A3.7 3.7 0 0 1 12 7a3.7 3.7 0 0 1 7.5 2.7C19.5 15 12 19.5 12 19.5Z" />,
+  image: (
+    <>
+      <rect x="4" y="4.5" width="16" height="15" rx="2.5" />
+      <circle cx="9" cy="9.5" r="1.5" />
+      <path d="m5 17 4.5-4.5 3.5 3.5 3-3 3 3" />
+    </>
+  ),
+  upload: <path d="M12 15.5v-11M8 8l4-4 4 4M5 19.5h14" />,
+  refresh: <path d="M19 8.5a7 7 0 1 0 1.5 5M19 4v4.5h-4.5" />,
+  check: <path d="m5 12.5 4 4 10-10" />,
+  arrowLeft: <path d="M19 12H5.5M11 5.5 4.5 12l6.5 6.5" />,
+  arrowRight: <path d="M5 12h13.5M13 5.5 19.5 12 13 18.5" />,
+  target: (
+    <>
+      <circle cx="12" cy="12" r="8" />
+      <circle cx="12" cy="12" r="4" />
+      <circle cx="12" cy="12" r="0.6" fill="currentColor" stroke="none" />
+    </>
+  ),
+  sliders: <path d="M4 8h10M18 8h2M4 16h2M10 16h10M14 5.5v5M6 13.5v5" />,
+  copy: (
+    <>
+      <rect x="8.5" y="8.5" width="11" height="11" rx="2" />
+      <path d="M15.5 8.5V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7.5a2 2 0 0 0 2 2h2.5" />
+    </>
+  ),
+  download: <path d="M12 4.5v11M8 11.5l4 4 4-4M5 19.5h14" />,
+  link: <path d="M10 13.5a3.5 3.5 0 0 0 5 0l2.5-2.5a3.5 3.5 0 0 0-5-5L11 7.5M14 10.5a3.5 3.5 0 0 0-5 0L6.5 13a3.5 3.5 0 0 0 5 5L13 16.5" />,
 }
 
 export function Icon({ name, className, ...props }: { name: IconName } & SVGProps<SVGSVGElement>) {

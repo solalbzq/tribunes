@@ -7,6 +7,7 @@ import ProgrammeTab from './ProgrammeTab'
 import VisualGenerator from './VisualGenerator'
 import TennisPadelTab from './posts/TennisPadelTab'
 import type { TennisVisualConfig } from './posts/TennisVisualGenerator'
+import { PageHeader, Segmented, GhostButton } from './ui'
 
 type Club = {
   id: string
@@ -54,28 +55,20 @@ export default function ContentTab({ club }: { club: Club }) {
 
   return (
     <div className="max-w-5xl space-y-6">
-      <div className="flex items-center gap-3">
-        <span className="text-2xl">✨</span>
-        <div>
-          <h2 className="text-xl font-extrabold text-[#111827]">Generer du contenu</h2>
-          <p className="text-sm text-gray-500">Choisis le type de contenu adapte a ton club.</p>
-        </div>
-      </div>
+      <PageHeader
+        icon="sparkles"
+        title="Générer du contenu"
+        subtitle="Choisissez le type de contenu adapté à votre club."
+      />
 
-      <div className="flex gap-2 p-1 bg-gray-100 rounded-xl w-fit">
-        {[
-          { key: 'match', label: '🏟️ Post match' },
-          { key: 'programme', label: '📅 Programme' },
-        ].map(tab => (
-          <button
-            key={tab.key}
-            onClick={() => setSection(tab.key as typeof section)}
-            className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${section === tab.key ? 'bg-white text-[#111827] shadow-sm' : 'text-gray-600 hover:text-[#111827]'}`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      <Segmented
+        value={section}
+        onChange={setSection}
+        items={[
+          { key: 'match', label: 'Post de match', icon: 'target' },
+          { key: 'programme', label: 'Programme', icon: 'calendar' },
+        ]}
+      />
 
       {section === 'match' && !generatedPosts && !generatedMatch && (
         <GenerateForm
@@ -95,16 +88,10 @@ export default function ContentTab({ club }: { club: Club }) {
       {section === 'match' && !generatedPosts && generatedMatch && (
         <div className="max-w-2xl space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-extrabold text-[#111827]">Ton visuel est pret 🖼️</h2>
-            <button
-              onClick={() => {
-                setGeneratedMatch(null)
-                setGeneratedPhoto(null)
-              }}
-              className="text-sm text-gray-500 hover:text-[#2563eb] transition"
-            >
-              ← Nouveau match
-            </button>
+            <PageHeader icon="image" title="Votre visuel est prêt" tone="gold" />
+            <GhostButton icon="arrowLeft" onClick={() => { setGeneratedMatch(null); setGeneratedPhoto(null) }}>
+              Nouveau match
+            </GhostButton>
           </div>
           <VisualGenerator club={club} match={generatedMatch} photoFile={generatedPhoto} />
         </div>

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
+import { PageHeader, PrimaryButton, GhostButton } from './ui'
 
 type Club = { name: string; sport: string }
 type Posts = { instagram: string; facebook: string; whatsapp: string }
@@ -307,10 +308,10 @@ export default function GenerateForm({
   const hasScore = homeScore !== '' && awayScore !== ''
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 p-8 max-w-xl">
-      <h2 className="text-xl font-extrabold text-[#111827] mb-6">
-        Nouveau match — {club.name}
-      </h2>
+    <div className="max-w-xl rounded-card border border-line bg-white p-6 shadow-card sm:p-8">
+      <div className="mb-6">
+        <PageHeader icon="target" title="Nouveau match" subtitle={club.name} />
+      </div>
 
       <form onSubmit={handleSubmit} className="space-y-5">
         {/* Domicile / Extérieur */}
@@ -437,15 +438,14 @@ export default function GenerateForm({
         {error && <p className="text-sm text-red-500">{error}</p>}
 
         <div className="flex gap-3">
-          <button type="submit" disabled={loading || loadingVisual}
-            className="flex-1 bg-[#2563eb] text-white font-bold py-3.5 rounded-xl hover:bg-[#1d4ed8] transition disabled:opacity-60 flex items-center justify-center gap-2">
-            {loading ? <><span className="animate-spin">⚡</span> L'IA génère tes posts...</> : '✨ Posts + Visuel'}
-          </button>
-          <button type="button" onClick={handleVisualOnly}
+          <PrimaryButton type="submit" disabled={loading || loadingVisual} loading={loading} icon={loading ? undefined : 'sparkles'} className="flex-1 py-3.5">
+            {loading ? "L'IA rédige vos posts…" : 'Posts + visuel'}
+          </PrimaryButton>
+          <GhostButton type="button" onClick={handleVisualOnly} icon="image"
             disabled={loading || loadingVisual || !opponent || homeScore === '' || awayScore === ''}
-            className="px-4 py-3.5 bg-[#111827] text-white font-bold rounded-xl hover:bg-[#1f2937] transition disabled:opacity-40 text-sm whitespace-nowrap">
-            🖼️ Visuel seul
-          </button>
+            className="whitespace-nowrap py-3.5">
+            Visuel seul
+          </GhostButton>
         </div>
       </form>
     </div>
