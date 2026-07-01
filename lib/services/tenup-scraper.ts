@@ -59,6 +59,17 @@ function endOfDay(d: Date): Date {
 
 // ── Fetch ────────────────────────────────────────────────────────────────
 
+/** Erreur spécifique : la page est protégée par le sas d'attente Queue-it. */
+export class QueueItBlockedError extends Error {
+  constructor() {
+    super(
+      "Ten'Up est protégé par un sas anti-robots (Queue-it) qui bloque la " +
+        'récupération automatique côté serveur. Utilise la saisie manuelle du programme.'
+    )
+    this.name = 'QueueItBlockedError'
+  }
+}
+
 async function fetchHtml(url: string): Promise<string> {
   const res = await fetch(url, {
     headers: {
@@ -68,11 +79,23 @@ async function fetchHtml(url: string): Promise<string> {
     },
     // Pas de cache : on veut toujours les données à jour
     cache: 'no-store',
+    redirect: 'follow',
   })
+
+  // Queue-it intercepte tout le domaine tenup.fft.fr et renvoie sa page de sas.
+  if (/queue-it\.net/i.test(res.url)) {
+    throw new QueueItBlockedError()
+  }
   if (!res.ok) {
     throw new Error(`Ten'Up a répondu ${res.status} pour ${url}`)
   }
-  return res.text()
+
+  const html = await res.text()
+  // Sécurité supplémentaire : détecter le challenge Queue-it dans le corps.
+  if (/queue-it|Queue-it|enqueuetoken/.test(html) && html.length < 8000) {
+    throw new QueueItBlockedError()
+  }
+  return html
 }
 
 // ── Parsing ──────────────────────────────────────────────────────────────

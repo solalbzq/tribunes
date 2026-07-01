@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { prisma } from '@/lib/prisma'
-import { scrapeTenup, isTenupUrl, type TenupScrapeScope } from '@/lib/services/tenup-scraper'
+import { scrapeTenup, isTenupUrl, QueueItBlockedError, type TenupScrapeScope } from '@/lib/services/tenup-scraper'
 
 export async function POST(req: Request) {
   const supabase = createClient()
@@ -44,6 +44,11 @@ export async function POST(req: Request) {
     const result = await scrapeTenup(url, scope)
     return NextResponse.json(result)
   } catch (err) {
+    // Sas Queue-it : ce n'est pas une panne, on renvoie un message clair (200)
+    // pour que l'UI invite simplement à passer en saisie manuelle.
+    if (err instanceof QueueItBlockedError) {
+      return NextResponse.json({ matches: [], scrapedAt: new Date().toISOString(), warning: err.message })
+    }
     console.error('[tenup/scrape] error:', err)
     return NextResponse.json(
       { error: (err as Error).message ?? "Échec de la récupération Ten'Up" },
