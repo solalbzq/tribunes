@@ -192,7 +192,7 @@ function HomeView({
             <div className="flex items-center gap-4">
               <ClubAvatar club={club} initials={initials} size={52} />
               <div>
-                <p className="text-[13px] font-semibold text-muted">Bonjour 👋</p>
+                <p className="text-[13px] font-semibold text-muted">Bonjour</p>
                 <h1 className="text-2xl font-black tracking-[-0.02em] text-ink sm:text-3xl">{club.name}</h1>
               </div>
             </div>

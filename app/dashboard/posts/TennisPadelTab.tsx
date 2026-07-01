@@ -7,7 +7,8 @@ import PostsResult from '../PostsResult'
 import VisualGenerator from '../VisualGenerator'
 import TennisProgrammeSection from './TennisProgrammeSection'
 import TennisVisualGenerator, { type TennisVisualConfig, DEFAULT_TENNIS_CONFIG } from './TennisVisualGenerator'
-import { PageHeader, Segmented } from '../ui'
+import { PageHeader, Segmented, GhostButton } from '../ui'
+import { Icon } from '../icons'
 
 type Club = {
   name: string
@@ -29,9 +30,9 @@ type MatchData = {
 }
 
 const PLATFORMS: { key: Platform; label: string; emoji: string }[] = [
-  { key: 'instagram', label: 'Instagram', emoji: '📸' },
-  { key: 'facebook',  label: 'Facebook',  emoji: '👥' },
-  { key: 'whatsapp',  label: 'WhatsApp',  emoji: '💬' },
+  { key: 'instagram', label: 'Instagram', emoji: '' },
+  { key: 'facebook',  label: 'Facebook',  emoji: '' },
+  { key: 'whatsapp',  label: 'WhatsApp',  emoji: '' },
 ]
 
 function PostDisplay({ posts }: { posts: Record<string, string> }) {
@@ -45,18 +46,18 @@ function PostDisplay({ posts }: { posts: Record<string, string> }) {
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
+    <div className="bg-white rounded-card border border-line shadow-card p-6 space-y-4">
       <div className="flex gap-2">
         {PLATFORMS.filter(p => posts[p.key]).map(p => (
           <button key={p.key} onClick={() => setTab(p.key)}
             className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition ${tab === p.key ? 'bg-[#111827] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
-            {p.emoji} {p.label}
+            {p.label}
           </button>
         ))}
         <button onClick={copy}
           className="ml-auto px-3 py-1.5 rounded-lg text-sm font-semibold text-white transition"
           style={{ background: copied ? '#22c55e' : '#2563eb' }}>
-          {copied ? '✓ Copié' : '📋 Copier'}
+          {copied ? '✓ Copié' : 'Copier'}
         </button>
       </div>
       <pre className="whitespace-pre-wrap text-sm text-gray-700 bg-gray-50 rounded-xl p-4 max-h-80 overflow-y-auto font-sans">
@@ -73,12 +74,11 @@ function MatchSection({ club }: { club: Club }) {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-2xl border border-gray-100 p-6">
-        <h3 className="font-bold text-[#111827]">🏟️ Post de match</h3>
-        <p className="text-sm text-gray-500 mt-1">
-          Cree rapidement un post de resultat avec son visuel pour ton club.
-        </p>
-      </div>
+      <PageHeader
+        icon="target"
+        title="Post de match"
+        subtitle="Créez un post de résultat avec son visuel, aux couleurs de votre club."
+      />
 
       {!generatedPosts && !generatedMatch && (
         <GenerateForm
@@ -98,16 +98,10 @@ function MatchSection({ club }: { club: Club }) {
       {!generatedPosts && generatedMatch && (
         <div className="max-w-2xl space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-extrabold text-[#111827]">Ton visuel est pret 🖼️</h2>
-            <button
-              onClick={() => {
-                setGeneratedMatch(null)
-                setGeneratedPhoto(null)
-              }}
-              className="text-sm text-gray-500 hover:text-[#2563eb] transition"
-            >
-              ← Nouveau match
-            </button>
+            <PageHeader icon="image" title="Votre visuel est prêt" tone="gold" />
+            <GhostButton icon="arrowLeft" onClick={() => { setGeneratedMatch(null); setGeneratedPhoto(null) }}>
+              Nouveau match
+            </GhostButton>
           </div>
           <VisualGenerator club={club} match={generatedMatch} photoFile={generatedPhoto} />
         </div>
@@ -185,10 +179,12 @@ function TournamentSection({ club }: { club: Club }) {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-5">
-        <h3 className="font-bold text-[#111827]">
-          {isPadel ? '🎾 Programmation tournoi FFT Padel' : '🎾 Programmation tournoi FFT Tennis'}
-        </h3>
+      <div className="bg-white rounded-card border border-line shadow-card p-6 space-y-5">
+        <PageHeader
+          icon="fileText"
+          title={isPadel ? 'Tournoi FFT Padel' : 'Tournoi FFT Tennis'}
+          subtitle="Importez la fiche de programmation, on en extrait vos matchs."
+        />
 
         {/* Upload PDF */}
         <div>
@@ -197,12 +193,12 @@ function TournamentSection({ club }: { club: Club }) {
             className="border-2 border-dashed border-gray-200 rounded-xl p-8 text-center cursor-pointer hover:border-[#2563eb] transition">
             {file ? (
               <div>
-                <p className="font-semibold text-[#111827]">📄 {file.name}</p>
+                <p className="font-semibold text-[#111827]">{file.name}</p>
                 <p className="text-xs text-gray-400 mt-1">{(file.size / 1024).toFixed(0)} Ko</p>
               </div>
             ) : (
               <div className="space-y-2">
-                <p className="text-3xl">📂</p>
+                <Icon name="upload" className="mx-auto h-7 w-7 text-muted" />
                 <p className="text-sm text-gray-500">Glissez le PDF FFT ici ou cliquez pour sélectionner</p>
                 <p className="text-xs text-gray-400">PDF uniquement · max 10 Mo</p>
               </div>
@@ -232,13 +228,13 @@ function TournamentSection({ club }: { club: Club }) {
 
         <button onClick={handleParse} disabled={!file || parsing}
           className="w-full py-3 bg-[#111827] text-white font-bold rounded-xl hover:bg-[#1f2937] transition disabled:opacity-60">
-          {parsing ? '⏳ Analyse du PDF...' : '🔍 Analyser le PDF'}
+          {parsing ? 'Analyse du PDF...' : 'Analyser le PDF'}
         </button>
       </div>
 
       {/* Parse results */}
       {parseResult && (
-        <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
+        <div className="bg-white rounded-card border border-line shadow-card p-6 space-y-4">
           <div className="flex items-start justify-between">
             <div>
               <h4 className="font-bold text-[#111827]">{parseResult.tournamentName}</h4>
@@ -294,7 +290,7 @@ function TournamentSection({ club }: { club: Club }) {
                   {PLATFORMS.map(p => (
                     <button key={p.key} type="button" onClick={() => togglePlatform(p.key)}
                       className={`px-3 py-2 rounded-xl text-sm font-semibold border transition ${platforms.includes(p.key) ? 'bg-[#111827] text-white border-[#111827]' : 'bg-white text-gray-600 border-gray-200'}`}>
-                      {p.emoji} {p.label}
+                      {p.label}
                     </button>
                   ))}
                 </div>
@@ -302,18 +298,18 @@ function TournamentSection({ club }: { club: Club }) {
               <div className="flex gap-3">
                 <button onClick={() => handleGenerate(false)} disabled={generating || platforms.length === 0}
                   className="flex-1 py-3 bg-[#2563eb] text-white font-bold rounded-xl hover:bg-[#1d4ed8] transition disabled:opacity-60 flex items-center justify-center gap-2">
-                  {generating ? <><span className="animate-spin">⚡</span> Génération en cours...</> : '✨ Générer les posts'}
+                  {generating ? <><Icon name="refresh" className="h-[18px] w-[18px] animate-spin" /> Génération en cours...</> : 'Générer les posts'}
                 </button>
                 {posts && (
                   <button onClick={() => handleGenerate(true)} disabled={generating}
-                    className="px-4 py-3 bg-gray-100 text-[#111827] font-bold rounded-xl hover:bg-gray-200 transition text-sm whitespace-nowrap"
+                    className="inline-flex items-center gap-2 px-4 py-3 bg-gray-100 text-[#111827] font-bold rounded-xl hover:bg-gray-200 transition text-sm whitespace-nowrap"
                     title="Régénérer de nouveaux textes (rappelle l'IA)">
-                    ♻️ Régénérer
+                    <Icon name="refresh" className="h-4 w-4" /> Régénérer
                   </button>
                 )}
                 <button onClick={() => setShowVisualOnly(true)}
-                  className="px-5 py-3 bg-gray-100 text-[#111827] font-bold rounded-xl hover:bg-gray-200 transition text-sm whitespace-nowrap">
-                  🖼️ Visuel seul
+                  className="inline-flex items-center gap-2 px-5 py-3 bg-gray-100 text-[#111827] font-bold rounded-xl hover:bg-gray-200 transition text-sm whitespace-nowrap">
+                  <Icon name="image" className="h-4 w-4" /> Visuel seul
                 </button>
               </div>
             </div>
@@ -374,14 +370,18 @@ function ResultsSection({ club }: { club: Club }) {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="font-bold text-[#111827]">🏆 Résultats interclubs</h3>
-          <button onClick={loadMatches} disabled={loading}
-            className="px-4 py-2 bg-[#111827] text-white text-sm font-semibold rounded-xl hover:bg-[#1f2937] transition disabled:opacity-60">
-            {loading ? '...' : '🔄 Charger'}
-          </button>
-        </div>
+      <div className="bg-white rounded-card border border-line shadow-card p-6 space-y-4">
+        <PageHeader
+          icon="trophy"
+          title="Résultats interclubs"
+          subtitle="Générez le post d'un résultat de rencontre."
+          action={
+            <button onClick={loadMatches} disabled={loading}
+              className="inline-flex items-center gap-2 rounded-btn bg-ink px-4 py-2 text-sm font-semibold text-white transition hover:bg-ink/90 disabled:opacity-60">
+              <Icon name="refresh" className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} /> {loading ? 'Chargement…' : 'Charger'}
+            </button>
+          }
+        />
 
         {matches.length === 0 && !loading && (
           <p className="text-sm text-gray-400 text-center py-4">
@@ -403,7 +403,7 @@ function ResultsSection({ club }: { club: Club }) {
               {!posts[m.id] && (
                 <button onClick={() => generateResult(m.id)} disabled={generating === m.id}
                   className="px-3 py-2 bg-[#2563eb] text-white text-sm font-semibold rounded-xl hover:bg-[#1d4ed8] transition disabled:opacity-60 whitespace-nowrap">
-                  {generating === m.id ? '⏳...' : '✨ Générer'}
+                  {generating === m.id ? '...' : 'Générer'}
                 </button>
               )}
             </div>
@@ -413,7 +413,7 @@ function ResultsSection({ club }: { club: Club }) {
                 <button onClick={() => generateResult(m.id, true)} disabled={generating === m.id}
                   className="text-xs font-semibold text-gray-500 hover:text-[#2563eb] transition disabled:opacity-60"
                   title="Régénérer de nouveaux textes (rappelle l'IA)">
-                  {generating === m.id ? '⏳ Régénération...' : '♻️ Régénérer'}
+                  {generating === m.id ? 'Régénération...' : 'Régénérer'}
                 </button>
               </>
             )}

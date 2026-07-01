@@ -22,10 +22,10 @@ type MatchData = {
 }
 
 const PLATFORMS = [
-  { key: 'instagram' as const, label: 'Instagram', icon: '📸', color: '#E1306C' },
-  { key: 'facebook' as const, label: 'Facebook', icon: '👥', color: '#1877F2' },
-  { key: 'whatsapp' as const, label: 'WhatsApp', icon: '💬', color: '#25D366' },
-  { key: 'visual' as const, label: 'Visuel', icon: '🖼️', color: '#111827' },
+  { key: 'instagram' as const, label: 'Instagram', icon: '', color: '#E1306C' },
+  { key: 'facebook' as const, label: 'Facebook', icon: '', color: '#1877F2' },
+  { key: 'whatsapp' as const, label: 'WhatsApp', icon: '', color: '#25D366' },
+  { key: 'visual' as const, label: 'Visuel', icon: '', color: '#111827' },
 ]
 
 export default function PostsResult({
@@ -58,7 +58,7 @@ export default function PostsResult({
           onClick={onReset}
           className="text-sm text-gray-500 hover:text-[#2563eb] transition"
         >
-          ← Nouveau match
+         Nouveau match
         </button>
       </div>
 
@@ -85,7 +85,7 @@ export default function PostsResult({
 
       {/* Post card */}
       {active !== 'visual' && PLATFORMS.map(p => p.key === active && (
-        <div key={p.key} className="bg-white rounded-2xl border border-gray-100 p-6">
+        <div key={p.key} className="bg-white rounded-card border border-line shadow-card p-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <span className="text-lg">{p.icon}</span>
@@ -96,7 +96,7 @@ export default function PostsResult({
               className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-white transition"
               style={{ background: copied === p.key ? '#22c55e' : p.color }}
             >
-              {copied === p.key ? '✓ Copié !' : '📋 Copier'}
+              {copied === p.key ? '✓ Copié !' : 'Copier'}
             </button>
           </div>
           <div className="bg-gray-50 rounded-xl p-4 text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
@@ -123,7 +123,7 @@ export default function PostsResult({
                 : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
             }`}
           >
-            {copied === 'all' ? '✓ Tous copiés !' : '📋 Copier tous les posts'}
+            {copied === 'all' ? '✓ Tous copiés !' : 'Copier tous les posts'}
           </button>
         </div>
       )}

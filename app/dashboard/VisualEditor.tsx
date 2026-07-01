@@ -15,9 +15,9 @@ type Club = {
 
 const HANDLE = 18
 const LABELS: Record<ElementType, string> = {
-  sport: '🏷️ Sport', clubName: '📛 Nom du club', logo: '🏆 Logo',
-  scoreBlock: '⚽ Carte score', footer: '📌 Bandeau bas',
-  text: '✏️ Texte', rect: '▭ Rectangle', circle: '⬤ Cercle', line: '— Séparateur',
+  sport: 'Sport', clubName: 'Nom du club', logo: 'Logo',
+  scoreBlock: 'Carte score', footer: 'Bandeau bas',
+  text: 'Texte', rect: 'Rectangle', circle: 'Cercle', line: 'Séparateur',
 }
 const LOCKED = new Set<ElementType>(['sport', 'clubName', 'logo', 'scoreBlock', 'footer'])
 

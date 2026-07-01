@@ -56,7 +56,7 @@ export default function ProgrammeTab({ club }: { club: Club }) {
 
         <div className="space-y-3">
           {matches.map((m, i) => (
-            <div key={m.id} className="bg-white rounded-2xl border border-gray-100 p-4">
+            <div key={m.id} className="bg-white rounded-card border border-line shadow-card p-4">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-xs font-bold text-gray-400 uppercase tracking-wide">Match {i + 1}</span>
                 {matches.length > 1 && (
@@ -72,7 +72,7 @@ export default function ProgrammeTab({ club }: { club: Club }) {
               <div className="space-y-2">
                 {/* Domicile / Extérieur */}
                 <div className="flex gap-2">
-                  {[{ val: true, label: '🏟️ Dom.' }, { val: false, label: '✈️ Ext.' }].map(opt => (
+                  {[{ val: true, label: 'Dom.' }, { val: false, label: 'Ext.' }].map(opt => (
                     <button
                       key={String(opt.val)}
                       type="button"

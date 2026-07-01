@@ -8,6 +8,8 @@ import type { VisualConfig } from '@/lib/visualLayout'
 import { parseVisualConfig } from '@/lib/visualLayout'
 import type { TennisVisualConfig } from './posts/TennisVisualGenerator'
 import { Segmented } from './ui'
+import { Icon } from './icons'
+import { LogoMark } from '@/components/Logo'
 
 type Club = {
   id: string
@@ -200,9 +202,9 @@ export default function ClubSettings({ club }: { club: Club }) {
       {mainTab === 'management' && (
         <div className="grid grid-cols-1 xl:grid-cols-[1.35fr_0.9fr] gap-6">
           <div className="space-y-6">
-            <div className="bg-white rounded-3xl border border-gray-100 p-6 space-y-5">
+            <div className="bg-white rounded-card border border-line shadow-card p-6 space-y-5">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.25em] text-gray-400">Base club</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand">Base club</p>
                 <h3 className="text-xl font-extrabold text-[#111827] mt-2">Informations generales</h3>
                 <p className="text-sm text-gray-500 mt-1">Ajoute un maximum d'infos utiles. Rien n'est obligatoire, mais plus ton club est renseigne, plus tes futurs dashboards seront pertinents.</p>
               </div>
@@ -237,9 +239,9 @@ export default function ClubSettings({ club }: { club: Club }) {
               </div>
             </div>
 
-            <div className="bg-white rounded-3xl border border-gray-100 p-6 space-y-5">
+            <div className="bg-white rounded-card border border-line shadow-card p-6 space-y-5">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.25em] text-gray-400">Ressources</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand">Ressources</p>
                 <h3 className="text-xl font-extrabold text-[#111827] mt-2">Effectifs et vie du club</h3>
               </div>
 
@@ -274,9 +276,9 @@ export default function ClubSettings({ club }: { club: Club }) {
               </div>
             </div>
 
-            <div className="bg-white rounded-3xl border border-gray-100 p-6 space-y-5">
+            <div className="bg-white rounded-card border border-line shadow-card p-6 space-y-5">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.25em] text-gray-400">Presence et contenu</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand">Presence et contenu</p>
                 <h3 className="text-xl font-extrabold text-[#111827] mt-2">Canaux de communication</h3>
               </div>
 
@@ -303,9 +305,9 @@ export default function ClubSettings({ club }: { club: Club }) {
             </div>
 
             {isTennisPadel && (
-              <div className="bg-white rounded-3xl border border-gray-100 p-6 space-y-5">
+              <div className="bg-white rounded-card border border-line shadow-card p-6 space-y-5">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.25em] text-gray-400">Automatisation</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand">Automatisation</p>
                   <h3 className="text-xl font-extrabold text-[#111827] mt-2">Lien Ten'Up du club</h3>
                   <p className="text-sm text-gray-500 mt-1">Colle l'adresse de la page Ten'Up de ton club (tenup.fft.fr). Elle permettra de recuperer automatiquement le programme de la semaine ou du jour dans l'onglet Programme.</p>
                 </div>
@@ -339,9 +341,9 @@ export default function ClubSettings({ club }: { club: Club }) {
               </div>
             </div>
 
-            <div className="bg-white rounded-3xl border border-gray-100 p-6 space-y-4">
+            <div className="bg-white rounded-card border border-line shadow-card p-6 space-y-4">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.25em] text-gray-400">Resume club</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand">Resume club</p>
                 <h3 className="text-xl font-extrabold text-[#111827] mt-2">Carte d'identite</h3>
               </div>
               <SummaryRow label="Club" value={name || 'A renseigner'} />
@@ -352,9 +354,9 @@ export default function ClubSettings({ club }: { club: Club }) {
               <SummaryRow label="Contact" value={profile.contactEmail || 'A renseigner'} />
             </div>
 
-            <div className="bg-white rounded-3xl border border-gray-100 p-6 space-y-4">
+            <div className="bg-white rounded-card border border-line shadow-card p-6 space-y-4">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.25em] text-gray-400">Donnees utiles</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand">Donnees utiles</p>
                 <h3 className="text-xl font-extrabold text-[#111827] mt-2">Ce que Tribunes pourra exploiter</h3>
               </div>
               {[
@@ -385,9 +387,9 @@ export default function ClubSettings({ club }: { club: Club }) {
           {artTab === 'identity' && (
             <div className="grid grid-cols-1 xl:grid-cols-[1.1fr_0.9fr] gap-6">
               <div className="space-y-6">
-                <div className="bg-white rounded-3xl border border-gray-100 p-6 space-y-5">
+                <div className="bg-white rounded-card border border-line shadow-card p-6 space-y-5">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.25em] text-gray-400">Direction artistique</p>
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand">Direction artistique</p>
                     <h3 className="text-xl font-extrabold text-[#111827] mt-2">Logo, couleurs et ambiance</h3>
                     <p className="text-sm text-gray-500 mt-1">Configure les grands marqueurs visuels du club. Ils serviront dans les visuels, apercus et futures integrations.</p>
                   </div>
@@ -402,7 +404,7 @@ export default function ClubSettings({ club }: { club: Club }) {
                         {logoPreview ? (
                           <img src={logoPreview} alt="logo" className="w-full h-full object-contain p-2" />
                         ) : (
-                          <span className="text-3xl">🏆</span>
+                          <Icon name="image" className="h-7 w-7 text-muted" />
                         )}
                       </div>
                       <div>
@@ -481,7 +483,7 @@ export default function ClubSettings({ club }: { club: Club }) {
                       {logoPreview ? (
                         <img src={logoPreview} alt="logo" className="w-full h-full object-contain p-1" />
                       ) : (
-                        <span className="text-2xl">⚡</span>
+                        <LogoMark size={22} />
                       )}
                     </div>
                   </div>

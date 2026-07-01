@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { PageHeader, PrimaryButton, GhostButton } from './ui'
+import { Icon } from './icons'
 
 type Club = { name: string; sport: string }
 type Posts = { instagram: string; facebook: string; whatsapp: string }
@@ -19,7 +20,7 @@ type MatchData = {
 function FootballFields({ extra, set }: { extra: Record<string, unknown>; set: (k: string, v: unknown) => void }) {
   return (
     <div className="space-y-4 pt-2 border-t border-gray-100">
-      <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Détails ⚽</p>
+      <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Détails du match</p>
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label className="text-xs font-semibold text-[#111827] block mb-1">Score mi-temps (nous)</label>
@@ -57,7 +58,7 @@ function FootballFields({ extra, set }: { extra: Record<string, unknown>; set: (
 function TennisFields({ extra, set }: { extra: Record<string, unknown>; set: (k: string, v: unknown) => void }) {
   return (
     <div className="space-y-4 pt-2 border-t border-gray-100">
-      <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Détails 🎾</p>
+      <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Détails du match</p>
       <div>
         <label className="text-xs font-semibold text-[#111827] block mb-1">Détail des sets</label>
         <input type="text" placeholder="6-4, 3-6, 7-5"
@@ -102,7 +103,7 @@ function BasketballFields({ extra, set }: { extra: Record<string, unknown>; set:
   ]
   return (
     <div className="space-y-4 pt-2 border-t border-gray-100">
-      <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Quarts-temps 🏀</p>
+      <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Quarts-temps</p>
       <div className="grid grid-cols-2 gap-x-3 gap-y-3">
         {quarters.map(q => (
           <div key={q.key} className="space-y-1">
@@ -149,7 +150,7 @@ function VolleyballFields({ extra, set }: { extra: Record<string, unknown>; set:
   ]
   return (
     <div className="space-y-3 pt-2 border-t border-gray-100">
-      <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Points par set 🏐</p>
+      <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Points par set</p>
       <p className="text-xs text-gray-400">Le score final (sets remportés) est saisi dans le bloc score ci-dessus.</p>
       {sets.map(s => (
         <div key={s.key} className="space-y-1">
@@ -174,7 +175,7 @@ function VolleyballFields({ extra, set }: { extra: Record<string, unknown>; set:
 function HandballFields({ extra, set }: { extra: Record<string, unknown>; set: (k: string, v: unknown) => void }) {
   return (
     <div className="space-y-4 pt-2 border-t border-gray-100">
-      <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Détails 🤾</p>
+      <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Détails du match</p>
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label className="text-xs font-semibold text-[#111827] block mb-1">Mi-temps (nous)</label>
@@ -211,9 +212,9 @@ function scorePlaceholder(sport: string) {
 }
 
 function resultLabel(sport: string, myScore: number, oppScore: number): string {
-  if (myScore > oppScore) return sport === 'Tennis' || sport === 'Volleyball' ? '🏆 Victoire !' : '🏆 Victoire !'
-  if (myScore < oppScore) return '😤 Défaite'
-  return '🤝 Nul'
+  if (myScore > oppScore) return sport === 'Tennis' || sport === 'Volleyball' ? 'Victoire' : 'Victoire'
+  if (myScore < oppScore) return 'Défaite'
+  return 'Match nul'
 }
 
 // ── Main component ────────────────────────────────────────────────────────
@@ -318,7 +319,7 @@ export default function GenerateForm({
         <div>
           <label className="block text-sm font-semibold text-[#111827] mb-2">Où jouiez-vous ?</label>
           <div className="flex gap-3">
-            {[{ val: true, label: '🏟️ Domicile' }, { val: false, label: '✈️ Extérieur' }].map(opt => (
+            {[{ val: true, label: 'Domicile' }, { val: false, label: 'Extérieur' }].map(opt => (
               <button key={String(opt.val)} type="button" onClick={() => setIsHome(opt.val)}
                 className={`flex-1 py-2.5 rounded-xl text-sm font-semibold border transition ${
                   isHome === opt.val
@@ -405,7 +406,7 @@ export default function GenerateForm({
               className="w-20 h-20 rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center overflow-hidden cursor-pointer hover:border-[#2563eb] transition shrink-0">
               {photoPreview
                 ? <img src={photoPreview} alt="aperçu" className="w-full h-full object-cover" />
-                : <span className="text-2xl">📷</span>}
+                : <Icon name="image" className="h-6 w-6 text-muted" />}
             </div>
             <div>
               <button type="button" onClick={() => fileRef.current?.click()}

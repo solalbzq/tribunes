@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import type { TournamentMatch } from '@/lib/services/fft-pdf-parser'
 import TennisVisualGenerator, { type TennisVisualConfig, DEFAULT_TENNIS_CONFIG } from './TennisVisualGenerator'
+import { Icon } from '../icons'
 
 type Club = {
   name: string
@@ -119,9 +120,9 @@ export default function TennisProgrammeSection({ club }: { club: Club }) {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
+      <div className="bg-white rounded-card border border-line shadow-card p-6 space-y-4">
         <div>
-          <h3 className="font-bold text-[#111827]">📅 Programme du club</h3>
+          <h3 className="font-bold text-[#111827]">Programme du club</h3>
           <p className="text-sm text-gray-500 mt-1">
             Crée le visuel du programme à la main, ou récupère-le automatiquement depuis Ten'Up.
           </p>
@@ -130,8 +131,8 @@ export default function TennisProgrammeSection({ club }: { club: Club }) {
         {/* Toggle Manuel / Auto */}
         <div className="flex gap-2 p-1 bg-gray-100 rounded-xl w-fit">
           {[
-            { key: 'manual', label: '✍️ Manuel' },
-            { key: 'auto', label: '⚡ Automatique (Ten\'Up)' },
+            { key: 'manual', label: 'Manuel' },
+            { key: 'auto', label: 'Automatique (Ten\'Up)' },
           ].map(t => (
             <button
               key={t.key}
@@ -159,7 +160,7 @@ export default function TennisProgrammeSection({ club }: { club: Club }) {
                   )}
                 </div>
                 <div className="flex gap-2">
-                  {[{ v: true, l: '🏟️ Dom.' }, { v: false, l: '✈️ Ext.' }].map(o => (
+                  {[{ v: true, l: 'Dom.' }, { v: false, l: 'Ext.' }].map(o => (
                     <button
                       key={String(o.v)}
                       type="button"
@@ -205,7 +206,7 @@ export default function TennisProgrammeSection({ club }: { club: Club }) {
           <div className="space-y-4">
             {!club.tenupUrl ? (
               <p className="text-sm text-amber-700 bg-amber-50 rounded-xl p-4">
-                ⚠️ Aucun lien Ten'Up configuré. Ajoute l'URL Ten'Up de ton club dans <b>Mon club → Gestion du club</b> pour activer la récupération automatique.
+                ⚠️ Aucun lien Ten'Up configuré. Ajoute l'URL Ten'Up de ton club dans <b>Mon clubGestion du club</b> pour activer la récupération automatique.
               </p>
             ) : (
               <>
@@ -238,12 +239,12 @@ export default function TennisProgrammeSection({ club }: { club: Club }) {
                 <div className="flex gap-2">
                   <button onClick={() => fetchTenup(false)} disabled={loading}
                     className="flex-1 py-3 bg-[#111827] text-white font-bold rounded-xl hover:bg-[#1f2937] transition disabled:opacity-60 flex items-center justify-center gap-2">
-                    {loading ? <><span className="animate-spin">⚡</span> Récupération Ten'Up...</> : '🔄 Récupérer depuis Ten\'Up'}
+                    {loading ? <><Icon name="refresh" className="h-[18px] w-[18px] animate-spin" /> Récupération Ten'Up...</> : 'Récupérer depuis Ten\'Up'}
                   </button>
                   {autoMatches.length > 0 && (
                     <button onClick={() => fetchTenup(true)} disabled={loading} title="Forcer un nouveau scrape (ignore le cache)"
                       className="px-4 py-3 bg-gray-100 text-[#111827] font-bold rounded-xl hover:bg-gray-200 transition disabled:opacity-60 text-sm whitespace-nowrap">
-                      ♻️ Rafraîchir
+                     Rafraîchir
                     </button>
                   )}
                 </div>
