@@ -164,13 +164,13 @@ function TournamentSection({ club }: { club: Club }) {
     setParseResult({ ...data, venue: data.venue ?? '' })
   }
 
-  async function handleGenerate() {
+  async function handleGenerate(regenerate = false) {
     if (!parseResult) return
     setGenerating(true); setError('')
     const res = await fetch('/api/posts/tennis/tournament/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ scheduleId: parseResult.scheduleId, platforms, grade }),
+      body: JSON.stringify({ scheduleId: parseResult.scheduleId, platforms, grade, regenerate }),
     })
     const data = await res.json()
     setGenerating(false)
@@ -299,10 +299,17 @@ function TournamentSection({ club }: { club: Club }) {
                 </div>
               </div>
               <div className="flex gap-3">
-                <button onClick={handleGenerate} disabled={generating || platforms.length === 0}
+                <button onClick={() => handleGenerate(false)} disabled={generating || platforms.length === 0}
                   className="flex-1 py-3 bg-[#e94560] text-white font-bold rounded-xl hover:bg-[#d63a52] transition disabled:opacity-60 flex items-center justify-center gap-2">
                   {generating ? <><span className="animate-spin">⚡</span> Génération en cours...</> : '✨ Générer les posts'}
                 </button>
+                {posts && (
+                  <button onClick={() => handleGenerate(true)} disabled={generating}
+                    className="px-4 py-3 bg-gray-100 text-[#1a1a2e] font-bold rounded-xl hover:bg-gray-200 transition text-sm whitespace-nowrap"
+                    title="Régénérer de nouveaux textes (rappelle l'IA)">
+                    ♻️ Régénérer
+                  </button>
+                )}
                 <button onClick={() => setShowVisualOnly(true)}
                   className="px-5 py-3 bg-gray-100 text-[#1a1a2e] font-bold rounded-xl hover:bg-gray-200 transition text-sm whitespace-nowrap">
                   🖼️ Visuel seul
@@ -351,12 +358,12 @@ function ResultsSection({ club }: { club: Club }) {
     setLoading(false)
   }
 
-  async function generateResult(matchId: string) {
+  async function generateResult(matchId: string, regenerate = false) {
     setGenerating(matchId); setError('')
     const res = await fetch('/api/posts/tennis/interclub/result', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ matchResultId: matchId }),
+      body: JSON.stringify({ matchResultId: matchId, regenerate }),
     })
     const data = await res.json()
     setGenerating(null)
@@ -399,7 +406,16 @@ function ResultsSection({ club }: { club: Club }) {
                 </button>
               )}
             </div>
-            {posts[m.id] && <PostDisplay posts={posts[m.id]} />}
+            {posts[m.id] && (
+              <>
+                <PostDisplay posts={posts[m.id]} />
+                <button onClick={() => generateResult(m.id, true)} disabled={generating === m.id}
+                  className="text-xs font-semibold text-gray-500 hover:text-[#e94560] transition disabled:opacity-60"
+                  title="Régénérer de nouveaux textes (rappelle l'IA)">
+                  {generating === m.id ? '⏳ Régénération...' : '♻️ Régénérer'}
+                </button>
+              </>
+            )}
           </div>
         ))}
 

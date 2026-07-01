@@ -38,6 +38,22 @@ export function extractClubId(url: string): string | null {
 
 // ── Date helpers ─────────────────────────────────────────────────────────
 
+/** Lundi (00:00) de la semaine contenant `d`. */
+export function mondayOf(d: Date): Date {
+  const x = new Date(d)
+  const day = x.getDay()
+  const diff = x.getDate() - day + (day === 0 ? -6 : 1)
+  x.setDate(diff)
+  x.setHours(0, 0, 0, 0)
+  return x
+}
+
+/** Filtre les rencontres d'une semaine sur un jour précis. */
+export function filterMatchesForDay(matches: TournamentMatch[], day: Date): TournamentMatch[] {
+  const label = day.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
+  return matches.filter(m => m.round === label)
+}
+
 function inScope(date: Date, scope: TenupScrapeScope): boolean {
   if (scope.kind === 'day') {
     return date.toDateString() === scope.day.toDateString()

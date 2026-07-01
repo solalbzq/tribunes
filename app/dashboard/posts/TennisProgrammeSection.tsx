@@ -93,9 +93,11 @@ export default function TennisProgrammeSection({ club }: { club: Club }) {
   const [warning, setWarning] = useState('')
   const [error, setError] = useState('')
 
-  async function fetchTenup() {
-    setLoading(true); setError(''); setWarning(''); setAutoMatches([])
-    const body = scope === 'day' ? { day } : { weekStart }
+  const [fromCache, setFromCache] = useState(false)
+
+  async function fetchTenup(force = false) {
+    setLoading(true); setError(''); setWarning(''); setAutoMatches([]); setFromCache(false)
+    const body = { ...(scope === 'day' ? { day } : { weekStart }), force }
     const res = await fetch('/api/clubs/tenup/scrape', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -105,6 +107,7 @@ export default function TennisProgrammeSection({ club }: { club: Club }) {
     setLoading(false)
     if (!res.ok) { setError(data.error ?? 'Erreur Ten\'Up'); return }
     setAutoMatches(data.matches ?? [])
+    setFromCache(Boolean(data.cached))
     if (data.warning) setWarning(data.warning)
   }
 
@@ -232,15 +235,23 @@ export default function TennisProgrammeSection({ club }: { club: Club }) {
                       className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#e94560]/30" />
                   </div>
                 )}
-                <button onClick={fetchTenup} disabled={loading}
-                  className="w-full py-3 bg-[#1a1a2e] text-white font-bold rounded-xl hover:bg-[#2a2a4e] transition disabled:opacity-60 flex items-center justify-center gap-2">
-                  {loading ? <><span className="animate-spin">⚡</span> Récupération Ten'Up...</> : '🔄 Récupérer depuis Ten\'Up'}
-                </button>
+                <div className="flex gap-2">
+                  <button onClick={() => fetchTenup(false)} disabled={loading}
+                    className="flex-1 py-3 bg-[#1a1a2e] text-white font-bold rounded-xl hover:bg-[#2a2a4e] transition disabled:opacity-60 flex items-center justify-center gap-2">
+                    {loading ? <><span className="animate-spin">⚡</span> Récupération Ten'Up...</> : '🔄 Récupérer depuis Ten\'Up'}
+                  </button>
+                  {autoMatches.length > 0 && (
+                    <button onClick={() => fetchTenup(true)} disabled={loading} title="Forcer un nouveau scrape (ignore le cache)"
+                      className="px-4 py-3 bg-gray-100 text-[#1a1a2e] font-bold rounded-xl hover:bg-gray-200 transition disabled:opacity-60 text-sm whitespace-nowrap">
+                      ♻️ Rafraîchir
+                    </button>
+                  )}
+                </div>
                 {warning && <p className="text-sm text-amber-700 bg-amber-50 rounded-xl p-3">{warning}</p>}
                 {error && <p className="text-sm text-red-500 bg-red-50 rounded-xl p-3">{error}</p>}
                 {autoMatches.length > 0 && (
                   <p className="text-sm text-green-700 bg-green-50 rounded-xl p-3">
-                    ✅ {autoMatches.length} rencontre{autoMatches.length > 1 ? 's' : ''} récupérée{autoMatches.length > 1 ? 's' : ''}.
+                    ✅ {autoMatches.length} rencontre{autoMatches.length > 1 ? 's' : ''} récupérée{autoMatches.length > 1 ? 's' : ''}{fromCache ? ' (depuis le cache)' : ''}.
                   </p>
                 )}
               </>
