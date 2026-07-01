@@ -70,14 +70,58 @@ export class QueueItBlockedError extends Error {
   }
 }
 
-async function fetchHtml(url: string): Promise<string> {
+/** Vrai si un rendu navigateur (ScrapingBee) est configuré. */
+export function hasBrowserRenderer(): boolean {
+  return Boolean(process.env.SCRAPINGBEE_API_KEY)
+}
+
+/**
+ * Rend la page via ScrapingBee : navigateur réel + JS + proxy France.
+ * C'est ce qui permet de traverser légitimement le sas Queue-it (la salle
+ * d'attente exécute son JS puis redirige d'elle-même vers la vraie page).
+ */
+async function fetchViaScrapingBee(url: string): Promise<string> {
+  const key = process.env.SCRAPINGBEE_API_KEY
+  if (!key) throw new Error('SCRAPINGBEE_API_KEY manquant')
+
+  const params = new URLSearchParams({
+    api_key: key,
+    url,
+    render_js: 'true',
+    // Proxy résidentiel France : Queue-it lie le jeton à l'IP, on reste cohérent.
+    premium_proxy: 'true',
+    country_code: 'fr',
+    // Laisse le temps au sas Queue-it de faire sa redirection JS.
+    wait: '9000',
+    // Suivre la navigation jusqu'au retour sur tenup.fft.fr.
+    wait_browser: 'load',
+  })
+
+  const res = await fetch(`https://app.scrapingbee.com/api/v1/?${params.toString()}`, {
+    cache: 'no-store',
+  })
+  if (res.status === 401) throw new Error("Clé ScrapingBee invalide (401).")
+  if (!res.ok) {
+    const body = await res.text().catch(() => '')
+    throw new Error(`ScrapingBee a répondu ${res.status}${body ? ` — ${body.slice(0, 200)}` : ''}`)
+  }
+
+  const html = await res.text()
+  // Si on est toujours coincé dans le sas malgré le rendu (file active), on le signale.
+  if (/enqueuetoken|queue-it\.net/i.test(html) && html.length < 8000) {
+    throw new QueueItBlockedError()
+  }
+  return html
+}
+
+/** Fetch direct (sans navigateur). Bloqué par Queue-it sur tenup.fft.fr. */
+async function fetchDirect(url: string): Promise<string> {
   const res = await fetch(url, {
     headers: {
       'User-Agent': UA,
       Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
       'Accept-Language': 'fr-FR,fr;q=0.9',
     },
-    // Pas de cache : on veut toujours les données à jour
     cache: 'no-store',
     redirect: 'follow',
   })
@@ -91,11 +135,14 @@ async function fetchHtml(url: string): Promise<string> {
   }
 
   const html = await res.text()
-  // Sécurité supplémentaire : détecter le challenge Queue-it dans le corps.
   if (/queue-it|Queue-it|enqueuetoken/.test(html) && html.length < 8000) {
     throw new QueueItBlockedError()
   }
   return html
+}
+
+async function fetchHtml(url: string): Promise<string> {
+  return hasBrowserRenderer() ? fetchViaScrapingBee(url) : fetchDirect(url)
 }
 
 // ── Parsing ──────────────────────────────────────────────────────────────
@@ -242,8 +289,15 @@ export async function scrapeTenup(
   }
 
   const html = await fetchHtml(url)
+
+  // 1. Données JSON éventuellement injectées dans la page.
   const blobs = extractEmbeddedJson(html)
-  const matches = matchesFromJson(blobs, scope)
+  let matches = matchesFromJson(blobs, scope)
+
+  // 2. À défaut, extraction depuis le DOM rendu (page compétitions Ten'Up).
+  if (matches.length === 0) {
+    matches = parseMatchesFromDom(html, scope)
+  }
 
   const result: TenupScrapeResult = {
     matches,
@@ -251,10 +305,24 @@ export async function scrapeTenup(
   }
 
   if (matches.length === 0) {
-    result.warning =
-      "Aucune rencontre trouvée dans la page Ten'Up pour cette période. " +
-      'La page charge peut-être ses données dynamiquement — passe en saisie manuelle si besoin.'
+    result.warning = hasBrowserRenderer()
+      ? "Page Ten'Up récupérée mais aucune rencontre détectée pour cette période. " +
+        'Vérifie la période, ou signale-le pour affiner la lecture de la page.'
+      : "Aucune rencontre trouvée. Active le rendu navigateur (clé ScrapingBee) pour " +
+        "traverser le sas Ten'Up, ou passe en saisie manuelle."
   }
 
   return result
+}
+
+/**
+ * Extraction des rencontres depuis le DOM rendu de /club/ID/competitions.
+ *
+ * ⚠️ Sélecteurs à finaliser contre une vraie sortie rendue Ten'Up. En attendant,
+ * on fait une passe générique : on repère les dates (jj/mm/aaaa ou jour + mois)
+ * et les libellés d'équipes à proximité. Renvoie [] si rien de fiable.
+ */
+function parseMatchesFromDom(_html: string, _scope: TenupScrapeScope): TournamentMatch[] {
+  // TODO(tenup): implémenter les sélecteurs précis une fois le HTML rendu obtenu.
+  return []
 }
