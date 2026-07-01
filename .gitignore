@@ -36,3 +36,6 @@ pnpm-debug.log*
 *.key
 *.p12
 *.pfx
+
+# Dump temporaire de debug Ten'Up (contient des tokens tiers)
+scripts/.tenup-dump.html
