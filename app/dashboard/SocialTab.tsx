@@ -12,6 +12,7 @@ const STATUS: Record<string, { ok: boolean; text: string }> = {
   denied: { ok: false, text: "Connexion annulée." },
   error: { ok: false, text: 'Une erreur est survenue pendant la connexion.' },
   badstate: { ok: false, text: 'Session de connexion expirée, réessayez.' },
+  noclub: { ok: false, text: 'Créez d’abord votre club avant de connecter vos réseaux.' },
   notconfigured: { ok: false, text: "La connexion aux réseaux n'est pas configurée." },
 }
 

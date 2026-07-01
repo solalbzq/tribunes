@@ -17,7 +17,9 @@ export async function GET(req: NextRequest) {
   // Vérif CSRF via le cookie state
   const cookieState = req.cookies.get('meta_oauth_state')?.value
   if (!cookieState || cookieState !== state) {
-    return NextResponse.redirect(`${settingsUrl}&social=badstate`)
+    const res = NextResponse.redirect(`${settingsUrl}&social=badstate`)
+    res.cookies.delete('meta_oauth_state')
+    return res
   }
 
   const supabase = createClient()
@@ -31,32 +33,47 @@ export async function GET(req: NextRequest) {
     const { token, expiresIn } = await exchangeCodeForLongLivedToken(code)
     const pages = await getPagesWithInstagram(token)
     const expiresAt = new Date(Date.now() + expiresIn * 1000)
+    const validAccountKeys = new Set<string>()
 
-    let count = 0
-    for (const page of pages) {
-      // Connexion Facebook (Page)
-      await prisma.socialConnection.upsert({
-        where: { clubId_provider_providerAccountId: { clubId: club.id, provider: 'facebook', providerAccountId: page.pageId } },
-        update: { accountName: page.pageName, accessToken: page.pageToken, avatarUrl: page.avatarUrl, igUserId: page.igUserId, tokenExpiresAt: expiresAt },
-        create: { clubId: club.id, provider: 'facebook', providerAccountId: page.pageId, accountName: page.pageName, accessToken: page.pageToken, avatarUrl: page.avatarUrl, igUserId: page.igUserId, tokenExpiresAt: expiresAt },
-      })
-      count++
-      // Connexion Instagram si compte business lié
-      if (page.igUserId) {
-        await prisma.socialConnection.upsert({
-          where: { clubId_provider_providerAccountId: { clubId: club.id, provider: 'instagram', providerAccountId: page.igUserId } },
-          update: { accountName: page.igUsername ?? page.pageName, accessToken: page.pageToken, tokenExpiresAt: expiresAt, meta: { pageId: page.pageId } },
-          create: { clubId: club.id, provider: 'instagram', providerAccountId: page.igUserId, accountName: page.igUsername ?? page.pageName, accessToken: page.pageToken, tokenExpiresAt: expiresAt, meta: { pageId: page.pageId } },
+    await prisma.$transaction(async tx => {
+      for (const page of pages) {
+        validAccountKeys.add(`facebook:${page.pageId}`)
+        await tx.socialConnection.upsert({
+          where: { clubId_provider_providerAccountId: { clubId: club.id, provider: 'facebook', providerAccountId: page.pageId } },
+          update: { accountName: page.pageName, accessToken: page.pageToken, avatarUrl: page.avatarUrl, igUserId: page.igUserId, tokenExpiresAt: expiresAt },
+          create: { clubId: club.id, provider: 'facebook', providerAccountId: page.pageId, accountName: page.pageName, accessToken: page.pageToken, avatarUrl: page.avatarUrl, igUserId: page.igUserId, tokenExpiresAt: expiresAt },
         })
-        count++
-      }
-    }
 
-    const res = NextResponse.redirect(`${settingsUrl}&social=${count > 0 ? 'connected' : 'nopages'}`)
+        if (page.igUserId) {
+          validAccountKeys.add(`instagram:${page.igUserId}`)
+          await tx.socialConnection.upsert({
+            where: { clubId_provider_providerAccountId: { clubId: club.id, provider: 'instagram', providerAccountId: page.igUserId } },
+            update: { accountName: page.igUsername ?? page.pageName, accessToken: page.pageToken, avatarUrl: page.avatarUrl, tokenExpiresAt: expiresAt, meta: { pageId: page.pageId } },
+            create: { clubId: club.id, provider: 'instagram', providerAccountId: page.igUserId, accountName: page.igUsername ?? page.pageName, accessToken: page.pageToken, avatarUrl: page.avatarUrl, tokenExpiresAt: expiresAt, meta: { pageId: page.pageId } },
+          })
+        }
+      }
+
+      const existing = await tx.socialConnection.findMany({
+        where: { clubId: club.id, provider: { in: ['facebook', 'instagram'] } },
+        select: { id: true, provider: true, providerAccountId: true },
+      })
+      const staleIds = existing
+        .filter(conn => !validAccountKeys.has(`${conn.provider}:${conn.providerAccountId}`))
+        .map(conn => conn.id)
+
+      if (staleIds.length > 0) {
+        await tx.socialConnection.deleteMany({ where: { id: { in: staleIds } } })
+      }
+    })
+
+    const res = NextResponse.redirect(`${settingsUrl}&social=${validAccountKeys.size > 0 ? 'connected' : 'nopages'}`)
     res.cookies.delete('meta_oauth_state')
     return res
   } catch (err) {
     console.error('[social/meta/callback]', err)
-    return NextResponse.redirect(`${settingsUrl}&social=error`)
+    const res = NextResponse.redirect(`${settingsUrl}&social=error`)
+    res.cookies.delete('meta_oauth_state')
+    return res
   }
 }
