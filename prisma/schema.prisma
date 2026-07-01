@@ -80,6 +80,25 @@ model Club {
   weeklySchedules     WeeklySchedule[]
   tenupSchedules      TenupSchedule[]
   usageEvents         UsageEvent[]
+  socialConnections   SocialConnection[]
+}
+
+model SocialConnection {
+  id                String    @id @default(cuid())
+  clubId            String
+  club              Club      @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  provider          String // 'facebook' | 'instagram'
+  providerAccountId String // page id (facebook) ou ig user id (instagram)
+  accountName       String // nom de la Page / @username IG
+  avatarUrl         String?
+  accessToken       String    @db.Text // page access token (long-lived)
+  igUserId          String? // compte IG business lié (sur une connexion facebook)
+  tokenExpiresAt    DateTime?
+  meta              Json?
+  createdAt         DateTime  @default(now())
+
+  @@unique([clubId, provider, providerAccountId])
+  @@index([clubId])
 }
 
 model TenupSchedule {
