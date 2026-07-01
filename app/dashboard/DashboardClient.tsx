@@ -1,11 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, type ReactNode } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Logo from '@/components/Logo'
 import ClubSettings from './ClubSettings'
 import ContentTab from './ContentTab'
+import { Icon } from './icons'
 
 type Club = {
   id: string
@@ -29,12 +30,19 @@ type Club = {
   }>
 } | null
 
+type View = 'home' | 'content' | 'history' | 'settings'
+
+const NAV: { key: View; label: string; icon: Parameters<typeof Icon>[0]['name'] }[] = [
+  { key: 'home', label: 'Accueil', icon: 'home' },
+  { key: 'content', label: 'Générer du contenu', icon: 'sparkles' },
+  { key: 'history', label: 'Historique', icon: 'clock' },
+  { key: 'settings', label: 'Mon club', icon: 'palette' },
+]
+
 export default function DashboardClient({ club, userEmail }: { club: Club; userEmail: string }) {
   const router = useRouter()
-  const isTennisPadel = club?.sport === 'Tennis' || club?.sport === 'Padel'
-  const [view, setView] = useState<'home' | 'content' | 'history' | 'settings'>('home')
+  const [view, setView] = useState<View>('home')
 
-  // Finalise la création du club si elle était en attente (email confirm flow)
   useEffect(() => {
     if (club) return
     const pending = sessionStorage.getItem('pending_club')
@@ -61,279 +69,375 @@ export default function DashboardClient({ club, userEmail }: { club: Club; userE
 
   if (!club) {
     return (
-      <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center">
+      <div className="min-h-screen bg-subtle flex items-center justify-center">
         <div className="text-center">
-          <p className="text-gray-500 mb-4">Erreur de chargement du club.</p>
-          <button onClick={handleLogout} className="text-[#2563eb] underline text-sm">Se déconnecter</button>
+          <p className="text-muted mb-4">Erreur de chargement du club.</p>
+          <button onClick={handleLogout} className="text-brand underline text-sm">Se déconnecter</button>
         </div>
       </div>
     )
   }
 
-  const totalPosts = club.matches.reduce((acc, match) => acc + match.posts.length, 0)
-  const recentMatches = [...club.matches]
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-    .slice(0, 3)
-  const wins = club.matches.filter(match => {
-    const clubScore = match.isHome ? match.homeScore : match.awayScore
-    const oppScore = match.isHome ? match.awayScore : match.homeScore
-    return clubScore > oppScore
-  }).length
-  const losses = club.matches.filter(match => {
-    const clubScore = match.isHome ? match.homeScore : match.awayScore
-    const oppScore = match.isHome ? match.awayScore : match.homeScore
-    return clubScore < oppScore
-  }).length
-  const draws = club.matches.length - wins - losses
-  const winRate = club.matches.length ? Math.round((wins / club.matches.length) * 100) : 0
-  const lastGeneratedAt = recentMatches[0]?.date
-  const socialStats = [
-    { label: 'Audience totale', value: '0', helper: 'Connexion reseaux bientot', accent: '#7c3aed' },
-    { label: 'Engagement moyen', value: '0%', helper: 'Likes, commentaires, partages', accent: '#2563eb' },
-    { label: 'Posts ce mois', value: String(totalPosts), helper: 'Base sur les contenus generes', accent: '#22c55e' },
-  ]
+  const initials = club.name.split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase()
+  const currentLabel = NAV.find(n => n.key === view)?.label ?? ''
 
   return (
-    <div className="min-h-screen bg-[#f8fafc]">
-      {/* Navbar */}
-      <nav className="bg-white border-b border-gray-100 px-6 py-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Logo size={24} />
-            <span className="text-gray-300">|</span>
-            <span className="text-sm font-semibold text-gray-600">{club.name}</span>
-            <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">{club.sport}</span>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="text-xs text-gray-400 hidden sm:block">{userEmail}</span>
-            <a href="/account" className="text-sm font-semibold text-gray-600 hover:text-[#111827] transition">
-              👤 Compte
-            </a>
-            <button onClick={handleLogout} className="text-sm text-gray-500 hover:text-[#2563eb] transition">
-              Déconnexion
-            </button>
+    <div className="min-h-screen bg-subtle lg:grid lg:grid-cols-[264px_1fr]">
+      {/* ── Sidebar (desktop) ── */}
+      <aside className="hidden lg:flex lg:flex-col lg:sticky lg:top-0 lg:h-screen border-r border-line bg-white">
+        <div className="px-5 py-5">
+          <Logo size={24} />
+        </div>
+
+        {/* Club identity */}
+        <div className="mx-3 mb-2 flex items-center gap-3 rounded-card border border-line bg-subtle/60 px-3 py-3">
+          <ClubAvatar club={club} initials={initials} />
+          <div className="min-w-0">
+            <p className="truncate text-sm font-bold text-ink">{club.name}</p>
+            <p className="truncate text-xs text-muted">{club.sport}</p>
           </div>
         </div>
-      </nav>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 xl:px-8 py-8">
-        {/* Tabs */}
-        <div className="flex gap-2 mb-8">
-          {[
-             { key: 'home', label: '🏠 Accueil' },
-             { key: 'content', label: isTennisPadel ? '✨ Generer du contenu' : '✨ Generer' },
-             { key: 'history', label: '📋 Historique' },
-             { key: 'settings', label: '🎨 Mon club' },
-           ].map(tab => (
-             <button
-               key={tab.key}
-               onClick={() => setView(tab.key as typeof view)}
-               className={`px-4 py-2 rounded-xl text-sm font-semibold transition ${
-                 view === tab.key
-                   ? 'bg-[#111827] text-white'
-                  : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-100'
+        <nav className="flex-1 px-3 py-2 space-y-1">
+          {NAV.map(item => (
+            <NavButton key={item.key} item={item} active={view === item.key} onClick={() => setView(item.key)} />
+          ))}
+        </nav>
+
+        <div className="border-t border-line p-3">
+          <a href="/account" className="flex items-center gap-3 rounded-btn px-3 py-2.5 text-sm font-medium text-muted transition hover:bg-subtle hover:text-ink">
+            <Icon name="user" className="h-[18px] w-[18px]" />
+            <span className="truncate">{userEmail}</span>
+          </a>
+          <button onClick={handleLogout} className="mt-1 flex w-full items-center gap-3 rounded-btn px-3 py-2.5 text-sm font-medium text-muted transition hover:bg-subtle hover:text-ink">
+            <Icon name="logout" className="h-[18px] w-[18px]" />
+            Déconnexion
+          </button>
+        </div>
+      </aside>
+
+      {/* ── Main ── */}
+      <div className="min-w-0">
+        {/* Top bar (mobile) */}
+        <header className="lg:hidden sticky top-0 z-40 flex items-center justify-between border-b border-line bg-white/85 px-4 py-3 backdrop-blur-md">
+          <Logo size={22} />
+          <button onClick={handleLogout} className="text-sm font-medium text-muted">Déconnexion</button>
+        </header>
+
+        {/* Mobile nav */}
+        <div className="lg:hidden flex gap-2 overflow-x-auto border-b border-line bg-white px-4 py-2">
+          {NAV.map(item => (
+            <button
+              key={item.key}
+              onClick={() => setView(item.key)}
+              className={`flex shrink-0 items-center gap-2 rounded-btn px-3 py-2 text-sm font-semibold transition ${
+                view === item.key ? 'bg-brand text-white' : 'text-muted'
               }`}
             >
-              {tab.label}
+              <Icon name={item.icon} className="h-4 w-4" />
+              {item.label}
             </button>
           ))}
         </div>
 
-        {/* Home */}
-        {view === 'home' && (
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 xl:grid-cols-[1.75fr_0.95fr] gap-4">
-              <div className="rounded-[26px] p-6 sm:p-7 text-white relative overflow-hidden" style={{ background: `linear-gradient(135deg, ${club.primaryColor} 0%, #111827 100%)` }}>
-                <div className="absolute inset-0 opacity-20" style={{ background: `radial-gradient(circle at top right, ${club.secondaryColor} 0%, transparent 45%)` }} />
-                <div className="relative space-y-5">
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs font-bold uppercase tracking-[0.3em] text-white/70">Dashboard club</span>
-                    <span className="text-xs px-3 py-1 rounded-full border border-white/15 bg-white/10">{club.sport}</span>
-                  </div>
-                  <div className="space-y-2 max-w-2xl">
-                    <h1 className="text-3xl sm:text-[2.6rem] font-black leading-tight">Bonjour, {club.name}</h1>
-                    <p className="text-sm sm:text-[15px] text-white/75 max-w-xl">
-                      Pilote ta communication depuis un seul espace avec des contenus prets a poster, des visuels de match et bientot les connexions reseaux sociaux du club.
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap gap-3">
-                    <button
-                      onClick={() => setView('content')}
-                      className="bg-white text-[#111827] font-bold px-6 py-3 rounded-xl hover:bg-white/90 transition"
-                    >
-                      ✨ Generer du contenu
-                    </button>
-                    <button
-                      onClick={() => setView('settings')}
-                      className="px-6 py-3 rounded-xl font-semibold border border-white/20 bg-white/10 hover:bg-white/15 transition"
-                    >
-                      🎨 Personnaliser le club
-                    </button>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
-                    <HighlightCard label="Posts generes" value={String(totalPosts)} helper={lastGeneratedAt ? `Dernier le ${formatDate(lastGeneratedAt)}` : 'Aucun post genere pour le moment'} />
-                    <HighlightCard label="Matchs suivis" value={String(club.matches.length)} helper={club.matches.length ? `${wins} victoire${wins > 1 ? 's' : ''} sur la periode` : 'Commence par enregistrer un match'} />
-                    <HighlightCard label="Taux de victoire" value={`${winRate}%`} helper={club.matches.length ? `${losses} defaite${losses > 1 ? 's' : ''} · ${draws} nul${draws > 1 ? 's' : ''}` : 'Les stats apparaitront ici'} />
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-[26px] p-5 space-y-4 shadow-sm">
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-[0.25em] text-gray-400">Vue rapide</p>
-                  <h2 className="text-lg font-extrabold text-[#111827] mt-2">Le club en un coup d'oeil</h2>
-                </div>
-                <div className="space-y-3">
-                  <StatCard label="Sport" value={club.sport} />
-                  <StatCard label="Posts par match" value={club.matches.length ? (totalPosts / club.matches.length).toFixed(1) : '0'} />
-                  <StatCard label="Adresse connectee" value={userEmail.split('@')[0]} />
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 xl:grid-cols-[1.05fr_0.95fr] gap-4">
-              <div className="bg-white rounded-[26px] p-5 space-y-4 shadow-sm">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <p className="text-xs font-bold uppercase tracking-[0.25em] text-gray-400">Reseaux sociaux</p>
-                    <h2 className="text-lg font-extrabold text-[#111827] mt-2">Stats a connecter</h2>
-                  </div>
-                  <div className="px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-500">
-                    Bientot en direct
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  {socialStats.map(stat => (
-                    <div key={stat.label} className="rounded-2xl bg-gray-50/80 p-4">
-                      <div className="w-9 h-1.5 rounded-full" style={{ background: stat.accent }} />
-                      <p className="text-sm text-gray-500 mt-4">{stat.label}</p>
-                      <p className="text-3xl font-black text-[#111827] mt-1">{stat.value}</p>
-                      <p className="text-xs text-gray-400 mt-2">{stat.helper}</p>
-                    </div>
-                  ))}
-                </div>
-                <div className="rounded-2xl bg-gray-50 p-4 flex items-center justify-between gap-4">
-                  <div>
-                    <p className="font-semibold text-[#111827]">Instagram, Facebook et WhatsApp</p>
-                    <p className="text-sm text-gray-500 mt-1">Les cartes afficheront la portee, l'engagement et les meilleurs formats des que les comptes seront relies.</p>
-                  </div>
-                  <button
-                    onClick={() => setView('settings')}
-                    className="shrink-0 px-4 py-2 rounded-xl text-sm font-semibold bg-[#111827] text-white hover:bg-[#1f2937] transition"
-                  >
-                    Preparer
-                  </button>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-[26px] p-5 space-y-4 shadow-sm">
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-[0.25em] text-gray-400">Activite recente</p>
-                  <h2 className="text-lg font-extrabold text-[#111827] mt-2">Derniers matchs</h2>
-                </div>
-                {recentMatches.length === 0 ? (
-                  <div className="rounded-2xl bg-gray-50 p-5 text-sm text-gray-500">
-                    Aucun match enregistre pour le moment. Commence par generer ton premier contenu pour alimenter ce dashboard.
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {recentMatches.map(match => {
-                      const clubScore = match.isHome ? match.homeScore : match.awayScore
-                      const oppScore = match.isHome ? match.awayScore : match.homeScore
-                      const result = clubScore > oppScore ? 'Victoire' : clubScore < oppScore ? 'Defaite' : 'Nul'
-                      const resultClasses = clubScore > oppScore
-                        ? 'bg-emerald-50 text-emerald-700'
-                        : clubScore < oppScore
-                          ? 'bg-rose-50 text-rose-700'
-                          : 'bg-slate-100 text-slate-600'
-
-                      return (
-                        <div key={match.id} className="rounded-2xl bg-gray-50 p-4 flex items-start justify-between gap-4">
-                          <div>
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <p className="font-bold text-[#111827]">{club.name} {clubScore} - {oppScore} {match.opponent}</p>
-                              <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${resultClasses}`}>{result}</span>
-                            </div>
-                            <p className="text-sm text-gray-500 mt-1">
-                              {match.competition ?? 'Match amical'} · {formatDate(match.date)}
-                            </p>
-                          </div>
-                          <span className="text-xs text-gray-400 whitespace-nowrap">{match.posts.length} post{match.posts.length > 1 ? 's' : ''}</span>
-                        </div>
-                      )
-                    })}
-                  </div>
-                )}
-              </div>
-            </div>
+        <main className="mx-auto max-w-6xl px-4 py-8 sm:px-8">
+          {/* Breadcrumb / page title (desktop) */}
+          <div className="hidden lg:flex items-center gap-2 mb-6 text-sm">
+            <span className="text-muted">Tribunes</span>
+            <Icon name="chevron" className="h-4 w-4 text-line" />
+            <span className="font-semibold text-ink">{currentLabel}</span>
           </div>
-        )}
 
-        {view === 'content' && <ContentTab club={club} />}
-
-        {/* History */}
-        {view === 'history' && (
-          <div className="space-y-4">
-            {club.matches.length === 0 ? (
-              <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center text-gray-500">
-                Aucun match enregistré. Génère ton premier post !
-              </div>
-            ) : club.matches.map(match => {
-              const clubScore = match.isHome ? match.homeScore : match.awayScore
-              const oppScore = match.isHome ? match.awayScore : match.homeScore
-              const result = clubScore > oppScore ? 'V' : clubScore < oppScore ? 'D' : 'N'
-              const color = result === 'V' ? '#22c55e' : result === 'D' ? '#2563eb' : '#6b7280'
-              return (
-                <div key={match.id} className="bg-white rounded-2xl border border-gray-100 p-5 flex items-center justify-between">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-[#111827]">vs {match.opponent}</span>
-                      <span className="text-xs font-bold px-2 py-0.5 rounded-full text-white" style={{ background: color }}>{result}</span>
-                    </div>
-                    <p className="text-sm text-gray-500 mt-0.5">
-                      {clubScore} - {oppScore} · {match.competition ?? 'Match amical'} · {new Date(match.date).toLocaleDateString('fr-FR')}
-                    </p>
-                  </div>
-                  <span className="text-xs text-gray-400">{match.posts.length} post{match.posts.length > 1 ? 's' : ''}</span>
-                </div>
-              )
-            })}
-          </div>
-        )}
-
-        {/* Settings */}
-        {view === 'settings' && (
-          <ClubSettings club={club} />
-        )}
-
+          {view === 'home' && <HomeView club={club} userEmail={userEmail} onNavigate={setView} initials={initials} />}
+          {view === 'content' && <ContentTab club={club} />}
+          {view === 'history' && <HistoryView club={club} onNavigate={setView} />}
+          {view === 'settings' && <ClubSettings club={club} />}
+        </main>
       </div>
     </div>
   )
 }
 
-function StatCard({ label, value }: { label: string; value: string | number }) {
+/* ─────────────────────────── Home ─────────────────────────── */
+
+function HomeView({
+  club,
+  userEmail,
+  onNavigate,
+  initials,
+}: {
+  club: NonNullable<Club>
+  userEmail: string
+  onNavigate: (v: View) => void
+  initials: string
+}) {
+  const totalPosts = club.matches.reduce((acc, m) => acc + m.posts.length, 0)
+  const recent = [...club.matches].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 4)
+  const wins = club.matches.filter(m => score(m).us > score(m).them).length
+  const losses = club.matches.filter(m => score(m).us < score(m).them).length
+  const draws = club.matches.length - wins - losses
+  const winRate = club.matches.length ? Math.round((wins / club.matches.length) * 100) : 0
+
   return (
-    <div className="bg-gray-50 rounded-2xl p-5">
-      <p className="text-sm text-gray-500">{label}</p>
-      <p className="text-2xl font-extrabold text-[#111827] mt-1">{value}</p>
+    <div className="space-y-8">
+      {/* Welcome + primary action */}
+      <section className="overflow-hidden rounded-card border border-line bg-white shadow-card">
+        <div className="relative p-6 sm:p-8">
+          {/* accent club discret */}
+          <div
+            className="pointer-events-none absolute right-0 top-0 h-40 w-40 rounded-full opacity-[0.07] blur-2xl"
+            style={{ background: club.primaryColor }}
+          />
+          <div className="relative flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-center gap-4">
+              <ClubAvatar club={club} initials={initials} size={52} />
+              <div>
+                <p className="text-[13px] font-semibold text-muted">Bonjour 👋</p>
+                <h1 className="text-2xl font-black tracking-[-0.02em] text-ink sm:text-3xl">{club.name}</h1>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <button
+                onClick={() => onNavigate('content')}
+                className="inline-flex items-center gap-2 rounded-btn bg-brand px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-hover"
+              >
+                <Icon name="sparkles" className="h-[18px] w-[18px]" />
+                Générer une publication
+              </button>
+              <button
+                onClick={() => onNavigate('settings')}
+                className="inline-flex items-center gap-2 rounded-btn border border-line bg-white px-5 py-3 text-sm font-semibold text-ink transition hover:bg-subtle"
+              >
+                <Icon name="palette" className="h-[18px] w-[18px]" />
+                Personnaliser
+              </button>
+            </div>
+          </div>
+        </div>
+        <p className="border-t border-line bg-subtle/60 px-6 py-3 text-[13px] text-muted sm:px-8">
+          Votre communication est prête en quelques secondes — un résultat, un match ou un programme suffit.
+        </p>
+      </section>
+
+      {/* Stats */}
+      <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <StatTile icon="fileText" label="Posts générés" value={String(totalPosts)} tone="brand" />
+        <StatTile icon="calendar" label="Matchs suivis" value={String(club.matches.length)} tone="ink" />
+        <StatTile icon="trophy" label="Taux de victoire" value={`${winRate}%`} tone="gold" helper={club.matches.length ? `${wins}V · ${losses}D · ${draws}N` : undefined} />
+        <StatTile icon="trending" label="Posts / match" value={club.matches.length ? (totalPosts / club.matches.length).toFixed(1) : '0'} tone="success" />
+      </section>
+
+      {/* Two columns */}
+      <section className="grid gap-4 lg:grid-cols-2">
+        {/* Recent activity */}
+        <Card>
+          <CardHeader
+            title="Activité récente"
+            subtitle="Vos derniers matchs"
+            action={club.matches.length > 0 ? <button onClick={() => onNavigate('history')} className="text-sm font-semibold text-brand hover:underline">Tout voir</button> : undefined}
+          />
+          {recent.length === 0 ? (
+            <EmptyState
+              icon="clock"
+              title="Rien pour l'instant"
+              text="Générez votre premier contenu pour voir l'activité de votre club ici."
+              cta={<button onClick={() => onNavigate('content')} className="rounded-btn bg-brand px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-hover">Commencer</button>}
+            />
+          ) : (
+            <ul className="divide-y divide-line">
+              {recent.map(m => (
+                <MatchRow key={m.id} club={club} match={m} />
+              ))}
+            </ul>
+          )}
+        </Card>
+
+        {/* Réseaux — bientôt */}
+        <Card>
+          <CardHeader
+            title="Réseaux sociaux"
+            subtitle="Statistiques à connecter"
+            action={<span className="rounded-full bg-gold-soft px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-gold-hover">Bientôt</span>}
+          />
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { label: 'Audience', value: '—', icon: 'users' as const },
+              { label: 'Engagement', value: '—', icon: 'heart' as const },
+              { label: 'Portée', value: '—', icon: 'trending' as const },
+            ].map(s => (
+              <div key={s.label} className="rounded-btn bg-subtle p-4 text-center">
+                <Icon name={s.icon} className="mx-auto h-5 w-5 text-muted" />
+                <p className="mt-2 text-2xl font-black text-ink">{s.value}</p>
+                <p className="text-xs text-muted">{s.label}</p>
+              </div>
+            ))}
+          </div>
+          <div className="mt-4 flex items-center justify-between gap-4 rounded-btn border border-line bg-white p-4">
+            <p className="text-sm text-muted">Reliez Instagram, Facebook et WhatsApp pour suivre vos performances.</p>
+            <button onClick={() => onNavigate('settings')} className="shrink-0 rounded-btn bg-ink px-4 py-2 text-sm font-semibold text-white transition hover:bg-ink/90">
+              Préparer
+            </button>
+          </div>
+        </Card>
+      </section>
+
+      <p className="text-center text-xs text-muted">Connecté en tant que {userEmail}</p>
     </div>
   )
 }
 
-function HighlightCard({ label, value, helper }: { label: string; value: string; helper: string }) {
+/* ─────────────────────────── History ─────────────────────────── */
+
+function HistoryView({ club, onNavigate }: { club: NonNullable<Club>; onNavigate: (v: View) => void }) {
+  if (club.matches.length === 0) {
+    return (
+      <Card>
+        <EmptyState
+          icon="clock"
+          title="Aucun match enregistré"
+          text="Vos matchs et les publications générées apparaîtront ici."
+          cta={<button onClick={() => onNavigate('content')} className="rounded-btn bg-brand px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-hover">Générer un contenu</button>}
+        />
+      </Card>
+    )
+  }
+  const sorted = [...club.matches].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/10 backdrop-blur-sm p-4">
-      <p className="text-xs uppercase tracking-[0.2em] text-white/60 font-semibold">{label}</p>
-      <p className="text-3xl font-black mt-2">{value}</p>
-      <p className="text-sm text-white/65 mt-2">{helper}</p>
+    <div className="space-y-4">
+      <div>
+        <h1 className="text-xl font-black tracking-[-0.02em] text-ink">Historique</h1>
+        <p className="text-sm text-muted">{club.matches.length} match{club.matches.length > 1 ? 's' : ''} · {club.matches.reduce((a, m) => a + m.posts.length, 0)} publication{club.matches.reduce((a, m) => a + m.posts.length, 0) > 1 ? 's' : ''}</p>
+      </div>
+      <Card padded={false}>
+        <ul className="divide-y divide-line">
+          {sorted.map(m => (
+            <MatchRow key={m.id} club={club} match={m} />
+          ))}
+        </ul>
+      </Card>
     </div>
   )
+}
+
+/* ─────────────────────────── Shared bits ─────────────────────────── */
+
+function NavButton({ item, active, onClick }: { item: (typeof NAV)[number]; active: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex w-full items-center gap-3 rounded-btn px-3 py-2.5 text-sm font-semibold transition ${
+        active ? 'bg-brand-soft text-brand' : 'text-muted hover:bg-subtle hover:text-ink'
+      }`}
+    >
+      <Icon name={item.icon} className="h-[18px] w-[18px]" />
+      {item.label}
+    </button>
+  )
+}
+
+function ClubAvatar({ club, initials, size = 40 }: { club: NonNullable<Club>; initials: string; size?: number }) {
+  if (club.logoUrl) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={club.logoUrl} alt={club.name} width={size} height={size} className="rounded-xl object-contain bg-white border border-line" style={{ width: size, height: size }} />
+  }
+  return (
+    <div
+      className="flex items-center justify-center rounded-xl font-black text-white"
+      style={{ width: size, height: size, background: club.primaryColor, fontSize: size * 0.36 }}
+    >
+      {initials || 'TC'}
+    </div>
+  )
+}
+
+function Card({ children, padded = true }: { children: ReactNode; padded?: boolean }) {
+  return <div className={`rounded-card border border-line bg-white shadow-card ${padded ? 'p-5 sm:p-6' : ''}`}>{children}</div>
+}
+
+function CardHeader({ title, subtitle, action }: { title: string; subtitle?: string; action?: ReactNode }) {
+  return (
+    <div className="mb-4 flex items-start justify-between gap-4">
+      <div>
+        <h2 className="text-[15px] font-bold text-ink">{title}</h2>
+        {subtitle && <p className="text-[13px] text-muted">{subtitle}</p>}
+      </div>
+      {action}
+    </div>
+  )
+}
+
+const TONES = {
+  brand: { bg: 'bg-brand-soft', fg: 'text-brand' },
+  gold: { bg: 'bg-gold-soft', fg: 'text-gold-hover' },
+  success: { bg: 'bg-emerald-50', fg: 'text-emerald-600' },
+  ink: { bg: 'bg-subtle', fg: 'text-ink' },
+} as const
+
+function StatTile({
+  icon,
+  label,
+  value,
+  helper,
+  tone,
+}: {
+  icon: Parameters<typeof Icon>[0]['name']
+  label: string
+  value: string
+  helper?: string
+  tone: keyof typeof TONES
+}) {
+  const t = TONES[tone]
+  return (
+    <div className="rounded-card border border-line bg-white p-4 shadow-card sm:p-5">
+      <span className={`inline-flex h-9 w-9 items-center justify-center rounded-btn ${t.bg} ${t.fg}`}>
+        <Icon name={icon} className="h-[18px] w-[18px]" />
+      </span>
+      <p className="mt-3 text-2xl font-black tracking-[-0.02em] text-ink sm:text-[1.7rem]">{value}</p>
+      <p className="text-[13px] font-medium text-muted">{label}</p>
+      {helper && <p className="mt-0.5 text-xs text-muted/80">{helper}</p>}
+    </div>
+  )
+}
+
+function MatchRow({ club, match }: { club: NonNullable<Club>; match: NonNullable<Club>['matches'][number] }) {
+  const { us, them } = score(match)
+  const res = us > them ? 'V' : us < them ? 'D' : 'N'
+  const cls = res === 'V' ? 'bg-emerald-50 text-emerald-700' : res === 'D' ? 'bg-brand-soft text-brand' : 'bg-subtle text-muted'
+  return (
+    <li className="flex items-center justify-between gap-4 py-3.5 first:pt-0 last:pb-0">
+      <div className="min-w-0">
+        <div className="flex items-center gap-2">
+          <span className={`inline-flex h-6 w-6 items-center justify-center rounded-md text-[11px] font-black ${cls}`}>{res}</span>
+          <p className="truncate text-[14px] font-semibold text-ink">
+            {club.name} <span className="tabular-nums">{us}–{them}</span> {match.opponent}
+          </p>
+        </div>
+        <p className="mt-0.5 pl-8 text-[12px] text-muted">{match.competition ?? 'Match amical'} · {formatDate(match.date)}</p>
+      </div>
+      <span className="shrink-0 text-xs text-muted">{match.posts.length} post{match.posts.length > 1 ? 's' : ''}</span>
+    </li>
+  )
+}
+
+function EmptyState({ icon, title, text, cta }: { icon: Parameters<typeof Icon>[0]['name']; title: string; text: string; cta?: ReactNode }) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-3 rounded-btn bg-subtle/60 px-6 py-10 text-center">
+      <span className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-white text-muted shadow-card">
+        <Icon name={icon} className="h-5 w-5" />
+      </span>
+      <div>
+        <p className="font-bold text-ink">{title}</p>
+        <p className="mt-1 max-w-xs text-sm text-muted">{text}</p>
+      </div>
+      {cta}
+    </div>
+  )
+}
+
+function score(m: NonNullable<Club>['matches'][number]) {
+  return { us: m.isHome ? m.homeScore : m.awayScore, them: m.isHome ? m.awayScore : m.homeScore }
 }
 
 function formatDate(date: string) {
-  return new Date(date).toLocaleDateString('fr-FR', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  })
+  return new Date(date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
 }
