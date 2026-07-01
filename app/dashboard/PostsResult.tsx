@@ -6,6 +6,7 @@ import PublishPanel from './PublishPanel'
 import { PageHeader, GhostButton } from './ui'
 
 type Posts = { instagram: string; facebook: string; whatsapp: string }
+type PostIds = Partial<Record<keyof Posts, string>>
 
 type Club = {
   name: string
@@ -32,12 +33,14 @@ const PLATFORMS = [
 
 export default function PostsResult({
   posts,
+  postIds,
   club,
   match,
   photoFile,
   onReset,
 }: {
   posts: Posts
+  postIds?: PostIds | null
   club: Club
   match: MatchData
   photoFile: File | null
@@ -110,7 +113,7 @@ export default function PostsResult({
       ))}
 
       {/* Publication directe */}
-      <PublishPanel posts={posts} getImageBlob={getImageBlob} />
+      <PublishPanel posts={posts} postIds={postIds} getImageBlob={getImageBlob} />
     </div>
   )
 }

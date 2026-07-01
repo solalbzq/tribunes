@@ -6,6 +6,7 @@ import { Icon } from './icons'
 
 type Club = { name: string; sport: string }
 type Posts = { instagram: string; facebook: string; whatsapp: string }
+type PostIds = Partial<Record<keyof Posts, string>>
 type MatchData = {
   opponent: string
   homeScore: number
@@ -225,7 +226,7 @@ export default function GenerateForm({
   onVisualOnly,
 }: {
   club: Club
-  onSuccess: (posts: Posts, match: MatchData, photoFile: File | null) => void
+  onSuccess: (posts: Posts, match: MatchData, photoFile: File | null, postIds: PostIds) => void
   onVisualOnly: (match: MatchData, photoFile: File | null) => void
 }) {
   const [opponent, setOpponent] = useState('')
@@ -296,7 +297,11 @@ export default function GenerateForm({
       })
       if (!res.ok) throw new Error('Erreur serveur')
       const data = await res.json()
-      onSuccess(data.posts, getMatchData(), photoFile)
+      const postIds = Object.fromEntries(
+        ((data.match?.posts as Array<{ id: string; platform: keyof Posts }> | undefined) ?? [])
+          .map(post => [post.platform, post.id])
+      ) as PostIds
+      onSuccess(data.posts, getMatchData(), photoFile, postIds)
     } catch {
       setError('Une erreur est survenue. Réessaie.')
     } finally {

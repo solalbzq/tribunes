@@ -30,10 +30,13 @@ type MatchData = {
   extraData?: Record<string, unknown>
 }
 
+type PostIds = Partial<Record<'instagram' | 'facebook' | 'whatsapp', string>>
+
 export default function ContentTab({ club }: { club: Club }) {
   const isTennisPadel = club.sport === 'Tennis' || club.sport === 'Padel'
   const [section, setSection] = useState<'match' | 'programme'>('match')
   const [generatedPosts, setGeneratedPosts] = useState<{ instagram: string; facebook: string; whatsapp: string } | null>(null)
+  const [generatedPostIds, setGeneratedPostIds] = useState<PostIds | null>(null)
   const [generatedMatch, setGeneratedMatch] = useState<MatchData | null>(null)
   const [generatedPhoto, setGeneratedPhoto] = useState<File | null>(null)
 
@@ -73,8 +76,9 @@ export default function ContentTab({ club }: { club: Club }) {
       {section === 'match' && !generatedPosts && !generatedMatch && (
         <GenerateForm
           club={club}
-          onSuccess={(posts, match, photo) => {
+          onSuccess={(posts, match, photo, postIds) => {
             setGeneratedPosts(posts)
+            setGeneratedPostIds(postIds)
             setGeneratedMatch(match)
             setGeneratedPhoto(photo)
           }}
@@ -100,11 +104,13 @@ export default function ContentTab({ club }: { club: Club }) {
       {section === 'match' && generatedPosts && generatedMatch && (
         <PostsResult
           posts={generatedPosts}
+          postIds={generatedPostIds}
           club={club}
           match={generatedMatch}
           photoFile={generatedPhoto}
           onReset={() => {
             setGeneratedPosts(null)
+            setGeneratedPostIds(null)
             setGeneratedMatch(null)
             setGeneratedPhoto(null)
           }}

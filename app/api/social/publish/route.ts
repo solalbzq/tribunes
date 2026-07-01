@@ -14,6 +14,7 @@ export async function POST(req: Request) {
   const form = await req.formData()
   const text = (form.get('text') as string) ?? ''
   const targetsRaw = (form.get('targets') as string) ?? '[]'
+  const generatedPostId = (form.get('generatedPostId') as string) || null
   const image = form.get('image') as File | null
 
   let targetIds: string[]
@@ -65,5 +66,23 @@ export async function POST(req: Request) {
   }
 
   const allOk = results.every(r => r.ok)
+  if (generatedPostId) {
+    const post = await prisma.generatedPost.findFirst({
+      where: {
+        id: generatedPostId,
+        match: { clubId: club.id },
+      },
+      select: { id: true },
+    })
+
+    if (post) {
+      const status = allOk ? 'PUBLISHED' : results.some(r => r.ok) ? 'PARTIAL' : 'FAILED'
+      await prisma.generatedPost.update({
+        where: { id: post.id },
+        data: { status },
+      })
+    }
+  }
+
   return NextResponse.json({ ok: allOk, results }, { status: allOk ? 200 : 207 })
 }

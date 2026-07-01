@@ -5,13 +5,16 @@ import { Icon } from './icons'
 
 type Conn = { id: string; provider: string; accountName: string; avatarUrl?: string | null }
 type Posts = { instagram: string; facebook: string; whatsapp: string }
+type PostIds = Partial<Record<keyof Posts, string>>
 type Result = { id: string; provider: string; accountName: string; ok: boolean; error?: string }
 
 export default function PublishPanel({
   posts,
+  postIds,
   getImageBlob,
 }: {
   posts: Posts
+  postIds?: PostIds | null
   getImageBlob: () => Promise<Blob | null>
 }) {
   const [connections, setConnections] = useState<Conn[] | null>(null)
@@ -47,17 +50,18 @@ export default function PublishPanel({
     const blob = await getImageBlob()
 
     // Grouper par provider pour la bonne légende (FB / IG)
-    const groups: { provider: string; caption: string; ids: string[] }[] = []
+    const groups: Array<{ provider: 'facebook' | 'instagram'; caption: string; ids: string[]; generatedPostId?: string }> = []
     const fb = chosen.filter(c => c.provider === 'facebook').map(c => c.id)
     const ig = chosen.filter(c => c.provider === 'instagram').map(c => c.id)
-    if (fb.length) groups.push({ provider: 'facebook', caption: posts.facebook, ids: fb })
-    if (ig.length) groups.push({ provider: 'instagram', caption: posts.instagram, ids: ig })
+    if (fb.length) groups.push({ provider: 'facebook', caption: posts.facebook, ids: fb, generatedPostId: postIds?.facebook })
+    if (ig.length) groups.push({ provider: 'instagram', caption: posts.instagram, ids: ig, generatedPostId: postIds?.instagram })
 
     const all: Result[] = []
     for (const g of groups) {
       const fd = new FormData()
       fd.append('text', g.caption)
       fd.append('targets', JSON.stringify(g.ids))
+      if (g.generatedPostId) fd.append('generatedPostId', g.generatedPostId)
       if (blob) fd.append('image', new File([blob], 'visuel.png', { type: 'image/png' }))
       try {
         const res = await fetch('/api/social/publish', { method: 'POST', body: fd })

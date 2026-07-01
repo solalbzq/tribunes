@@ -28,6 +28,7 @@ type MatchData = {
   competition: string
   extraData?: Record<string, unknown>
 }
+type PostIds = Partial<Record<'instagram' | 'facebook' | 'whatsapp', string>>
 
 const PLATFORMS: { key: Platform; label: string; emoji: string }[] = [
   { key: 'instagram', label: 'Instagram', emoji: '' },
@@ -69,6 +70,7 @@ function PostDisplay({ posts }: { posts: Record<string, string> }) {
 
 function MatchSection({ club }: { club: Club }) {
   const [generatedPosts, setGeneratedPosts] = useState<{ instagram: string; facebook: string; whatsapp: string } | null>(null)
+  const [generatedPostIds, setGeneratedPostIds] = useState<PostIds | null>(null)
   const [generatedMatch, setGeneratedMatch] = useState<MatchData | null>(null)
   const [generatedPhoto, setGeneratedPhoto] = useState<File | null>(null)
 
@@ -83,8 +85,9 @@ function MatchSection({ club }: { club: Club }) {
       {!generatedPosts && !generatedMatch && (
         <GenerateForm
           club={club}
-          onSuccess={(posts, match, photo) => {
+          onSuccess={(posts, match, photo, postIds) => {
             setGeneratedPosts(posts)
+            setGeneratedPostIds(postIds)
             setGeneratedMatch(match)
             setGeneratedPhoto(photo)
           }}
@@ -110,11 +113,13 @@ function MatchSection({ club }: { club: Club }) {
       {generatedPosts && generatedMatch && (
         <PostsResult
           posts={generatedPosts}
+          postIds={generatedPostIds}
           club={club}
           match={generatedMatch}
           photoFile={generatedPhoto}
           onReset={() => {
             setGeneratedPosts(null)
+            setGeneratedPostIds(null)
             setGeneratedMatch(null)
             setGeneratedPhoto(null)
           }}
