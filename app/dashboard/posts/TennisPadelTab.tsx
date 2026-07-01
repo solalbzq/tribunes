@@ -4,8 +4,8 @@ import { useState, useRef } from 'react'
 import type { TournamentMatch } from '@/lib/services/fft-pdf-parser'
 import GenerateForm from '../GenerateForm'
 import PostsResult from '../PostsResult'
-import ProgrammeTab from '../ProgrammeTab'
 import VisualGenerator from '../VisualGenerator'
+import TennisProgrammeSection from './TennisProgrammeSection'
 import TennisVisualGenerator, { type TennisVisualConfig, DEFAULT_TENNIS_CONFIG } from './TennisVisualGenerator'
 
 type Club = {
@@ -15,6 +15,7 @@ type Club = {
   secondaryColor: string
   logoUrl: string | null
   tennisVisualConfig?: TennisVisualConfig | null
+  tenupUrl?: string | null
 }
 type Platform = 'instagram' | 'facebook' | 'whatsapp'
 type MatchData = {
@@ -328,88 +329,6 @@ function TournamentSection({ club }: { club: Club }) {
   )
 }
 
-// ── SECTION 2 : Programme de la semaine ───────────────────────────────────
-
-function WeeklySection({ club }: { club: Club }) {
-  const [weekStart, setWeekStart] = useState(() => {
-    const d = new Date()
-    const day = d.getDay()
-    const diff = d.getDate() - day + (day === 0 ? -6 : 1)
-    d.setDate(diff)
-    return d.toISOString().split('T')[0]
-  })
-  const [generating, setGenerating] = useState(false)
-  const [posts, setPosts] = useState<Record<string, string> | null>(null)
-  const [weekMatches, setWeekMatches] = useState<TournamentMatch[]>([])
-  const [error, setError] = useState('')
-
-  async function generate() {
-    setGenerating(true); setError('')
-    const res = await fetch('/api/posts/tennis/interclub/weekly', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ weekStart }),
-    })
-    const data = await res.json()
-    setGenerating(false)
-    if (!res.ok) { setError(data.error); return }
-    setPosts(data.posts)
-    // Convert weekly matches to TournamentMatch shape for visual
-    if (data.matches) {
-      setWeekMatches(data.matches.map((m: { teamName: string; opponent: string; day: string; time: string; division: string }) => ({
-        time: m.time ?? '',
-        court: '',
-        player1: m.teamName,
-        club1: '',
-        ranking1: '',
-        player2: m.opponent,
-        club2: '',
-        ranking2: '',
-        category: m.division ?? '',
-        round: m.day ?? '',
-        score: '',
-        isPadelPair: false,
-        isClubPlayer: true,
-        isBye: false,
-        isWalkover: false,
-      })))
-    }
-  }
-
-  return (
-    <div className="space-y-6">
-      <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
-        <h3 className="font-bold text-[#1a1a2e]">📅 Programme interclubs de la semaine</h3>
-        <p className="text-sm text-gray-500">
-          Génère un post regroupant tous les matchs interclubs de la semaine sélectionnée, saisis dans l'onglet Générateur.
-        </p>
-        <div>
-          <label className="text-sm font-semibold text-[#1a1a2e] block mb-1">Semaine du (lundi)</label>
-          <input type="date" value={weekStart} onChange={e => setWeekStart(e.target.value)}
-            className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#e94560]/30" />
-        </div>
-        <button onClick={generate} disabled={generating}
-          className="w-full py-3 bg-[#e94560] text-white font-bold rounded-xl hover:bg-[#d63a52] transition disabled:opacity-60 flex items-center justify-center gap-2">
-          {generating ? <><span className="animate-spin">⚡</span> Génération...</> : '✨ Générer le programme'}
-        </button>
-        {error && <p className="text-sm text-red-500 bg-red-50 rounded-xl p-3">{error}</p>}
-      </div>
-      {posts && <PostDisplay posts={posts} />}
-      {posts && weekMatches.length > 0 && (
-        <TennisVisualGenerator
-          club={club}
-          matches={weekMatches}
-          tournamentName={`Programme interclubs`}
-          matchDate={new Date(weekStart)}
-          label="Programme de la semaine"
-          config={club.tennisVisualConfig ?? DEFAULT_TENNIS_CONFIG}
-        />
-      )}
-    </div>
-  )
-}
-
-// ── SECTION 3 : Résultats interclubs ──────────────────────────────────────
 
 function ResultsSection({ club }: { club: Club }) {
   const [loading, setLoading] = useState(false)
@@ -493,7 +412,7 @@ function ResultsSection({ club }: { club: Club }) {
 // ── Main component ─────────────────────────────────────────────────────────
 
 export default function TennisPadelTab({ club }: { club: Club }) {
-  const [section, setSection] = useState<'match' | 'programme' | 'tournament' | 'weekly' | 'results'>('match')
+  const [section, setSection] = useState<'match' | 'programme' | 'tournament' | 'results'>('match')
   const sport = club.sport === 'Padel' ? 'Padel' : 'Tennis'
   const emoji = sport === 'Padel' ? '🏸' : '🎾'
 
@@ -513,7 +432,6 @@ export default function TennisPadelTab({ club }: { club: Club }) {
           { key: 'match', label: '🏟️ Post match' },
           { key: 'programme', label: '📅 Programme' },
           { key: 'tournament', label: `📄 Tournoi FFT` },
-          { key: 'weekly',     label: `📅 Semaine` },
           { key: 'results',    label: `🏆 Résultats` },
         ].map(s => (
           <button key={s.key} onClick={() => setSection(s.key as typeof section)}
@@ -523,11 +441,10 @@ export default function TennisPadelTab({ club }: { club: Club }) {
         ))}
       </div>
 
-      {section === 'match'      && <MatchSection      club={club} />}
-      {section === 'programme'  && <ProgrammeTab      club={club} />}
-      {section === 'tournament' && <TournamentSection club={club} />}
-      {section === 'weekly'     && <WeeklySection     club={club} />}
-      {section === 'results'    && <ResultsSection    club={club} />}
+      {section === 'match'      && <MatchSection            club={club} />}
+      {section === 'programme'  && <TennisProgrammeSection  club={club} />}
+      {section === 'tournament' && <TournamentSection       club={club} />}
+      {section === 'results'    && <ResultsSection          club={club} />}
     </div>
   )
 }

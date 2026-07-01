@@ -17,6 +17,7 @@ type Club = {
   logoUrl: string | null
   visualConfig: unknown
   tennisVisualConfig?: unknown
+  tenupUrl?: string | null
 }
 
 type MatchData = {
@@ -45,6 +46,7 @@ export default function ContentTab({ club }: { club: Club }) {
           secondaryColor: club.secondaryColor,
           logoUrl: club.logoUrl,
           tennisVisualConfig: club.tennisVisualConfig as TennisVisualConfig | null | undefined,
+          tenupUrl: club.tenupUrl ?? null,
         }}
       />
     )

@@ -15,6 +15,7 @@ type Club = {
   logoUrl: string | null
   visualConfig: unknown
   tennisVisualConfig?: unknown
+  tenupUrl?: string | null
   matches: Array<{
     id: string
     opponent: string

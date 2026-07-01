@@ -11,7 +11,7 @@ export async function POST(req: Request) {
     : await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { name, sport, primaryColor, secondaryColor, visualConfig, tennisVisualConfig } = await req.json()
+  const { name, sport, primaryColor, secondaryColor, visualConfig, tennisVisualConfig, tenupUrl } = await req.json()
   if (!name || !sport) return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
 
   const data = {
@@ -20,6 +20,7 @@ export async function POST(req: Request) {
     secondaryColor: secondaryColor ?? '#e94560',
     ...(visualConfig !== undefined ? { visualConfig } : {}),
     ...(tennisVisualConfig !== undefined ? { tennisVisualConfig } : {}),
+    ...(tenupUrl !== undefined ? { tenupUrl: tenupUrl || null } : {}),
   }
 
   const club = await prisma.club.upsert({

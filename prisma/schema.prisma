@@ -72,6 +72,7 @@ model Club {
   logoUrl             String?
   visualConfig        Json?
   tennisVisualConfig  Json?
+  tenupUrl            String?
   suspended           Boolean              @default(false)
   createdAt           DateTime             @default(now())
   matches             MatchResult[]

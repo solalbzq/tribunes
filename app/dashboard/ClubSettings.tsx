@@ -17,6 +17,7 @@ type Club = {
   logoUrl: string | null
   visualConfig: unknown
   tennisVisualConfig?: unknown
+  tenupUrl?: string | null
 }
 
 type ClubProfile = {
@@ -93,6 +94,7 @@ export default function ClubSettings({ club }: { club: Club }) {
   const [secondary, setSecondary] = useState(club.secondaryColor)
   const [logoUrl, setLogoUrl] = useState<string | null>(club.logoUrl)
   const [logoPreview, setLogoPreview] = useState<string | null>(club.logoUrl)
+  const [tenupUrl, setTenupUrl] = useState(club.tenupUrl ?? '')
   const [profile, setProfile] = useState<ClubProfile>({ ...EMPTY_PROFILE, ...initialVisualConfig.clubProfile })
 
   const [mainTab, setMainTab] = useState<'management' | 'art'>('management')
@@ -132,6 +134,7 @@ export default function ClubSettings({ club }: { club: Club }) {
         sport,
         primaryColor: primary,
         secondaryColor: secondary,
+        tenupUrl,
         ...(extra.visualConfig !== undefined ? { visualConfig: extra.visualConfig } : {}),
         ...(extra.tennisVisualConfig !== undefined ? { tennisVisualConfig: extra.tennisVisualConfig } : {}),
       }),
@@ -307,6 +310,19 @@ export default function ClubSettings({ club }: { club: Club }) {
                 </Field>
               </div>
             </div>
+
+            {isTennisPadel && (
+              <div className="bg-white rounded-3xl border border-gray-100 p-6 space-y-5">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.25em] text-gray-400">Automatisation</p>
+                  <h3 className="text-xl font-extrabold text-[#1a1a2e] mt-2">Lien Ten'Up du club</h3>
+                  <p className="text-sm text-gray-500 mt-1">Colle l'adresse de la page Ten'Up de ton club (tenup.fft.fr). Elle permettra de recuperer automatiquement le programme de la semaine ou du jour dans l'onglet Programme.</p>
+                </div>
+                <Field label="URL Ten'Up">
+                  <input type="url" value={tenupUrl} onChange={e => setTenupUrl(e.target.value)} className={INPUT} placeholder="https://tenup.fft.fr/club/..." />
+                </Field>
+              </div>
+            )}
 
             <button
               onClick={handleSaveManagement}
