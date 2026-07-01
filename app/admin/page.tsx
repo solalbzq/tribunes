@@ -43,6 +43,21 @@ type StatsResponse = {
   recentClubs: Array<{ name: string; sport: string; createdAt: string }>
 }
 
+type RealUsage = {
+  windowDays: number
+  aiCalls: number
+  scrapes: number
+  tokensIn: number
+  tokensOut: number
+  aiCostUsd: number
+  scrapeCostUsd: number
+  totalCostUsd: number
+  activeClubs: number
+  avgCostPerClubUsd: number
+  avgCostPerAiCallUsd: number
+  byClub: Array<{ clubId: string; name: string; aiCalls: number; scrapes: number; costUsd: number }>
+}
+
 type Entry = {
   id: string
   email: string
@@ -191,6 +206,7 @@ function PlanBadge({ plan, count }: { plan: string; count: number }) {
 export default function AdminDashboardPage() {
   const router = useRouter()
   const [stats, setStats] = useState<StatsResponse | null>(null)
+  const [realUsage, setRealUsage] = useState<RealUsage | null>(null)
   const [entriesData, setEntriesData] = useState<EntriesResponse | null>(null)
   const [isLoadingStats, setIsLoadingStats] = useState(true)
   const [isLoadingEntries, setIsLoadingEntries] = useState(true)
@@ -222,6 +238,14 @@ export default function AdminDashboardPage() {
         if (mounted) setStats(data)
       })
       .finally(() => { if (mounted) setIsLoadingStats(false) })
+    // Conso réelle mesurée (UsageEvent)
+    fetch('/api/admin/usage', { cache: 'no-store' })
+      .then(async (res) => {
+        if (!res.ok) return
+        const data = await res.json() as RealUsage
+        if (mounted) setRealUsage(data)
+      })
+      .catch(() => {})
     return () => { mounted = false }
   }, [router])
 
@@ -663,7 +687,53 @@ export default function AdminDashboardPage() {
         {/* ─── IA & COÛTS ─── */}
         {activeTab === 'ai' && (
           <div className="space-y-6">
-            <h1 className="text-2xl font-extrabold text-[#1a1a2e]">IA & Coûts OpenAI</h1>
+            <h1 className="text-2xl font-extrabold text-[#1a1a2e]">IA & Coûts</h1>
+
+            {/* Conso RÉELLE mesurée (UsageEvent) — base pour fixer les tarifs */}
+            <div className="rounded-xl border-2 border-[#1a1a2e] bg-white p-5 shadow-sm">
+              <div className="mb-4 flex items-center justify-between">
+                <SectionTitle>💡 Conso réelle mesurée (30 derniers jours)</SectionTitle>
+                <span className="rounded-full bg-[#dcfce7] px-3 py-1 text-xs font-semibold text-[#166534]">chiffres réels</span>
+              </div>
+              {!realUsage ? (
+                <p className="text-sm text-[#6b7280]">Aucune donnée de conso pour l&apos;instant (les mesures s&apos;accumulent au fil des générations et scrapes).</p>
+              ) : (
+                <>
+                  <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                    <StatCard icon="🤖" label="Appels IA" value={fmt(realUsage.aiCalls)} sub={`${fmt(realUsage.tokensIn + realUsage.tokensOut)} tokens`} />
+                    <StatCard icon="🔎" label="Scrapes Ten'Up" value={fmt(realUsage.scrapes)} sub={`$${realUsage.scrapeCostUsd.toFixed(3)}`} />
+                    <StatCard icon="💰" label="Coût total réel" value={`$${realUsage.totalCostUsd.toFixed(4)}`} accent sub={`IA $${realUsage.aiCostUsd.toFixed(3)} + scrape $${realUsage.scrapeCostUsd.toFixed(3)}`} />
+                    <StatCard icon="🏟️" label="Coût moyen / club" value={`$${realUsage.avgCostPerClubUsd.toFixed(4)}`} sub={`${realUsage.activeClubs} club(s) actif(s)`} />
+                  </div>
+                  {realUsage.byClub.length > 0 && (
+                    <div className="mt-5 overflow-x-auto">
+                      <table className="min-w-full text-sm">
+                        <thead>
+                          <tr className="text-[#6b7280]">
+                            <th className="border-b border-[#e5e7eb] px-4 py-2 text-left font-semibold">Club</th>
+                            <th className="border-b border-[#e5e7eb] px-4 py-2 text-right font-semibold">Appels IA</th>
+                            <th className="border-b border-[#e5e7eb] px-4 py-2 text-right font-semibold">Scrapes</th>
+                            <th className="border-b border-[#e5e7eb] px-4 py-2 text-right font-semibold">Coût ($)</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {realUsage.byClub.map((c) => (
+                            <tr key={c.clubId}>
+                              <td className="border-b border-[#f3f4f6] px-4 py-2 font-medium">{c.name}</td>
+                              <td className="border-b border-[#f3f4f6] px-4 py-2 text-right">{fmt(c.aiCalls)}</td>
+                              <td className="border-b border-[#f3f4f6] px-4 py-2 text-right">{fmt(c.scrapes)}</td>
+                              <td className="border-b border-[#f3f4f6] px-4 py-2 text-right font-semibold text-[#e94560]">${c.costUsd.toFixed(4)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+
+            <h2 className="pt-2 text-lg font-bold text-[#1a1a2e]">Estimation historique (basée sur le nb de posts)</h2>
 
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               <StatCard icon="🤖" label="Appels gpt-4o" value={isLoadingStats ? '...' : fmt(stats?.totalCompletions ?? 0)} sub="1 appel = 3 posts" />
