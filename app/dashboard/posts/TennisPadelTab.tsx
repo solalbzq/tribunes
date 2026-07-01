@@ -48,13 +48,13 @@ function PostDisplay({ posts }: { posts: Record<string, string> }) {
       <div className="flex gap-2">
         {PLATFORMS.filter(p => posts[p.key]).map(p => (
           <button key={p.key} onClick={() => setTab(p.key)}
-            className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition ${tab === p.key ? 'bg-[#1a1a2e] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+            className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition ${tab === p.key ? 'bg-[#111827] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
             {p.emoji} {p.label}
           </button>
         ))}
         <button onClick={copy}
           className="ml-auto px-3 py-1.5 rounded-lg text-sm font-semibold text-white transition"
-          style={{ background: copied ? '#10b981' : '#e94560' }}>
+          style={{ background: copied ? '#22c55e' : '#2563eb' }}>
           {copied ? '✓ Copié' : '📋 Copier'}
         </button>
       </div>
@@ -73,7 +73,7 @@ function MatchSection({ club }: { club: Club }) {
   return (
     <div className="space-y-6">
       <div className="bg-white rounded-2xl border border-gray-100 p-6">
-        <h3 className="font-bold text-[#1a1a2e]">🏟️ Post de match</h3>
+        <h3 className="font-bold text-[#111827]">🏟️ Post de match</h3>
         <p className="text-sm text-gray-500 mt-1">
           Cree rapidement un post de resultat avec son visuel pour ton club.
         </p>
@@ -97,13 +97,13 @@ function MatchSection({ club }: { club: Club }) {
       {!generatedPosts && generatedMatch && (
         <div className="max-w-2xl space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-extrabold text-[#1a1a2e]">Ton visuel est pret 🖼️</h2>
+            <h2 className="text-xl font-extrabold text-[#111827]">Ton visuel est pret 🖼️</h2>
             <button
               onClick={() => {
                 setGeneratedMatch(null)
                 setGeneratedPhoto(null)
               }}
-              className="text-sm text-gray-500 hover:text-[#e94560] transition"
+              className="text-sm text-gray-500 hover:text-[#2563eb] transition"
             >
               ← Nouveau match
             </button>
@@ -185,18 +185,18 @@ function TournamentSection({ club }: { club: Club }) {
   return (
     <div className="space-y-6">
       <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-5">
-        <h3 className="font-bold text-[#1a1a2e]">
+        <h3 className="font-bold text-[#111827]">
           {isPadel ? '🎾 Programmation tournoi FFT Padel' : '🎾 Programmation tournoi FFT Tennis'}
         </h3>
 
         {/* Upload PDF */}
         <div>
-          <label className="text-sm font-semibold text-[#1a1a2e] block mb-2">Fiche de programmation FFT (PDF)</label>
+          <label className="text-sm font-semibold text-[#111827] block mb-2">Fiche de programmation FFT (PDF)</label>
           <div onClick={() => fileRef.current?.click()}
-            className="border-2 border-dashed border-gray-200 rounded-xl p-8 text-center cursor-pointer hover:border-[#e94560] transition">
+            className="border-2 border-dashed border-gray-200 rounded-xl p-8 text-center cursor-pointer hover:border-[#2563eb] transition">
             {file ? (
               <div>
-                <p className="font-semibold text-[#1a1a2e]">📄 {file.name}</p>
+                <p className="font-semibold text-[#111827]">📄 {file.name}</p>
                 <p className="text-xs text-gray-400 mt-1">{(file.size / 1024).toFixed(0)} Ko</p>
               </div>
             ) : (
@@ -214,15 +214,15 @@ function TournamentSection({ club }: { club: Club }) {
         {/* Club name filter */}
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="text-sm font-semibold text-[#1a1a2e] block mb-1">Nom à filtrer dans le PDF</label>
+            <label className="text-sm font-semibold text-[#111827] block mb-1">Nom à filtrer dans le PDF</label>
             <input type="text" value={clubNameFilter} onChange={e => setClubNameFilter(e.target.value)}
-              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#e94560]/30" />
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2563eb]/30" />
           </div>
           {isPadel && (
             <div>
-              <label className="text-sm font-semibold text-[#1a1a2e] block mb-1">Grade du tournoi</label>
+              <label className="text-sm font-semibold text-[#111827] block mb-1">Grade du tournoi</label>
               <select value={grade} onChange={e => setGrade(e.target.value)}
-                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#e94560]/30">
+                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2563eb]/30">
                 {['P25', 'P100', 'P250', 'P500', 'P1000', 'Open'].map(g => <option key={g}>{g}</option>)}
               </select>
             </div>
@@ -230,7 +230,7 @@ function TournamentSection({ club }: { club: Club }) {
         </div>
 
         <button onClick={handleParse} disabled={!file || parsing}
-          className="w-full py-3 bg-[#1a1a2e] text-white font-bold rounded-xl hover:bg-[#2a2a4e] transition disabled:opacity-60">
+          className="w-full py-3 bg-[#111827] text-white font-bold rounded-xl hover:bg-[#1f2937] transition disabled:opacity-60">
           {parsing ? '⏳ Analyse du PDF...' : '🔍 Analyser le PDF'}
         </button>
       </div>
@@ -240,7 +240,7 @@ function TournamentSection({ club }: { club: Club }) {
         <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
           <div className="flex items-start justify-between">
             <div>
-              <h4 className="font-bold text-[#1a1a2e]">{parseResult.tournamentName}</h4>
+              <h4 className="font-bold text-[#111827]">{parseResult.tournamentName}</h4>
               <p className="text-sm text-gray-500">{new Date(parseResult.matchDate).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
             </div>
             <span className="text-sm bg-green-50 text-green-700 font-semibold px-3 py-1 rounded-full">
@@ -263,12 +263,12 @@ function TournamentSection({ club }: { club: Club }) {
                 <tbody>
                   {parseResult.clubMatches.map((m, i) => (
                     <tr key={i} className="border-b border-gray-50">
-                      <td className="py-2 pr-3 font-mono font-semibold text-[#1a1a2e]">{m.time}</td>
+                      <td className="py-2 pr-3 font-mono font-semibold text-[#111827]">{m.time}</td>
                       <td className="py-2 pr-3 text-gray-600">{m.court}</td>
                       <td className="py-2 pr-3 text-gray-600">{m.category}</td>
                       <td className="py-2 pr-3 text-gray-600">{m.round}</td>
                       <td className="py-2 text-gray-800">
-                        <span className="font-semibold text-[#e94560]">
+                        <span className="font-semibold text-[#2563eb]">
                           {m.player1}{m.player1Partner ? ` / ${m.player1Partner}` : ''}
                         </span>
                         {' vs '}
@@ -288,11 +288,11 @@ function TournamentSection({ club }: { club: Club }) {
           {parseResult.clubMatches.length > 0 && (
             <div className="space-y-3 pt-2 border-t border-gray-100">
               <div>
-                <label className="text-sm font-semibold text-[#1a1a2e] block mb-2">Plateformes</label>
+                <label className="text-sm font-semibold text-[#111827] block mb-2">Plateformes</label>
                 <div className="flex gap-2">
                   {PLATFORMS.map(p => (
                     <button key={p.key} type="button" onClick={() => togglePlatform(p.key)}
-                      className={`px-3 py-2 rounded-xl text-sm font-semibold border transition ${platforms.includes(p.key) ? 'bg-[#1a1a2e] text-white border-[#1a1a2e]' : 'bg-white text-gray-600 border-gray-200'}`}>
+                      className={`px-3 py-2 rounded-xl text-sm font-semibold border transition ${platforms.includes(p.key) ? 'bg-[#111827] text-white border-[#111827]' : 'bg-white text-gray-600 border-gray-200'}`}>
                       {p.emoji} {p.label}
                     </button>
                   ))}
@@ -300,18 +300,18 @@ function TournamentSection({ club }: { club: Club }) {
               </div>
               <div className="flex gap-3">
                 <button onClick={() => handleGenerate(false)} disabled={generating || platforms.length === 0}
-                  className="flex-1 py-3 bg-[#e94560] text-white font-bold rounded-xl hover:bg-[#d63a52] transition disabled:opacity-60 flex items-center justify-center gap-2">
+                  className="flex-1 py-3 bg-[#2563eb] text-white font-bold rounded-xl hover:bg-[#1d4ed8] transition disabled:opacity-60 flex items-center justify-center gap-2">
                   {generating ? <><span className="animate-spin">⚡</span> Génération en cours...</> : '✨ Générer les posts'}
                 </button>
                 {posts && (
                   <button onClick={() => handleGenerate(true)} disabled={generating}
-                    className="px-4 py-3 bg-gray-100 text-[#1a1a2e] font-bold rounded-xl hover:bg-gray-200 transition text-sm whitespace-nowrap"
+                    className="px-4 py-3 bg-gray-100 text-[#111827] font-bold rounded-xl hover:bg-gray-200 transition text-sm whitespace-nowrap"
                     title="Régénérer de nouveaux textes (rappelle l'IA)">
                     ♻️ Régénérer
                   </button>
                 )}
                 <button onClick={() => setShowVisualOnly(true)}
-                  className="px-5 py-3 bg-gray-100 text-[#1a1a2e] font-bold rounded-xl hover:bg-gray-200 transition text-sm whitespace-nowrap">
+                  className="px-5 py-3 bg-gray-100 text-[#111827] font-bold rounded-xl hover:bg-gray-200 transition text-sm whitespace-nowrap">
                   🖼️ Visuel seul
                 </button>
               </div>
@@ -375,9 +375,9 @@ function ResultsSection({ club }: { club: Club }) {
     <div className="space-y-6">
       <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="font-bold text-[#1a1a2e]">🏆 Résultats interclubs</h3>
+          <h3 className="font-bold text-[#111827]">🏆 Résultats interclubs</h3>
           <button onClick={loadMatches} disabled={loading}
-            className="px-4 py-2 bg-[#1a1a2e] text-white text-sm font-semibold rounded-xl hover:bg-[#2a2a4e] transition disabled:opacity-60">
+            className="px-4 py-2 bg-[#111827] text-white text-sm font-semibold rounded-xl hover:bg-[#1f2937] transition disabled:opacity-60">
             {loading ? '...' : '🔄 Charger'}
           </button>
         </div>
@@ -392,8 +392,8 @@ function ResultsSection({ club }: { club: Club }) {
           <div key={m.id} className="border border-gray-100 rounded-xl p-4 space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-semibold text-[#1a1a2e]">
-                  {m.teamName ?? club.name} <span className="text-[#e94560] font-bold">{m.globalScore}</span> {m.opponent}
+                <p className="font-semibold text-[#111827]">
+                  {m.teamName ?? club.name} <span className="text-[#2563eb] font-bold">{m.globalScore}</span> {m.opponent}
                 </p>
                 <p className="text-xs text-gray-400">
                   {new Date(m.date).toLocaleDateString('fr-FR')} · {m.division ?? ''}
@@ -401,7 +401,7 @@ function ResultsSection({ club }: { club: Club }) {
               </div>
               {!posts[m.id] && (
                 <button onClick={() => generateResult(m.id)} disabled={generating === m.id}
-                  className="px-3 py-2 bg-[#e94560] text-white text-sm font-semibold rounded-xl hover:bg-[#d63a52] transition disabled:opacity-60 whitespace-nowrap">
+                  className="px-3 py-2 bg-[#2563eb] text-white text-sm font-semibold rounded-xl hover:bg-[#1d4ed8] transition disabled:opacity-60 whitespace-nowrap">
                   {generating === m.id ? '⏳...' : '✨ Générer'}
                 </button>
               )}
@@ -410,7 +410,7 @@ function ResultsSection({ club }: { club: Club }) {
               <>
                 <PostDisplay posts={posts[m.id]} />
                 <button onClick={() => generateResult(m.id, true)} disabled={generating === m.id}
-                  className="text-xs font-semibold text-gray-500 hover:text-[#e94560] transition disabled:opacity-60"
+                  className="text-xs font-semibold text-gray-500 hover:text-[#2563eb] transition disabled:opacity-60"
                   title="Régénérer de nouveaux textes (rappelle l'IA)">
                   {generating === m.id ? '⏳ Régénération...' : '♻️ Régénérer'}
                 </button>
@@ -437,7 +437,7 @@ export default function TennisPadelTab({ club }: { club: Club }) {
       <div className="flex items-center gap-3">
         <span className="text-2xl">{emoji}</span>
         <div>
-          <h2 className="text-xl font-extrabold text-[#1a1a2e]">Generer du contenu {sport}</h2>
+          <h2 className="text-xl font-extrabold text-[#111827]">Generer du contenu {sport}</h2>
           <p className="text-sm text-gray-500">Choisis le type de contenu adapte a ton club.</p>
         </div>
       </div>
@@ -451,7 +451,7 @@ export default function TennisPadelTab({ club }: { club: Club }) {
           { key: 'results',    label: `🏆 Résultats` },
         ].map(s => (
           <button key={s.key} onClick={() => setSection(s.key as typeof section)}
-            className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${section === s.key ? 'bg-white text-[#1a1a2e] shadow-sm' : 'text-gray-600 hover:text-[#1a1a2e]'}`}>
+            className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${section === s.key ? 'bg-white text-[#111827] shadow-sm' : 'text-gray-600 hover:text-[#111827]'}`}>
             {s.label}
           </button>
         ))}

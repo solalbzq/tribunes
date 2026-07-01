@@ -25,7 +25,7 @@ export default function ConfirmDialog({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
       <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl">
-        <h3 className="text-lg font-bold text-[#1a1a2e]">{title}</h3>
+        <h3 className="text-lg font-bold text-[#111827]">{title}</h3>
         <p className="mt-2 text-sm text-[#6b7280]">{message}</p>
 
         {requireText && (
@@ -37,7 +37,7 @@ export default function ConfirmDialog({
               autoFocus
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              className="w-full rounded-lg border border-[#e5e7eb] px-3 py-2 text-sm outline-none focus:border-[#e94560]"
+              className="w-full rounded-lg border border-[#e5e7eb] px-3 py-2 text-sm outline-none focus:border-[#2563eb]"
             />
           </div>
         )}
@@ -46,7 +46,7 @@ export default function ConfirmDialog({
           <button
             type="button"
             onClick={onCancel}
-            className="rounded-lg border border-[#e5e7eb] px-4 py-2 text-sm font-semibold text-[#1a1a2e] transition hover:bg-[#f8f8f8]"
+            className="rounded-lg border border-[#e5e7eb] px-4 py-2 text-sm font-semibold text-[#111827] transition hover:bg-[#f8fafc]"
           >
             Annuler
           </button>
@@ -55,7 +55,7 @@ export default function ConfirmDialog({
             disabled={disabled}
             onClick={onConfirm}
             className={`rounded-lg px-4 py-2 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-50 ${
-              danger ? 'bg-[#e94560] hover:bg-[#c73652]' : 'bg-[#1a1a2e] hover:bg-[#2a2a4e]'
+              danger ? 'bg-[#2563eb] hover:bg-[#1d4ed8]' : 'bg-[#111827] hover:bg-[#1f2937]'
             }`}
           >
             {confirmLabel}

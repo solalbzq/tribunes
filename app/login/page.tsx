@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Logo from '@/components/Logo'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -40,11 +41,11 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f8f8f8] flex items-center justify-center px-4">
+    <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <Link href="/" className="text-2xl font-extrabold text-[#1a1a2e]">⚡ Tribunes</Link>
-          <p className="mt-2 text-gray-600">Connecte-toi à ton compte</p>
+          <Link href="/" className="inline-flex"><Logo size={30} /></Link>
+          <p className="mt-3 text-gray-600">Connecte-toi à ton compte</p>
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 space-y-5">
@@ -54,7 +55,7 @@ export default function LoginPage() {
               type="button"
               onClick={() => handleOAuth('google')}
               disabled={oauthLoading !== null}
-              className="flex items-center justify-center gap-2 rounded-xl border border-gray-200 px-4 py-3 text-sm font-semibold text-[#1a1a2e] transition hover:bg-gray-50 disabled:opacity-60"
+              className="flex items-center justify-center gap-2 rounded-xl border border-gray-200 px-4 py-3 text-sm font-semibold text-[#111827] transition hover:bg-gray-50 disabled:opacity-60"
             >
               <GoogleIcon />
               {oauthLoading === 'google' ? '...' : 'Google'}
@@ -63,7 +64,7 @@ export default function LoginPage() {
               type="button"
               onClick={() => handleOAuth('apple')}
               disabled={oauthLoading !== null}
-              className="flex items-center justify-center gap-2 rounded-xl bg-[#1a1a2e] px-4 py-3 text-sm font-semibold text-white transition hover:bg-black disabled:opacity-60"
+              className="flex items-center justify-center gap-2 rounded-xl bg-[#111827] px-4 py-3 text-sm font-semibold text-white transition hover:bg-black disabled:opacity-60"
             >
               <AppleIcon />
               {oauthLoading === 'apple' ? '...' : 'Apple'}
@@ -78,24 +79,24 @@ export default function LoginPage() {
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="block text-sm font-semibold text-[#1a1a2e] mb-1">Email</label>
+              <label className="block text-sm font-semibold text-[#111827] mb-1">Email</label>
               <input
                 type="email"
                 required
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#e94560]/30"
+                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#2563eb]/30"
                 placeholder="ton@email.com"
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-[#1a1a2e] mb-1">Mot de passe</label>
+              <label className="block text-sm font-semibold text-[#111827] mb-1">Mot de passe</label>
               <input
                 type="password"
                 required
                 value={password}
                 onChange={e => setPassword(e.target.value)}
-                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#e94560]/30"
+                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#2563eb]/30"
                 placeholder="••••••••"
               />
             </div>
@@ -103,13 +104,13 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-[#e94560] text-white font-bold py-3 rounded-xl hover:bg-[#d63a52] transition disabled:opacity-60"
+              className="w-full bg-[#2563eb] text-white font-bold py-3 rounded-xl hover:bg-[#1d4ed8] transition disabled:opacity-60"
             >
               {loading ? 'Connexion...' : 'Se connecter'}
             </button>
             <p className="text-center text-sm text-gray-500">
               Pas encore de compte ?{' '}
-              <Link href="/signup" className="text-[#e94560] font-semibold hover:underline">
+              <Link href="/signup" className="text-[#2563eb] font-semibold hover:underline">
                 Créer un compte
               </Link>
             </p>

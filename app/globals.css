@@ -3,18 +3,44 @@
 @tailwind utilities;
 
 :root {
-  --primary: #1a1a2e;
-  --accent: #e94560;
-  --accent-hover: #c73652;
-  --bg: #f8f8f8;
+  /* Fonds */
+  --bg: #ffffff;
+  --bg-subtle: #f8fafc;
   --surface: #ffffff;
-  --text-primary: #1a1a2e;
-  --text-secondary: #6b7280;
-  --success: #10b981;
+
+  /* Texte */
+  --ink: #111827;
+  --muted: #6b7280;
+
+  /* Marque */
+  --brand: #2563eb;
+  --brand-hover: #1d4ed8;
+  --brand-soft: #eff4ff;
+  --gold: #eeb007;
+  --gold-hover: #d99e06;
+  --gold-soft: #fef6e0;
+
+  /* États */
+  --success: #22c55e;
+  --error: #ef4444;
+  --warning: #f59e0b;
+
+  /* Lignes & profondeur */
   --border: #e5e7eb;
-  --radius-card: 12px;
-  --radius-btn: 8px;
-  --shadow: 0 1px 3px rgba(0,0,0,0.08);
+  --radius-card: 16px;
+  --radius-btn: 10px;
+  --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.05);
+  --shadow: 0 1px 3px rgba(16, 24, 40, 0.08), 0 1px 2px rgba(16, 24, 40, 0.04);
+  --shadow-lg: 0 12px 32px -8px rgba(16, 24, 40, 0.12);
+
+  /* Compat anciennes variables */
+  --primary: var(--ink);
+  --accent: var(--brand);
+  --accent-hover: var(--brand-hover);
+  --text-primary: var(--ink);
+  --text-secondary: var(--muted);
+  --radius-card: 16px;
+  --radius-btn: 10px;
 }
 
 html {
@@ -24,9 +50,10 @@ html {
 body {
   margin: 0;
   background: var(--bg);
-  color: var(--text-primary);
-  font-family: 'Inter', sans-serif;
+  color: var(--ink);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 a {
@@ -39,6 +66,16 @@ a {
 }
 
 button,
-input {
+input,
+textarea,
+select {
   font: inherit;
+}
+
+/* Dégradés de marque, subtils */
+.brand-gradient {
+  background-image: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+}
+.brand-gradient-soft {
+  background-image: linear-gradient(135deg, #eff4ff 0%, #ffffff 60%);
 }

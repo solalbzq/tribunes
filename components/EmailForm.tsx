@@ -73,7 +73,7 @@ export function EmailForm({ placeholder, buttonLabel, note, className }: EmailFo
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           placeholder={placeholder}
-          className="sm:col-span-3 rounded-[8px] border border-[#e5e7eb] px-4 py-3 text-sm text-[#1a1a2e] outline-none transition focus:border-[#e94560] focus:ring-2 focus:ring-[#fff0f3]"
+          className="sm:col-span-3 rounded-[8px] border border-[#e5e7eb] px-4 py-3 text-sm text-[#111827] outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#fff0f3]"
         />
         <input
           name="clubName"
@@ -81,7 +81,7 @@ export function EmailForm({ placeholder, buttonLabel, note, className }: EmailFo
           value={clubName}
           onChange={(event) => setClubName(event.target.value)}
           placeholder="Nom du club (optionnel)"
-          className="rounded-[8px] border border-[#e5e7eb] px-4 py-3 text-sm text-[#1a1a2e] outline-none transition focus:border-[#e94560] focus:ring-2 focus:ring-[#fff0f3]"
+          className="rounded-[8px] border border-[#e5e7eb] px-4 py-3 text-sm text-[#111827] outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#fff0f3]"
         />
         <input
           name="sport"
@@ -89,19 +89,19 @@ export function EmailForm({ placeholder, buttonLabel, note, className }: EmailFo
           value={sport}
           onChange={(event) => setSport(event.target.value)}
           placeholder="Sport (optionnel)"
-          className="rounded-[8px] border border-[#e5e7eb] px-4 py-3 text-sm text-[#1a1a2e] outline-none transition focus:border-[#e94560] focus:ring-2 focus:ring-[#fff0f3]"
+          className="rounded-[8px] border border-[#e5e7eb] px-4 py-3 text-sm text-[#111827] outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#fff0f3]"
         />
         <button
           type="submit"
           disabled={status === 'loading'}
-          className="rounded-[8px] bg-[#e94560] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#c73652] disabled:cursor-not-allowed disabled:opacity-70"
+          className="rounded-[8px] bg-[#2563eb] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#1d4ed8] disabled:cursor-not-allowed disabled:opacity-70"
         >
           {status === 'loading' ? 'Envoi...' : buttonLabel}
         </button>
       </div>
       {note ? <p className="mt-3 text-[13px] text-[#6b7280]">{note}</p> : null}
       {message ? (
-        <p className={`mt-3 text-sm ${status === 'error' ? 'text-[#e94560]' : 'text-[#10b981]'}`}>
+        <p className={`mt-3 text-sm ${status === 'error' ? 'text-[#2563eb]' : 'text-[#22c55e]'}`}>
           {message}
         </p>
       ) : null}

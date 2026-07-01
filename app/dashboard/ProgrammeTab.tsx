@@ -50,7 +50,7 @@ export default function ProgrammeTab({ club }: { club: Club }) {
       {/* Formulaire */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="font-bold text-[#1a1a2e]">Matchs à venir</h3>
+          <h3 className="font-bold text-[#111827]">Matchs à venir</h3>
           <span className="text-xs text-gray-400">{matches.length}/6 matchs</span>
         </div>
 
@@ -79,7 +79,7 @@ export default function ProgrammeTab({ club }: { club: Club }) {
                       onClick={() => update(m.id, 'isHome', opt.val)}
                       className={`flex-1 py-1.5 rounded-xl text-xs font-semibold border transition ${
                         m.isHome === opt.val
-                          ? 'bg-[#1a1a2e] text-white border-[#1a1a2e]'
+                          ? 'bg-[#111827] text-white border-[#111827]'
                           : 'bg-white text-gray-500 border-gray-200'
                       }`}
                     >
@@ -95,7 +95,7 @@ export default function ProgrammeTab({ club }: { club: Club }) {
                       type="date"
                       value={m.date}
                       onChange={e => update(m.id, 'date', e.target.value)}
-                      className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-[#e94560]/30"
+                      className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-[#2563eb]/30"
                     />
                   </div>
                   <div>
@@ -104,7 +104,7 @@ export default function ProgrammeTab({ club }: { club: Club }) {
                       type="text"
                       value={m.competition}
                       onChange={e => update(m.id, 'competition', e.target.value)}
-                      className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-[#e94560]/30"
+                      className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-[#2563eb]/30"
                       placeholder="Championnat..."
                     />
                   </div>
@@ -116,7 +116,7 @@ export default function ProgrammeTab({ club }: { club: Club }) {
                     type="text"
                     value={m.opponent}
                     onChange={e => update(m.id, 'opponent', e.target.value)}
-                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#e94560]/30"
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#2563eb]/30"
                     placeholder="Ex: Stade Nîmois"
                   />
                 </div>
@@ -128,14 +128,14 @@ export default function ProgrammeTab({ club }: { club: Club }) {
         {matches.length < 6 && (
           <button
             onClick={addMatch}
-            className="w-full py-3 rounded-2xl border-2 border-dashed border-gray-200 text-sm font-semibold text-gray-400 hover:border-[#e94560] hover:text-[#e94560] transition"
+            className="w-full py-3 rounded-2xl border-2 border-dashed border-gray-200 text-sm font-semibold text-gray-400 hover:border-[#2563eb] hover:text-[#2563eb] transition"
           >
             + Ajouter un match
           </button>
         )}
 
         {filled.length > 0 && (
-          <div className="bg-[#1a1a2e]/5 rounded-xl p-3 text-xs text-[#1a1a2e]">
+          <div className="bg-[#111827]/5 rounded-xl p-3 text-xs text-[#111827]">
             <p className="font-semibold">✅ {filled.length} match{filled.length > 1 ? 's' : ''} prêt{filled.length > 1 ? 's' : ''} pour le visuel</p>
             <p className="text-gray-500 mt-0.5">Le visuel se met à jour automatiquement à droite</p>
           </div>

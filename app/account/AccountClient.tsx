@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import Logo from '@/components/Logo'
 
 type Org = {
   id: string
@@ -24,7 +25,7 @@ type ResolvedMember = {
 const PLAN_LABELS: Record<string, { label: string; color: string; desc: string; price: string }> = {
   FREE:       { label: 'Gratuit',    color: '#6b7280', desc: '1 compte, fonctionnalités limitées', price: '0€' },
   PRO:        { label: 'Pro',        color: '#3b82f6', desc: '1 compte, tout illimité',            price: '10€/mois' },
-  STRUCTURE:  { label: 'Structure',  color: '#e94560', desc: 'Comptes illimités dans votre équipe', price: '25€/mois' },
+  STRUCTURE:  { label: 'Structure',  color: '#2563eb', desc: 'Comptes illimités dans votre équipe', price: '25€/mois' },
 }
 
 export default function AccountClient({
@@ -126,17 +127,17 @@ export default function AccountClient({
   }
 
   return (
-    <div className="min-h-screen bg-[#f8f8f8]">
+    <div className="min-h-screen bg-[#f8fafc]">
       {/* Navbar */}
       <nav className="bg-white border-b border-gray-100 px-6 py-4">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Link href="/dashboard" className="text-xl font-extrabold text-[#1a1a2e]">⚡ Tribunes</Link>
+            <Link href="/dashboard" className="inline-flex"><Logo size={24} /></Link>
             <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">Mon compte</span>
           </div>
           <div className="flex items-center gap-3">
-            <Link href="/dashboard" className="text-sm text-gray-500 hover:text-[#1a1a2e] transition">← Dashboard</Link>
-            <button onClick={logout} className="text-sm text-gray-400 hover:text-[#e94560] transition">Déconnexion</button>
+            <Link href="/dashboard" className="text-sm text-gray-500 hover:text-[#111827] transition">← Dashboard</Link>
+            <button onClick={logout} className="text-sm text-gray-400 hover:text-[#2563eb] transition">Déconnexion</button>
           </div>
         </div>
       </nav>
@@ -151,7 +152,7 @@ export default function AccountClient({
           ].map(t => (
             <button key={t.key} onClick={() => setTab(t.key as typeof tab)}
               className={`px-4 py-2 rounded-xl text-sm font-semibold transition ${
-                tab === t.key ? 'bg-[#1a1a2e] text-white' : 'bg-white text-gray-600 border border-gray-100 hover:bg-gray-50'
+                tab === t.key ? 'bg-[#111827] text-white' : 'bg-white text-gray-600 border border-gray-100 hover:bg-gray-50'
               }`}>
               {t.label}
             </button>
@@ -162,29 +163,29 @@ export default function AccountClient({
         {tab === 'profil' && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-2xl">
             <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
-              <h3 className="font-bold text-[#1a1a2e]">Informations</h3>
+              <h3 className="font-bold text-[#111827]">Informations</h3>
               <div>
                 <label className="text-xs text-gray-400 block mb-1">Email</label>
-                <p className="font-semibold text-[#1a1a2e]">{userEmail}</p>
+                <p className="font-semibold text-[#111827]">{userEmail}</p>
               </div>
               {club && (
                 <div>
                   <label className="text-xs text-gray-400 block mb-1">Club principal</label>
-                  <p className="font-semibold text-[#1a1a2e]">{club.name} <span className="text-gray-400 font-normal text-sm">({club.sport})</span></p>
+                  <p className="font-semibold text-[#111827]">{club.name} <span className="text-gray-400 font-normal text-sm">({club.sport})</span></p>
                 </div>
               )}
             </div>
             <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
-              <h3 className="font-bold text-[#1a1a2e]">Plan actuel</h3>
+              <h3 className="font-bold text-[#111827]">Plan actuel</h3>
               <div className="flex items-center gap-3">
                 <span className="px-3 py-1 rounded-full text-sm font-bold text-white" style={{ background: planInfo.color }}>
                   {planInfo.label}
                 </span>
-                <span className="text-sm font-bold text-[#1a1a2e]">{planInfo.price}</span>
+                <span className="text-sm font-bold text-[#111827]">{planInfo.price}</span>
               </div>
               <p className="text-sm text-gray-500">{planInfo.desc}</p>
               <button onClick={() => setTab('abonnement')}
-                className="text-sm font-semibold text-[#e94560] hover:underline">
+                className="text-sm font-semibold text-[#2563eb] hover:underline">
                 Gérer l'abonnement →
               </button>
             </div>
@@ -197,16 +198,16 @@ export default function AccountClient({
             {!org ? (
               <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center space-y-4">
                 <p className="text-2xl">🏢</p>
-                <h3 className="font-bold text-[#1a1a2e]">Créer votre structure sportive</h3>
+                <h3 className="font-bold text-[#111827]">Créer votre structure sportive</h3>
                 <p className="text-sm text-gray-500">
                   Une structure regroupe votre club et vos collaborateurs (coachs, bénévoles, staff). Créez-la pour inviter des membres.
                 </p>
                 <div className="flex gap-3 max-w-sm mx-auto">
                   <input type="text" value={orgName} onChange={e => setOrgName(e.target.value)}
                     placeholder="Nom de votre structure"
-                    className="flex-1 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#e94560]/30" />
+                    className="flex-1 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2563eb]/30" />
                   <button onClick={createOrg} disabled={creating || !orgName}
-                    className="bg-[#e94560] text-white font-bold px-4 py-2.5 rounded-xl hover:bg-[#d63a52] transition disabled:opacity-60">
+                    className="bg-[#2563eb] text-white font-bold px-4 py-2.5 rounded-xl hover:bg-[#1d4ed8] transition disabled:opacity-60">
                     {creating ? '...' : 'Créer'}
                   </button>
                 </div>
@@ -216,7 +217,7 @@ export default function AccountClient({
                 <div className="bg-white rounded-2xl border border-gray-100 p-6">
                   <div className="flex items-center justify-between mb-4">
                     <div>
-                      <h3 className="font-bold text-[#1a1a2e] text-lg">{org.name}</h3>
+                      <h3 className="font-bold text-[#111827] text-lg">{org.name}</h3>
                       <span className="text-xs px-2 py-0.5 rounded-full text-white font-semibold" style={{ background: planInfo.color }}>
                         Plan {planInfo.label}
                       </span>
@@ -235,11 +236,11 @@ export default function AccountClient({
                         return (
                           <div key={m.id} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
                             <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#1a1a2e] to-[#e94560] flex items-center justify-center text-white text-xs font-bold">
+                              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#111827] to-[#2563eb] flex items-center justify-center text-white text-xs font-bold">
                                 {i + 1}
                               </div>
                               <div>
-                                <p className="text-sm font-semibold text-[#1a1a2e]">{m.email ?? 'Email indisponible'}</p>
+                                <p className="text-sm font-semibold text-[#111827]">{m.email ?? 'Email indisponible'}</p>
                                 <p className="text-xs text-gray-400">{m.role === 'OWNER' ? 'Propriétaire' : 'Membre'}</p>
                               </div>
                             </div>
@@ -260,7 +261,7 @@ export default function AccountClient({
                                     type="button"
                                     disabled={busy}
                                     onClick={() => removeMember(m.id)}
-                                    className="text-xs font-semibold text-[#e94560] bg-[#e94560]/10 hover:bg-[#e94560]/20 px-2.5 py-1.5 rounded-full transition disabled:opacity-50"
+                                    className="text-xs font-semibold text-[#2563eb] bg-[#2563eb]/10 hover:bg-[#2563eb]/20 px-2.5 py-1.5 rounded-full transition disabled:opacity-50"
                                   >
                                     Retirer
                                   </button>
@@ -277,14 +278,14 @@ export default function AccountClient({
                   {/* Inviter */}
                   {isOwner && (
                     <div>
-                      <p className="text-sm font-semibold text-[#1a1a2e] mb-2">Inviter un collaborateur</p>
+                      <p className="text-sm font-semibold text-[#111827] mb-2">Inviter un collaborateur</p>
                       {plan === 'STRUCTURE' ? (
                         <div className="flex gap-3">
                           <input type="email" value={inviteEmail} onChange={e => setInviteEmail(e.target.value)}
                             placeholder="email@collaborateur.com"
-                            className="flex-1 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#e94560]/30" />
+                            className="flex-1 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2563eb]/30" />
                           <button onClick={invite} disabled={loading || !inviteEmail}
-                            className="bg-[#1a1a2e] text-white font-bold px-4 py-2.5 rounded-xl hover:bg-[#2a2a4e] transition disabled:opacity-60">
+                            className="bg-[#111827] text-white font-bold px-4 py-2.5 rounded-xl hover:bg-[#1f2937] transition disabled:opacity-60">
                             {loading ? '...' : 'Inviter'}
                           </button>
                         </div>
@@ -292,7 +293,7 @@ export default function AccountClient({
                         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center justify-between">
                           <p className="text-sm text-amber-700">L'invitation de membres nécessite le plan Structure.</p>
                           <button onClick={() => setTab('abonnement')}
-                            className="text-sm font-bold text-[#e94560] hover:underline shrink-0 ml-3">
+                            className="text-sm font-bold text-[#2563eb] hover:underline shrink-0 ml-3">
                             Passer à Structure →
                           </button>
                         </div>
@@ -319,17 +320,17 @@ export default function AccountClient({
                 const info = PLAN_LABELS[p.key]
                 const isCurrent = plan === p.key
                 return (
-                  <div key={p.key} className={`bg-white rounded-2xl border-2 p-6 flex flex-col ${isCurrent ? 'border-[#e94560]' : 'border-gray-100'}`}>
-                    {isCurrent && <span className="text-xs font-bold text-[#e94560] mb-2">Plan actuel</span>}
-                    <h3 className="font-extrabold text-[#1a1a2e] text-lg">{info.label}</h3>
+                  <div key={p.key} className={`bg-white rounded-2xl border-2 p-6 flex flex-col ${isCurrent ? 'border-[#2563eb]' : 'border-gray-100'}`}>
+                    {isCurrent && <span className="text-xs font-bold text-[#2563eb] mb-2">Plan actuel</span>}
+                    <h3 className="font-extrabold text-[#111827] text-lg">{info.label}</h3>
                     <div className="flex items-baseline gap-1 my-2">
-                      <span className="text-3xl font-black text-[#1a1a2e]">{p.price}</span>
+                      <span className="text-3xl font-black text-[#111827]">{p.price}</span>
                       <span className="text-sm text-gray-400">{p.period}</span>
                     </div>
                     <ul className="space-y-1.5 flex-1 mb-4">
                       {p.features.map(f => (
                         <li key={f} className="text-sm text-gray-600 flex items-center gap-2">
-                          <span className="text-[#10b981]">✓</span> {f}
+                          <span className="text-[#22c55e]">✓</span> {f}
                         </li>
                       ))}
                     </ul>

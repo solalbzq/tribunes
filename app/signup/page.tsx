@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Logo from '@/components/Logo'
 
 const SPORTS = ['Football', 'Rugby', 'Basketball', 'Handball', 'Volleyball', 'Tennis', 'Badminton', 'Padel', 'Autre']
 
@@ -74,11 +75,11 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f8f8f8] flex items-center justify-center px-4">
+    <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <Link href="/" className="text-2xl font-extrabold text-[#1a1a2e]">⚡ Tribunes</Link>
-          <p className="mt-2 text-gray-600">Crée ton compte gratuitement</p>
+          <Link href="/" className="inline-flex"><Logo size={30} /></Link>
+          <p className="mt-3 text-gray-600">Crée ton compte gratuitement</p>
         </div>
 
         {/* Stepper */}
@@ -87,9 +88,9 @@ export default function SignupPage() {
             <div key={label} className="flex items-center gap-2">
               <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
                 (i === 0 && step === 'account') || (i === 1 && step === 'club')
-                  ? 'bg-[#e94560] text-white'
+                  ? 'bg-[#2563eb] text-white'
                   : i === 0 && step === 'club'
-                  ? 'bg-[#10b981] text-white'
+                  ? 'bg-[#22c55e] text-white'
                   : 'bg-gray-200 text-gray-500'
               }`}>{i === 0 && step === 'club' ? '✓' : i + 1}</div>
               <span className="text-sm text-gray-500">{label}</span>
@@ -107,7 +108,7 @@ export default function SignupPage() {
                   type="button"
                   onClick={() => handleOAuth('google')}
                   disabled={oauthLoading !== null}
-                  className="flex items-center justify-center gap-2 rounded-xl border border-gray-200 px-4 py-3 text-sm font-semibold text-[#1a1a2e] transition hover:bg-gray-50 disabled:opacity-60"
+                  className="flex items-center justify-center gap-2 rounded-xl border border-gray-200 px-4 py-3 text-sm font-semibold text-[#111827] transition hover:bg-gray-50 disabled:opacity-60"
                 >
                   <GoogleIcon />
                   {oauthLoading === 'google' ? '...' : 'Google'}
@@ -116,7 +117,7 @@ export default function SignupPage() {
                   type="button"
                   onClick={() => handleOAuth('apple')}
                   disabled={oauthLoading !== null}
-                  className="flex items-center justify-center gap-2 rounded-xl bg-[#1a1a2e] px-4 py-3 text-sm font-semibold text-white transition hover:bg-black disabled:opacity-60"
+                  className="flex items-center justify-center gap-2 rounded-xl bg-[#111827] px-4 py-3 text-sm font-semibold text-white transition hover:bg-black disabled:opacity-60"
                 >
                   <AppleIcon />
                   {oauthLoading === 'apple' ? '...' : 'Apple'}
@@ -131,46 +132,46 @@ export default function SignupPage() {
 
               <form onSubmit={handleAccount} className="space-y-5">
                 <div>
-                  <label className="block text-sm font-semibold text-[#1a1a2e] mb-1">Email</label>
+                  <label className="block text-sm font-semibold text-[#111827] mb-1">Email</label>
                   <input
                     type="email" required value={email} onChange={e => setEmail(e.target.value)}
-                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#e94560]/30"
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#2563eb]/30"
                     placeholder="ton@email.com"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-[#1a1a2e] mb-1">Mot de passe</label>
+                  <label className="block text-sm font-semibold text-[#111827] mb-1">Mot de passe</label>
                   <input
                     type="password" required value={password} onChange={e => setPassword(e.target.value)}
-                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#e94560]/30"
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#2563eb]/30"
                     placeholder="8 caractères minimum"
                   />
                 </div>
                 {error && <p className="text-sm text-red-500">{error}</p>}
-                <button type="submit" className="w-full bg-[#e94560] text-white font-bold py-3 rounded-xl hover:bg-[#d63a52] transition">
+                <button type="submit" className="w-full bg-[#2563eb] text-white font-bold py-3 rounded-xl hover:bg-[#1d4ed8] transition">
                   Continuer →
                 </button>
                 <p className="text-center text-sm text-gray-500">
                   Déjà un compte ?{' '}
-                  <Link href="/login" className="text-[#e94560] font-semibold hover:underline">Se connecter</Link>
+                  <Link href="/login" className="text-[#2563eb] font-semibold hover:underline">Se connecter</Link>
                 </p>
               </form>
             </div>
           ) : (
             <form onSubmit={handleClub} className="space-y-5">
               <div>
-                <label className="block text-sm font-semibold text-[#1a1a2e] mb-1">Nom du club</label>
+                <label className="block text-sm font-semibold text-[#111827] mb-1">Nom du club</label>
                 <input
                   type="text" required value={clubName} onChange={e => setClubName(e.target.value)}
-                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#e94560]/30"
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#2563eb]/30"
                   placeholder="Ex: AS Beauvoisin"
                 />
               </div>
               <div>
-                <label className="block text-sm font-semibold text-[#1a1a2e] mb-1">Sport</label>
+                <label className="block text-sm font-semibold text-[#111827] mb-1">Sport</label>
                 <select
                   required value={sport} onChange={e => setSport(e.target.value)}
-                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#e94560]/30"
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#2563eb]/30"
                 >
                   <option value="">Choisir un sport</option>
                   {SPORTS.map(s => <option key={s} value={s}>{s}</option>)}
@@ -178,16 +179,16 @@ export default function SignupPage() {
               </div>
 
               {/* Structure optionnelle */}
-              <div className="rounded-xl border border-gray-100 bg-[#f8f8f8] p-4">
+              <div className="rounded-xl border border-gray-100 bg-[#f8fafc] p-4">
                 <label className="flex items-center gap-3 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={createStructure}
                     onChange={e => setCreateStructure(e.target.checked)}
-                    className="w-4 h-4 accent-[#e94560]"
+                    className="w-4 h-4 accent-[#2563eb]"
                   />
                   <div>
-                    <p className="text-sm font-semibold text-[#1a1a2e]">Créer une structure sportive</p>
+                    <p className="text-sm font-semibold text-[#111827]">Créer une structure sportive</p>
                     <p className="text-xs text-gray-500">Pour inviter d'autres coachs ou bénévoles</p>
                   </div>
                 </label>
@@ -197,13 +198,13 @@ export default function SignupPage() {
                     value={structureName}
                     onChange={e => setStructureName(e.target.value)}
                     placeholder="Nom de votre structure"
-                    className="mt-3 w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#e94560]/30"
+                    className="mt-3 w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2563eb]/30"
                   />
                 )}
               </div>
 
               {error && <p className="text-sm text-red-500">{error}</p>}
-              <button type="submit" disabled={loading} className="w-full bg-[#e94560] text-white font-bold py-3 rounded-xl hover:bg-[#d63a52] transition disabled:opacity-60">
+              <button type="submit" disabled={loading} className="w-full bg-[#2563eb] text-white font-bold py-3 rounded-xl hover:bg-[#1d4ed8] transition disabled:opacity-60">
                 {loading ? 'Création en cours...' : 'Créer mon compte ✓'}
               </button>
             </form>

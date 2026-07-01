@@ -31,16 +31,16 @@ const PRESETS: PresetMeta[] = [
     label: 'Sobre',
     desc: 'Blanc épuré, pro',
     bg: '#ffffff',
-    accent: '#e94560',
-    textCol: '#1a1a2e',
+    accent: '#2563eb',
+    textCol: '#111827',
     overrides: { showGrid: false, namesFormat: 'as-is', logoBubble: false },
   },
   {
     key: 'pro',
     label: 'Pro',
     desc: 'Dégradé premium',
-    bg: 'linear-gradient(135deg,#1a1a2e 0%,rgba(233,69,96,.6) 100%)',
-    accent: '#e94560',
+    bg: 'linear-gradient(135deg,#111827 0%,rgba(233,69,96,.6) 100%)',
+    accent: '#2563eb',
     textCol: '#ffffff',
     overrides: { showGrid: true, namesFormat: 'upper', logoBubble: true },
   },
@@ -57,7 +57,7 @@ const PRESETS: PresetMeta[] = [
     key: 'glass',
     label: 'Glass',
     desc: 'Glassmorphisme',
-    bg: 'radial-gradient(circle at 38% 30%, rgba(233,69,96,.35) 0%, #1a1a2e 50%, #0d0d1f 100%)',
+    bg: 'radial-gradient(circle at 38% 30%, rgba(233,69,96,.35) 0%, #111827 50%, #0d0d1f 100%)',
     accent: 'rgba(255,255,255,.88)',
     textCol: '#ffffff',
     overrides: { showGrid: false, namesFormat: 'as-is', logoBubble: true, gradientAngle: 145 },
@@ -66,8 +66,8 @@ const PRESETS: PresetMeta[] = [
     key: 'magazine',
     label: 'Magazine',
     desc: 'Bande diagonale',
-    bg: '#e94560',
-    accent: '#1a1a2e',
+    bg: '#2563eb',
+    accent: '#111827',
     textCol: '#ffffff',
     overrides: { showGrid: false, namesFormat: 'upper', logoBubble: false },
   },
@@ -75,7 +75,7 @@ const PRESETS: PresetMeta[] = [
     key: 'classique',
     label: 'Classique',
     desc: 'Sobre & club',
-    bg: '#1a1a2e',
+    bg: '#111827',
     accent: '#f5a623',
     textCol: '#ffffff',
     overrides: { showGrid: false, namesFormat: 'upper', logoBubble: false },
@@ -107,7 +107,7 @@ function PresetCard({
     position: 'relative',
     overflow: 'hidden',
     cursor: 'pointer',
-    border: selected ? `2.5px solid #e94560` : '2.5px solid transparent',
+    border: selected ? `2.5px solid #2563eb` : '2.5px solid transparent',
     transition: 'border-color .15s',
   }
 
@@ -224,10 +224,10 @@ function PresetCard({
 function Toggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
   return (
     <label className="flex items-center justify-between cursor-pointer select-none">
-      <span className="text-sm text-[#1a1a2e]">{label}</span>
+      <span className="text-sm text-[#111827]">{label}</span>
       <div
         onClick={() => onChange(!checked)}
-        className={`relative w-10 h-5 rounded-full transition-colors ${checked ? 'bg-[#e94560]' : 'bg-gray-200'}`}
+        className={`relative w-10 h-5 rounded-full transition-colors ${checked ? 'bg-[#2563eb]' : 'bg-gray-200'}`}
       >
         <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${checked ? 'translate-x-5' : 'translate-x-0'}`} />
       </div>
@@ -244,12 +244,12 @@ function Slider({ label, min, max, step, value, onChange, format }: {
   return (
     <div>
       <div className="flex items-center justify-between mb-1">
-        <span className="text-sm text-[#1a1a2e]">{label}</span>
+        <span className="text-sm text-[#111827]">{label}</span>
         <span className="text-sm text-gray-500 font-mono tabular-nums">{format ? format(value) : value}</span>
       </div>
       <input type="range" min={min} max={max} step={step} value={value}
         onChange={e => onChange(Number(e.target.value))}
-        className="w-full accent-[#e94560] h-1.5 rounded" />
+        className="w-full accent-[#2563eb] h-1.5 rounded" />
     </div>
   )
 }
@@ -312,7 +312,7 @@ export default function TennisVisualEditor({
             <div key={meta.key} className="space-y-1.5">
               <PresetCard meta={meta} selected={cfg.preset === meta.key} club={club} onClick={() => selectPreset(meta)} />
               <div>
-                <p className="text-xs font-semibold text-[#1a1a2e] text-center">{meta.label}</p>
+                <p className="text-xs font-semibold text-[#111827] text-center">{meta.label}</p>
                 <p className="text-[10px] text-gray-400 text-center">{meta.desc}</p>
               </div>
             </div>
@@ -338,12 +338,12 @@ export default function TennisVisualEditor({
             {isNeon && (
               <div className="space-y-3">
                 <div>
-                  <label className="text-sm text-[#1a1a2e] block mb-1.5">Couleur néon</label>
+                  <label className="text-sm text-[#111827] block mb-1.5">Couleur néon</label>
                   <div className="flex items-center gap-2">
                     <input type="color" value={cfg.neonColor} onChange={e => upd({ neonColor: e.target.value })}
                       className="w-10 h-10 rounded-lg border border-gray-200 cursor-pointer p-0.5" />
                     <input type="text" value={cfg.neonColor} onChange={e => upd({ neonColor: e.target.value })}
-                      className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#e94560]/30"
+                      className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#2563eb]/30"
                       maxLength={7} />
                   </div>
                 </div>
@@ -367,11 +367,11 @@ export default function TennisVisualEditor({
               format={v => `×${v.toFixed(1)}`} />
 
             <div>
-              <label className="text-sm text-[#1a1a2e] block mb-2">Style du VS</label>
+              <label className="text-sm text-[#111827] block mb-2">Style du VS</label>
               <div className="grid grid-cols-2 gap-2">
                 {([['text', 'Texte seul'], ['lines', '──── vs ────']] as const).map(([val, lbl]) => (
                   <button key={val} onClick={() => upd({ vsStyle: val })}
-                    className={`py-2 rounded-xl text-xs font-semibold border transition ${(cfg.vsStyle ?? 'text') === val ? 'bg-[#1a1a2e] text-white border-[#1a1a2e]' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'}`}>
+                    className={`py-2 rounded-xl text-xs font-semibold border transition ${(cfg.vsStyle ?? 'text') === val ? 'bg-[#111827] text-white border-[#111827]' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'}`}>
                     {lbl}
                   </button>
                 ))}
@@ -379,11 +379,11 @@ export default function TennisVisualEditor({
             </div>
 
             <div>
-              <label className="text-sm text-[#1a1a2e] block mb-2">Affichage des classements</label>
+              <label className="text-sm text-[#111827] block mb-2">Affichage des classements</label>
               <div className="grid grid-cols-3 gap-2">
                 {([['pill', '🏷️ Badge'], ['text', '· Texte'], ['hidden', '✕ Masqué']] as const).map(([val, lbl]) => (
                   <button key={val} onClick={() => upd({ rankingStyle: val })}
-                    className={`py-2 rounded-xl text-xs font-semibold border transition ${(cfg.rankingStyle ?? 'pill') === val ? 'bg-[#1a1a2e] text-white border-[#1a1a2e]' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'}`}>
+                    className={`py-2 rounded-xl text-xs font-semibold border transition ${(cfg.rankingStyle ?? 'pill') === val ? 'bg-[#111827] text-white border-[#111827]' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'}`}>
                     {lbl}
                   </button>
                 ))}
@@ -417,7 +417,7 @@ export default function TennisVisualEditor({
               value={cfg.matchesPerPage} onChange={v => upd({ matchesPerPage: v })} />
 
             <div>
-              <label className="text-sm text-[#1a1a2e] block mb-2">Casse des noms</label>
+              <label className="text-sm text-[#111827] block mb-2">Casse des noms</label>
               <div className="grid grid-cols-3 gap-2">
                 {([
                   ['smart',  'NOM Prénom'],
@@ -425,7 +425,7 @@ export default function TennisVisualEditor({
                   ['as-is',  'Tel quel'],
                 ] as const).map(([val, lbl]) => (
                   <button key={val} onClick={() => upd({ namesFormat: val })}
-                    className={`py-2 rounded-xl text-xs font-semibold border transition ${(cfg.namesFormat ?? 'smart') === val ? 'bg-[#1a1a2e] text-white border-[#1a1a2e]' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'}`}>
+                    className={`py-2 rounded-xl text-xs font-semibold border transition ${(cfg.namesFormat ?? 'smart') === val ? 'bg-[#111827] text-white border-[#111827]' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'}`}>
                     {lbl}
                   </button>
                 ))}
@@ -441,11 +441,11 @@ export default function TennisVisualEditor({
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Logo</p>
 
             <div>
-              <label className="text-sm text-[#1a1a2e] block mb-2">Taille</label>
+              <label className="text-sm text-[#111827] block mb-2">Taille</label>
               <div className="grid grid-cols-4 gap-2">
                 {(['hidden', 'sm', 'md', 'lg'] as const).map(sz => (
                   <button key={sz} onClick={() => upd({ logoSize: sz })}
-                    className={`py-2 rounded-xl text-xs font-semibold border transition ${cfg.logoSize === sz ? 'bg-[#1a1a2e] text-white border-[#1a1a2e]' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'}`}>
+                    className={`py-2 rounded-xl text-xs font-semibold border transition ${cfg.logoSize === sz ? 'bg-[#111827] text-white border-[#111827]' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'}`}>
                     {sz === 'hidden' ? 'Aucun' : sz === 'sm' ? 'Petit' : sz === 'md' ? 'Moyen' : 'Grand'}
                   </button>
                 ))}
@@ -455,11 +455,11 @@ export default function TennisVisualEditor({
             {cfg.logoSize !== 'hidden' && (
               <>
                 <div>
-                  <label className="text-sm text-[#1a1a2e] block mb-2">Position</label>
+                  <label className="text-sm text-[#111827] block mb-2">Position</label>
                   <div className="grid grid-cols-3 gap-2">
                     {([['top-right', 'Haut droite'], ['top-left', 'Haut gauche'], ['watermark', 'Filigrane']] as const).map(([val, lbl]) => (
                       <button key={val} onClick={() => upd({ logoPosition: val })}
-                        className={`py-2 rounded-xl text-xs font-semibold border transition ${cfg.logoPosition === val ? 'bg-[#1a1a2e] text-white border-[#1a1a2e]' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'}`}>
+                        className={`py-2 rounded-xl text-xs font-semibold border transition ${cfg.logoPosition === val ? 'bg-[#111827] text-white border-[#111827]' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'}`}>
                         {lbl}
                       </button>
                     ))}
@@ -474,16 +474,16 @@ export default function TennisVisualEditor({
           <div className="bg-white rounded-2xl border border-gray-100 p-5 space-y-3">
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Footer</p>
             <div>
-              <label className="text-sm text-[#1a1a2e] block mb-1.5">Hashtags personnalisés</label>
+              <label className="text-sm text-[#111827] block mb-1.5">Hashtags personnalisés</label>
               <input type="text" value={cfg.footerTag} onChange={e => upd({ footerTag: e.target.value })}
                 placeholder={`#${club.name.toLowerCase().replace(/\s/g, '')} #${club.sport.toLowerCase()}`}
-                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#e94560]/30" />
+                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2563eb]/30" />
               <p className="text-xs text-gray-400 mt-1">Laisse vide = hashtags automatiques</p>
             </div>
           </div>
 
           <button onClick={handleSave} disabled={saving}
-            className={`w-full py-3.5 rounded-xl font-bold text-sm transition ${saved ? 'bg-[#10b981] text-white' : 'bg-[#1a1a2e] text-white hover:bg-[#2a2a4e]'} disabled:opacity-60`}>
+            className={`w-full py-3.5 rounded-xl font-bold text-sm transition ${saved ? 'bg-[#22c55e] text-white' : 'bg-[#111827] text-white hover:bg-[#1f2937]'} disabled:opacity-60`}>
             {saved ? '✓ Style sauvegardé !' : saving ? 'Sauvegarde...' : '💾 Sauvegarder le style'}
           </button>
         </div>
@@ -506,7 +506,7 @@ export default function TennisVisualEditor({
           {/* Quick reset */}
           <button
             onClick={() => { const meta = PRESETS.find(m => m.key === cfg.preset); if (meta) selectPreset(meta) }}
-            className="w-full py-2 text-xs font-semibold text-gray-500 hover:text-[#e94560] border border-gray-100 rounded-xl hover:border-[#e94560]/30 transition">
+            className="w-full py-2 text-xs font-semibold text-gray-500 hover:text-[#2563eb] border border-gray-100 rounded-xl hover:border-[#2563eb]/30 transition">
             ↺ Réinitialiser le preset « {cfg.preset} »
           </button>
         </div>

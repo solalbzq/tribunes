@@ -20,7 +20,7 @@ const features = [
 
 export function Solution() {
   return (
-    <section className="bg-[#1a1a2e] py-16" id="solution">
+    <section className="bg-[#111827] py-16" id="solution">
       <div className="mx-auto max-w-2xl px-4">
         <h2 className="text-xl font-bold tracking-[-0.03em] text-white">
           Ce que l&apos;outil fait pour toi
@@ -31,10 +31,10 @@ export function Solution() {
               key={feature.title}
               className="rounded-[12px] border border-white/10 bg-white/5 p-6 shadow-[0_1px_3px_rgba(0,0,0,0.08)]"
             >
-              <span className="inline-flex rounded-full bg-[#fff0f3] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.05em] text-[#e94560]">
+              <span className="inline-flex rounded-full bg-[#fff0f3] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.05em] text-[#2563eb]">
                 Étape {index + 1}
               </span>
-              <div className="mt-4 h-9 w-9 rounded-full bg-[#e94560]/10 text-center text-lg leading-9 text-[#e94560]">
+              <div className="mt-4 h-9 w-9 rounded-full bg-[#2563eb]/10 text-center text-lg leading-9 text-[#2563eb]">
                 {index + 1}
               </div>
               <h3 className="mt-4 text-lg font-semibold tracking-tight text-white">

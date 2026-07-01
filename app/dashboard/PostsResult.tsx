@@ -25,7 +25,7 @@ const PLATFORMS = [
   { key: 'instagram' as const, label: 'Instagram', icon: '📸', color: '#E1306C' },
   { key: 'facebook' as const, label: 'Facebook', icon: '👥', color: '#1877F2' },
   { key: 'whatsapp' as const, label: 'WhatsApp', icon: '💬', color: '#25D366' },
-  { key: 'visual' as const, label: 'Visuel', icon: '🖼️', color: '#1a1a2e' },
+  { key: 'visual' as const, label: 'Visuel', icon: '🖼️', color: '#111827' },
 ]
 
 export default function PostsResult({
@@ -53,10 +53,10 @@ export default function PostsResult({
   return (
     <div className="max-w-2xl">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-extrabold text-[#1a1a2e]">Tes posts sont prêts ! 🎉</h2>
+        <h2 className="text-xl font-extrabold text-[#111827]">Tes posts sont prêts ! 🎉</h2>
         <button
           onClick={onReset}
-          className="text-sm text-gray-500 hover:text-[#e94560] transition"
+          className="text-sm text-gray-500 hover:text-[#2563eb] transition"
         >
           ← Nouveau match
         </button>
@@ -89,12 +89,12 @@ export default function PostsResult({
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <span className="text-lg">{p.icon}</span>
-              <span className="font-bold text-[#1a1a2e]">{p.label}</span>
+              <span className="font-bold text-[#111827]">{p.label}</span>
             </div>
             <button
               onClick={() => copyToClipboard(posts[p.key as keyof Posts], p.key)}
               className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-white transition"
-              style={{ background: copied === p.key ? '#10b981' : p.color }}
+              style={{ background: copied === p.key ? '#22c55e' : p.color }}
             >
               {copied === p.key ? '✓ Copié !' : '📋 Copier'}
             </button>
@@ -119,7 +119,7 @@ export default function PostsResult({
             }}
             className={`flex-1 py-3 rounded-xl text-sm font-semibold border transition ${
               copied === 'all'
-                ? 'bg-[#10b981] text-white border-[#10b981]'
+                ? 'bg-[#22c55e] text-white border-[#22c55e]'
                 : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
             }`}
           >

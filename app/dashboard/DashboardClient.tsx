@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import Logo from '@/components/Logo'
 import ClubSettings from './ClubSettings'
 import ContentTab from './ContentTab'
 
@@ -60,10 +61,10 @@ export default function DashboardClient({ club, userEmail }: { club: Club; userE
 
   if (!club) {
     return (
-      <div className="min-h-screen bg-[#f8f8f8] flex items-center justify-center">
+      <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center">
         <div className="text-center">
           <p className="text-gray-500 mb-4">Erreur de chargement du club.</p>
-          <button onClick={handleLogout} className="text-[#e94560] underline text-sm">Se déconnecter</button>
+          <button onClick={handleLogout} className="text-[#2563eb] underline text-sm">Se déconnecter</button>
         </div>
       </div>
     )
@@ -88,27 +89,27 @@ export default function DashboardClient({ club, userEmail }: { club: Club; userE
   const lastGeneratedAt = recentMatches[0]?.date
   const socialStats = [
     { label: 'Audience totale', value: '0', helper: 'Connexion reseaux bientot', accent: '#7c3aed' },
-    { label: 'Engagement moyen', value: '0%', helper: 'Likes, commentaires, partages', accent: '#e94560' },
-    { label: 'Posts ce mois', value: String(totalPosts), helper: 'Base sur les contenus generes', accent: '#10b981' },
+    { label: 'Engagement moyen', value: '0%', helper: 'Likes, commentaires, partages', accent: '#2563eb' },
+    { label: 'Posts ce mois', value: String(totalPosts), helper: 'Base sur les contenus generes', accent: '#22c55e' },
   ]
 
   return (
-    <div className="min-h-screen bg-[#f8f8f8]">
+    <div className="min-h-screen bg-[#f8fafc]">
       {/* Navbar */}
       <nav className="bg-white border-b border-gray-100 px-6 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <span className="text-xl font-extrabold text-[#1a1a2e]">⚡ Tribunes</span>
+            <Logo size={24} />
             <span className="text-gray-300">|</span>
             <span className="text-sm font-semibold text-gray-600">{club.name}</span>
             <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">{club.sport}</span>
           </div>
           <div className="flex items-center gap-4">
             <span className="text-xs text-gray-400 hidden sm:block">{userEmail}</span>
-            <a href="/account" className="text-sm font-semibold text-gray-600 hover:text-[#1a1a2e] transition">
+            <a href="/account" className="text-sm font-semibold text-gray-600 hover:text-[#111827] transition">
               👤 Compte
             </a>
-            <button onClick={handleLogout} className="text-sm text-gray-500 hover:text-[#e94560] transition">
+            <button onClick={handleLogout} className="text-sm text-gray-500 hover:text-[#2563eb] transition">
               Déconnexion
             </button>
           </div>
@@ -129,7 +130,7 @@ export default function DashboardClient({ club, userEmail }: { club: Club; userE
                onClick={() => setView(tab.key as typeof view)}
                className={`px-4 py-2 rounded-xl text-sm font-semibold transition ${
                  view === tab.key
-                   ? 'bg-[#1a1a2e] text-white'
+                   ? 'bg-[#111827] text-white'
                   : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-100'
               }`}
             >
@@ -158,7 +159,7 @@ export default function DashboardClient({ club, userEmail }: { club: Club; userE
                   <div className="flex flex-wrap gap-3">
                     <button
                       onClick={() => setView('content')}
-                      className="bg-white text-[#1a1a2e] font-bold px-6 py-3 rounded-xl hover:bg-white/90 transition"
+                      className="bg-white text-[#111827] font-bold px-6 py-3 rounded-xl hover:bg-white/90 transition"
                     >
                       ✨ Generer du contenu
                     </button>
@@ -180,7 +181,7 @@ export default function DashboardClient({ club, userEmail }: { club: Club; userE
               <div className="bg-white rounded-[26px] p-5 space-y-4 shadow-sm">
                 <div>
                   <p className="text-xs font-bold uppercase tracking-[0.25em] text-gray-400">Vue rapide</p>
-                  <h2 className="text-lg font-extrabold text-[#1a1a2e] mt-2">Le club en un coup d'oeil</h2>
+                  <h2 className="text-lg font-extrabold text-[#111827] mt-2">Le club en un coup d'oeil</h2>
                 </div>
                 <div className="space-y-3">
                   <StatCard label="Sport" value={club.sport} />
@@ -195,7 +196,7 @@ export default function DashboardClient({ club, userEmail }: { club: Club; userE
                 <div className="flex items-center justify-between gap-4">
                   <div>
                     <p className="text-xs font-bold uppercase tracking-[0.25em] text-gray-400">Reseaux sociaux</p>
-                    <h2 className="text-lg font-extrabold text-[#1a1a2e] mt-2">Stats a connecter</h2>
+                    <h2 className="text-lg font-extrabold text-[#111827] mt-2">Stats a connecter</h2>
                   </div>
                   <div className="px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-500">
                     Bientot en direct
@@ -206,19 +207,19 @@ export default function DashboardClient({ club, userEmail }: { club: Club; userE
                     <div key={stat.label} className="rounded-2xl bg-gray-50/80 p-4">
                       <div className="w-9 h-1.5 rounded-full" style={{ background: stat.accent }} />
                       <p className="text-sm text-gray-500 mt-4">{stat.label}</p>
-                      <p className="text-3xl font-black text-[#1a1a2e] mt-1">{stat.value}</p>
+                      <p className="text-3xl font-black text-[#111827] mt-1">{stat.value}</p>
                       <p className="text-xs text-gray-400 mt-2">{stat.helper}</p>
                     </div>
                   ))}
                 </div>
                 <div className="rounded-2xl bg-gray-50 p-4 flex items-center justify-between gap-4">
                   <div>
-                    <p className="font-semibold text-[#1a1a2e]">Instagram, Facebook et WhatsApp</p>
+                    <p className="font-semibold text-[#111827]">Instagram, Facebook et WhatsApp</p>
                     <p className="text-sm text-gray-500 mt-1">Les cartes afficheront la portee, l'engagement et les meilleurs formats des que les comptes seront relies.</p>
                   </div>
                   <button
                     onClick={() => setView('settings')}
-                    className="shrink-0 px-4 py-2 rounded-xl text-sm font-semibold bg-[#1a1a2e] text-white hover:bg-[#2a2a4e] transition"
+                    className="shrink-0 px-4 py-2 rounded-xl text-sm font-semibold bg-[#111827] text-white hover:bg-[#1f2937] transition"
                   >
                     Preparer
                   </button>
@@ -228,7 +229,7 @@ export default function DashboardClient({ club, userEmail }: { club: Club; userE
               <div className="bg-white rounded-[26px] p-5 space-y-4 shadow-sm">
                 <div>
                   <p className="text-xs font-bold uppercase tracking-[0.25em] text-gray-400">Activite recente</p>
-                  <h2 className="text-lg font-extrabold text-[#1a1a2e] mt-2">Derniers matchs</h2>
+                  <h2 className="text-lg font-extrabold text-[#111827] mt-2">Derniers matchs</h2>
                 </div>
                 {recentMatches.length === 0 ? (
                   <div className="rounded-2xl bg-gray-50 p-5 text-sm text-gray-500">
@@ -250,7 +251,7 @@ export default function DashboardClient({ club, userEmail }: { club: Club; userE
                         <div key={match.id} className="rounded-2xl bg-gray-50 p-4 flex items-start justify-between gap-4">
                           <div>
                             <div className="flex items-center gap-2 flex-wrap">
-                              <p className="font-bold text-[#1a1a2e]">{club.name} {clubScore} - {oppScore} {match.opponent}</p>
+                              <p className="font-bold text-[#111827]">{club.name} {clubScore} - {oppScore} {match.opponent}</p>
                               <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${resultClasses}`}>{result}</span>
                             </div>
                             <p className="text-sm text-gray-500 mt-1">
@@ -281,12 +282,12 @@ export default function DashboardClient({ club, userEmail }: { club: Club; userE
               const clubScore = match.isHome ? match.homeScore : match.awayScore
               const oppScore = match.isHome ? match.awayScore : match.homeScore
               const result = clubScore > oppScore ? 'V' : clubScore < oppScore ? 'D' : 'N'
-              const color = result === 'V' ? '#10b981' : result === 'D' ? '#e94560' : '#6b7280'
+              const color = result === 'V' ? '#22c55e' : result === 'D' ? '#2563eb' : '#6b7280'
               return (
                 <div key={match.id} className="bg-white rounded-2xl border border-gray-100 p-5 flex items-center justify-between">
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="font-bold text-[#1a1a2e]">vs {match.opponent}</span>
+                      <span className="font-bold text-[#111827]">vs {match.opponent}</span>
                       <span className="text-xs font-bold px-2 py-0.5 rounded-full text-white" style={{ background: color }}>{result}</span>
                     </div>
                     <p className="text-sm text-gray-500 mt-0.5">
@@ -314,7 +315,7 @@ function StatCard({ label, value }: { label: string; value: string | number }) {
   return (
     <div className="bg-gray-50 rounded-2xl p-5">
       <p className="text-sm text-gray-500">{label}</p>
-      <p className="text-2xl font-extrabold text-[#1a1a2e] mt-1">{value}</p>
+      <p className="text-2xl font-extrabold text-[#111827] mt-1">{value}</p>
     </div>
   )
 }

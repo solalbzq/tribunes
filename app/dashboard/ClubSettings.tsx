@@ -51,7 +51,7 @@ type StoredVisualConfig = VisualConfig & {
 const SPORTS = ['Football', 'Rugby', 'Basketball', 'Handball', 'Volleyball', 'Tennis', 'Badminton', 'Padel', 'Autre']
 
 const PRESETS = [
-  { label: 'Bleu nuit / Rouge', primary: '#1a1a2e', secondary: '#e94560' },
+  { label: 'Bleu nuit / Rouge', primary: '#111827', secondary: '#2563eb' },
   { label: 'Marine / Or', primary: '#0a1628', secondary: '#f5a623' },
   { label: 'Vert foret / Blanc', primary: '#1a3d2b', secondary: '#ffffff' },
   { label: 'Bordeaux / Beige', primary: '#6b1a2a', secondary: '#f5e6d3' },
@@ -197,7 +197,7 @@ export default function ClubSettings({ club }: { club: Club }) {
             onClick={() => setMainTab(tab.key as typeof mainTab)}
             className={`px-4 py-2 rounded-xl text-sm font-semibold transition ${
               mainTab === tab.key
-                ? 'bg-[#1a1a2e] text-white'
+                ? 'bg-[#111827] text-white'
                 : 'bg-white text-gray-600 border border-gray-100 hover:bg-gray-50'
             }`}
           >
@@ -212,7 +212,7 @@ export default function ClubSettings({ club }: { club: Club }) {
             <div className="bg-white rounded-3xl border border-gray-100 p-6 space-y-5">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.25em] text-gray-400">Base club</p>
-                <h3 className="text-xl font-extrabold text-[#1a1a2e] mt-2">Informations generales</h3>
+                <h3 className="text-xl font-extrabold text-[#111827] mt-2">Informations generales</h3>
                 <p className="text-sm text-gray-500 mt-1">Ajoute un maximum d'infos utiles. Rien n'est obligatoire, mais plus ton club est renseigne, plus tes futurs dashboards seront pertinents.</p>
               </div>
 
@@ -249,7 +249,7 @@ export default function ClubSettings({ club }: { club: Club }) {
             <div className="bg-white rounded-3xl border border-gray-100 p-6 space-y-5">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.25em] text-gray-400">Ressources</p>
-                <h3 className="text-xl font-extrabold text-[#1a1a2e] mt-2">Effectifs et vie du club</h3>
+                <h3 className="text-xl font-extrabold text-[#111827] mt-2">Effectifs et vie du club</h3>
               </div>
 
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -286,7 +286,7 @@ export default function ClubSettings({ club }: { club: Club }) {
             <div className="bg-white rounded-3xl border border-gray-100 p-6 space-y-5">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.25em] text-gray-400">Presence et contenu</p>
-                <h3 className="text-xl font-extrabold text-[#1a1a2e] mt-2">Canaux de communication</h3>
+                <h3 className="text-xl font-extrabold text-[#111827] mt-2">Canaux de communication</h3>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -315,7 +315,7 @@ export default function ClubSettings({ club }: { club: Club }) {
               <div className="bg-white rounded-3xl border border-gray-100 p-6 space-y-5">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.25em] text-gray-400">Automatisation</p>
-                  <h3 className="text-xl font-extrabold text-[#1a1a2e] mt-2">Lien Ten'Up du club</h3>
+                  <h3 className="text-xl font-extrabold text-[#111827] mt-2">Lien Ten'Up du club</h3>
                   <p className="text-sm text-gray-500 mt-1">Colle l'adresse de la page Ten'Up de ton club (tenup.fft.fr). Elle permettra de recuperer automatiquement le programme de la semaine ou du jour dans l'onglet Programme.</p>
                 </div>
                 <Field label="URL Ten'Up">
@@ -327,14 +327,14 @@ export default function ClubSettings({ club }: { club: Club }) {
             <button
               onClick={handleSaveManagement}
               disabled={savingManagement}
-              className={`w-full py-3 rounded-xl font-bold text-sm transition ${savedManagement ? 'bg-[#10b981] text-white' : 'bg-[#1a1a2e] text-white hover:bg-[#2a2a4e]'} disabled:opacity-60`}
+              className={`w-full py-3 rounded-xl font-bold text-sm transition ${savedManagement ? 'bg-[#22c55e] text-white' : 'bg-[#111827] text-white hover:bg-[#1f2937]'} disabled:opacity-60`}
             >
               {savedManagement ? '✓ Gestion du club sauvegardee' : savingManagement ? 'Sauvegarde...' : 'Sauvegarder la gestion du club'}
             </button>
           </div>
 
           <div className="space-y-6">
-            <div className="bg-[#1a1a2e] rounded-3xl p-6 text-white space-y-5">
+            <div className="bg-[#111827] rounded-3xl p-6 text-white space-y-5">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.25em] text-white/60">Dashboard club</p>
                 <h3 className="text-2xl font-black mt-2">Vue dirigeant</h3>
@@ -351,7 +351,7 @@ export default function ClubSettings({ club }: { club: Club }) {
             <div className="bg-white rounded-3xl border border-gray-100 p-6 space-y-4">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.25em] text-gray-400">Resume club</p>
-                <h3 className="text-xl font-extrabold text-[#1a1a2e] mt-2">Carte d'identite</h3>
+                <h3 className="text-xl font-extrabold text-[#111827] mt-2">Carte d'identite</h3>
               </div>
               <SummaryRow label="Club" value={name || 'A renseigner'} />
               <SummaryRow label="Sport" value={sport || 'A renseigner'} />
@@ -364,7 +364,7 @@ export default function ClubSettings({ club }: { club: Club }) {
             <div className="bg-white rounded-3xl border border-gray-100 p-6 space-y-4">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.25em] text-gray-400">Donnees utiles</p>
-                <h3 className="text-xl font-extrabold text-[#1a1a2e] mt-2">Ce que Tribunes pourra exploiter</h3>
+                <h3 className="text-xl font-extrabold text-[#111827] mt-2">Ce que Tribunes pourra exploiter</h3>
               </div>
               {[
                 'Comparer les volumes de contenus par equipe et par mois',
@@ -392,7 +392,7 @@ export default function ClubSettings({ club }: { club: Club }) {
                 onClick={() => setArtTab(tab.key as typeof artTab)}
                 className={`px-4 py-2 rounded-xl text-sm font-semibold transition ${
                   artTab === tab.key
-                    ? 'bg-[#1a1a2e] text-white'
+                    ? 'bg-[#111827] text-white'
                     : 'bg-white text-gray-600 border border-gray-100 hover:bg-gray-50'
                 }`}
               >
@@ -407,15 +407,15 @@ export default function ClubSettings({ club }: { club: Club }) {
                 <div className="bg-white rounded-3xl border border-gray-100 p-6 space-y-5">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-[0.25em] text-gray-400">Direction artistique</p>
-                    <h3 className="text-xl font-extrabold text-[#1a1a2e] mt-2">Logo, couleurs et ambiance</h3>
+                    <h3 className="text-xl font-extrabold text-[#111827] mt-2">Logo, couleurs et ambiance</h3>
                     <p className="text-sm text-gray-500 mt-1">Configure les grands marqueurs visuels du club. Ils serviront dans les visuels, apercus et futures integrations.</p>
                   </div>
 
                   <div className="bg-gray-50 rounded-2xl p-5">
-                    <h4 className="font-bold text-[#1a1a2e] mb-4">Logo du club</h4>
+                    <h4 className="font-bold text-[#111827] mb-4">Logo du club</h4>
                     <div className="flex items-center gap-4">
                       <div
-                        className="w-24 h-24 rounded-2xl border-2 border-dashed border-gray-200 flex items-center justify-center overflow-hidden cursor-pointer hover:border-[#e94560] transition"
+                        className="w-24 h-24 rounded-2xl border-2 border-dashed border-gray-200 flex items-center justify-center overflow-hidden cursor-pointer hover:border-[#2563eb] transition"
                         onClick={() => fileRef.current?.click()}
                       >
                         {logoPreview ? (
@@ -428,19 +428,19 @@ export default function ClubSettings({ club }: { club: Club }) {
                         <button
                           onClick={() => fileRef.current?.click()}
                           disabled={uploading}
-                          className="block text-sm font-semibold text-[#e94560] hover:underline disabled:opacity-50"
+                          className="block text-sm font-semibold text-[#2563eb] hover:underline disabled:opacity-50"
                         >
                           {uploading ? 'Upload en cours...' : 'Choisir un logo'}
                         </button>
                         <p className="text-xs text-gray-400 mt-1">PNG, JPG, SVG - max 2 Mo</p>
-                        {logoUrl && !uploading && <p className="text-xs text-[#10b981] mt-1">✓ Logo sauvegarde</p>}
+                        {logoUrl && !uploading && <p className="text-xs text-[#22c55e] mt-1">✓ Logo sauvegarde</p>}
                       </div>
                     </div>
                     <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleLogoChange} />
                   </div>
 
                   <div className="bg-gray-50 rounded-2xl p-5 space-y-5">
-                    <h4 className="font-bold text-[#1a1a2e]">Palette visuelle</h4>
+                    <h4 className="font-bold text-[#111827]">Palette visuelle</h4>
                     <div>
                       <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Palettes predefinies</p>
                       <div className="grid grid-cols-3 gap-2">
@@ -450,7 +450,7 @@ export default function ClubSettings({ club }: { club: Club }) {
                             onClick={() => { setPrimary(preset.primary); setSecondary(preset.secondary) }}
                             className={`rounded-xl overflow-hidden border-2 transition ${
                               primary === preset.primary && secondary === preset.secondary
-                                ? 'border-[#e94560]'
+                                ? 'border-[#2563eb]'
                                 : 'border-transparent hover:border-gray-200'
                             }`}
                             title={preset.label}
@@ -481,7 +481,7 @@ export default function ClubSettings({ club }: { club: Club }) {
                   <button
                     onClick={handleSaveIdentity}
                     disabled={savingIdentity}
-                    className={`w-full py-3 rounded-xl font-bold text-sm transition ${savedIdentity ? 'bg-[#10b981] text-white' : 'bg-[#1a1a2e] text-white hover:bg-[#2a2a4e]'} disabled:opacity-60`}
+                    className={`w-full py-3 rounded-xl font-bold text-sm transition ${savedIdentity ? 'bg-[#22c55e] text-white' : 'bg-[#111827] text-white hover:bg-[#1f2937]'} disabled:opacity-60`}
                   >
                     {savedIdentity ? '✓ Direction artistique sauvegardee' : savingIdentity ? 'Sauvegarde...' : 'Sauvegarder la direction artistique'}
                   </button>
@@ -559,12 +559,12 @@ export default function ClubSettings({ club }: { club: Club }) {
   )
 }
 
-const INPUT = 'w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#e94560]/30'
+const INPUT = 'w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2563eb]/30'
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div>
-      <label className="block text-sm font-semibold text-[#1a1a2e] mb-1.5">{label}</label>
+      <label className="block text-sm font-semibold text-[#111827] mb-1.5">{label}</label>
       {children}
     </div>
   )
@@ -574,7 +574,7 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between gap-4 rounded-2xl bg-gray-50 px-4 py-3">
       <span className="text-sm text-gray-500">{label}</span>
-      <span className="text-sm font-semibold text-[#1a1a2e] text-right">{value}</span>
+      <span className="text-sm font-semibold text-[#111827] text-right">{value}</span>
     </div>
   )
 }

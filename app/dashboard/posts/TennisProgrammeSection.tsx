@@ -121,7 +121,7 @@ export default function TennisProgrammeSection({ club }: { club: Club }) {
     <div className="space-y-6">
       <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
         <div>
-          <h3 className="font-bold text-[#1a1a2e]">📅 Programme du club</h3>
+          <h3 className="font-bold text-[#111827]">📅 Programme du club</h3>
           <p className="text-sm text-gray-500 mt-1">
             Crée le visuel du programme à la main, ou récupère-le automatiquement depuis Ten'Up.
           </p>
@@ -137,7 +137,7 @@ export default function TennisProgrammeSection({ club }: { club: Club }) {
               key={t.key}
               onClick={() => setMode(t.key as typeof mode)}
               className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${
-                mode === t.key ? 'bg-white text-[#1a1a2e] shadow-sm' : 'text-gray-600 hover:text-[#1a1a2e]'
+                mode === t.key ? 'bg-white text-[#111827] shadow-sm' : 'text-gray-600 hover:text-[#111827]'
               }`}
             >
               {t.label}
@@ -165,7 +165,7 @@ export default function TennisProgrammeSection({ club }: { club: Club }) {
                       type="button"
                       onClick={() => updateRow(r.id, 'isHome', o.v)}
                       className={`flex-1 py-1.5 rounded-lg text-xs font-semibold border transition ${
-                        r.isHome === o.v ? 'bg-[#1a1a2e] text-white border-[#1a1a2e]' : 'bg-white text-gray-500 border-gray-200'
+                        r.isHome === o.v ? 'bg-[#111827] text-white border-[#111827]' : 'bg-white text-gray-500 border-gray-200'
                       }`}
                     >
                       {o.l}
@@ -174,26 +174,26 @@ export default function TennisProgrammeSection({ club }: { club: Club }) {
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <input type="date" value={r.date} onChange={e => updateRow(r.id, 'date', e.target.value)}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-[#e94560]/30" />
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-[#2563eb]/30" />
                   <input type="time" value={r.time} onChange={e => updateRow(r.id, 'time', e.target.value)}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-[#e94560]/30" />
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-[#2563eb]/30" />
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <input type="text" value={r.team} onChange={e => updateRow(r.id, 'team', e.target.value)}
                     placeholder="Notre équipe"
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#e94560]/30" />
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2563eb]/30" />
                   <input type="text" value={r.opponent} onChange={e => updateRow(r.id, 'opponent', e.target.value)}
                     placeholder="Adversaire"
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#e94560]/30" />
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#2563eb]/30" />
                 </div>
                 <input type="text" value={r.division} onChange={e => updateRow(r.id, 'division', e.target.value)}
                   placeholder="Division / compétition (ex: Régionale 2)"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-[#e94560]/30" />
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-[#2563eb]/30" />
               </div>
             ))}
             {rows.length < 8 && (
               <button onClick={addRow}
-                className="w-full py-3 rounded-xl border-2 border-dashed border-gray-200 text-sm font-semibold text-gray-400 hover:border-[#e94560] hover:text-[#e94560] transition">
+                className="w-full py-3 rounded-xl border-2 border-dashed border-gray-200 text-sm font-semibold text-gray-400 hover:border-[#2563eb] hover:text-[#2563eb] transition">
                 + Ajouter un match
               </button>
             )}
@@ -216,7 +216,7 @@ export default function TennisProgrammeSection({ club }: { club: Club }) {
                   ].map(t => (
                     <button key={t.key} onClick={() => setScope(t.key as typeof scope)}
                       className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition ${
-                        scope === t.key ? 'bg-white text-[#1a1a2e] shadow-sm' : 'text-gray-600 hover:text-[#1a1a2e]'
+                        scope === t.key ? 'bg-white text-[#111827] shadow-sm' : 'text-gray-600 hover:text-[#111827]'
                       }`}>
                       {t.label}
                     </button>
@@ -224,25 +224,25 @@ export default function TennisProgrammeSection({ club }: { club: Club }) {
                 </div>
                 {scope === 'week' ? (
                   <div>
-                    <label className="text-sm font-semibold text-[#1a1a2e] block mb-1">Semaine du (lundi)</label>
+                    <label className="text-sm font-semibold text-[#111827] block mb-1">Semaine du (lundi)</label>
                     <input type="date" value={weekStart} onChange={e => setWeekStart(e.target.value)}
-                      className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#e94560]/30" />
+                      className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2563eb]/30" />
                   </div>
                 ) : (
                   <div>
-                    <label className="text-sm font-semibold text-[#1a1a2e] block mb-1">Jour</label>
+                    <label className="text-sm font-semibold text-[#111827] block mb-1">Jour</label>
                     <input type="date" value={day} onChange={e => setDay(e.target.value)}
-                      className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#e94560]/30" />
+                      className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2563eb]/30" />
                   </div>
                 )}
                 <div className="flex gap-2">
                   <button onClick={() => fetchTenup(false)} disabled={loading}
-                    className="flex-1 py-3 bg-[#1a1a2e] text-white font-bold rounded-xl hover:bg-[#2a2a4e] transition disabled:opacity-60 flex items-center justify-center gap-2">
+                    className="flex-1 py-3 bg-[#111827] text-white font-bold rounded-xl hover:bg-[#1f2937] transition disabled:opacity-60 flex items-center justify-center gap-2">
                     {loading ? <><span className="animate-spin">⚡</span> Récupération Ten'Up...</> : '🔄 Récupérer depuis Ten\'Up'}
                   </button>
                   {autoMatches.length > 0 && (
                     <button onClick={() => fetchTenup(true)} disabled={loading} title="Forcer un nouveau scrape (ignore le cache)"
-                      className="px-4 py-3 bg-gray-100 text-[#1a1a2e] font-bold rounded-xl hover:bg-gray-200 transition disabled:opacity-60 text-sm whitespace-nowrap">
+                      className="px-4 py-3 bg-gray-100 text-[#111827] font-bold rounded-xl hover:bg-gray-200 transition disabled:opacity-60 text-sm whitespace-nowrap">
                       ♻️ Rafraîchir
                     </button>
                   )}

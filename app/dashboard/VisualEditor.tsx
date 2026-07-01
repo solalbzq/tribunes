@@ -223,7 +223,7 @@ export default function VisualEditor({ club, onSave }: { club: Club; onSave: (cf
             Réinitialiser
           </button>
           <button onClick={handleSave} disabled={saving}
-            className={`px-4 py-1.5 rounded-xl text-xs font-bold text-white transition disabled:opacity-60 ${saved ? 'bg-[#10b981]' : 'bg-[#1a1a2e]'}`}>
+            className={`px-4 py-1.5 rounded-xl text-xs font-bold text-white transition disabled:opacity-60 ${saved ? 'bg-[#22c55e]' : 'bg-[#111827]'}`}>
             {saved ? '✓ Sauvegardé' : saving ? '...' : 'Sauvegarder'}
           </button>
         </div>
@@ -253,7 +253,7 @@ export default function VisualEditor({ club, onSave }: { club: Club; onSave: (cf
               <input type="range" min="0" max="1" step="0.05"
                 value={cfg.bgOpacity}
                 onChange={e => setCfg(c => ({ ...c, bgOpacity: Number(e.target.value) }))}
-                className="flex-1 accent-[#e94560]"
+                className="flex-1 accent-[#2563eb]"
               />
               <span className="text-xs font-mono w-8 text-right">{Math.round(cfg.bgOpacity * 100)}%</span>
             </div>
@@ -263,7 +263,7 @@ export default function VisualEditor({ club, onSave }: { club: Club; onSave: (cf
           {sel ? (
             <div className="bg-white border border-blue-200 rounded-2xl p-4 space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-[#1a1a2e]">{LABELS[sel.type]}</span>
+                <span className="text-xs font-bold text-[#111827]">{LABELS[sel.type]}</span>
                 <div className="flex gap-1">
                   <button onClick={() => moveLayer(sel.id, -1)} title="Monter" className="w-6 h-6 rounded bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs flex items-center justify-center">↑</button>
                   <button onClick={() => moveLayer(sel.id, 1)} title="Descendre" className="w-6 h-6 rounded bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs flex items-center justify-center">↓</button>
@@ -283,7 +283,7 @@ export default function VisualEditor({ club, onSave }: { club: Club; onSave: (cf
               <Row label="Opacité">
                 <input type="range" min="0" max="1" step="0.05" value={sel.opacity}
                   onChange={e => updateEl(sel.id, el => ({ ...el, opacity: Number(e.target.value) }))}
-                  className="flex-1 accent-[#e94560]" />
+                  className="flex-1 accent-[#2563eb]" />
                 <span className="text-xs font-mono w-8 text-right">{Math.round(sel.opacity * 100)}%</span>
               </Row>
 
@@ -329,7 +329,7 @@ export default function VisualEditor({ club, onSave }: { club: Club; onSave: (cf
                 <Row label="Arrondi">
                   <input type="range" min="0" max="100" step="2" value={sel.borderRadius ?? 0}
                     onChange={e => updateEl(sel.id, el => ({ ...el, borderRadius: Number(e.target.value) }))}
-                    className="flex-1 accent-[#e94560]" />
+                    className="flex-1 accent-[#2563eb]" />
                   <span className="text-xs font-mono w-6">{sel.borderRadius ?? 0}</span>
                 </Row>
               )}
@@ -342,7 +342,7 @@ export default function VisualEditor({ club, onSave }: { club: Club; onSave: (cf
                       className="w-8 h-8 rounded-lg cursor-pointer border border-gray-200 p-0.5" />
                     <input type="range" min="0" max="20" step="1" value={sel.strokeWidth ?? 0}
                       onChange={e => updateEl(sel.id, el => ({ ...el, strokeWidth: Number(e.target.value) }))}
-                      className="flex-1 accent-[#e94560]" />
+                      className="flex-1 accent-[#2563eb]" />
                     <span className="text-xs font-mono w-4">{sel.strokeWidth ?? 0}</span>
                   </Row>
                 </>
@@ -390,7 +390,7 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) {
   return (
     <button onClick={() => onChange(!value)}
-      className={`w-10 h-5 rounded-full transition relative ${value ? 'bg-[#10b981]' : 'bg-gray-200'}`}>
+      className={`w-10 h-5 rounded-full transition relative ${value ? 'bg-[#22c55e]' : 'bg-gray-200'}`}>
       <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all ${value ? 'left-5' : 'left-0.5'}`} />
     </button>
   )

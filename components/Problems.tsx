@@ -21,9 +21,9 @@ const problems = [
 
 export function Problems() {
   return (
-    <section className="bg-[#f8f8f8] py-16" id="problems">
+    <section className="bg-[#f8fafc] py-16" id="problems">
       <div className="mx-auto max-w-2xl px-4">
-        <h2 className="text-2xl font-bold tracking-[-0.03em] text-[#1a1a2e]">
+        <h2 className="text-2xl font-bold tracking-[-0.03em] text-[#111827]">
           Tu te reconnais là-dedans ?
         </h2>
         <div className="mt-8 grid grid-cols-1 gap-3">
@@ -32,11 +32,11 @@ export function Problems() {
               key={problem.title}
               className="flex gap-4 rounded-[12px] border border-[#e5e7eb] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.08)]"
             >
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#fff0f3] text-sm font-semibold text-[#e94560]">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#fff0f3] text-sm font-semibold text-[#2563eb]">
                 {problem.icon}
               </div>
               <div>
-                <h3 className="text-[15px] font-semibold text-[#1a1a2e]">{problem.title}</h3>
+                <h3 className="text-[15px] font-semibold text-[#111827]">{problem.title}</h3>
                 <p className="mt-2 text-[14px] leading-[1.6] text-[#6b7280]">
                   {problem.description}
                 </p>

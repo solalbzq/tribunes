@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Logo from '@/components/Logo'
 
 export default function AdminLoginPage() {
   const router = useRouter()
@@ -38,16 +39,16 @@ export default function AdminLoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#f8f8f8] px-4 py-10">
+    <main className="flex min-h-screen items-center justify-center bg-[#f8fafc] px-4 py-10">
       <div className="w-full max-w-md rounded-2xl border border-[#e5e7eb] bg-white p-8 shadow-sm">
         <div className="mb-8">
-          <p className="text-2xl font-extrabold text-[#1a1a2e]">⚡ Tribunes Admin</p>
+          <span className="inline-flex items-center gap-2"><Logo size={26} /><span className="text-sm font-bold text-gray-400">Admin</span></span>
           <p className="mt-2 text-sm text-[#6b7280]">Acces prive au tableau de bord.</p>
         </div>
 
         <form className="space-y-4" onSubmit={handleSubmit}>
           <div>
-            <label className="mb-2 block text-sm font-semibold text-[#1a1a2e]" htmlFor="password">
+            <label className="mb-2 block text-sm font-semibold text-[#111827]" htmlFor="password">
               Mot de passe
             </label>
             <input
@@ -55,7 +56,7 @@ export default function AdminLoginPage() {
               type="password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
-              className="w-full rounded-lg border border-[#e5e7eb] px-4 py-3 outline-none transition focus:border-[#e94560]"
+              className="w-full rounded-lg border border-[#e5e7eb] px-4 py-3 outline-none transition focus:border-[#2563eb]"
               placeholder="Votre mot de passe admin"
               required
             />
@@ -66,7 +67,7 @@ export default function AdminLoginPage() {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full rounded-lg bg-[#e94560] px-4 py-3 font-semibold text-white transition hover:bg-[#c73652] disabled:cursor-not-allowed disabled:opacity-70"
+            className="w-full rounded-lg bg-[#2563eb] px-4 py-3 font-semibold text-white transition hover:bg-[#1d4ed8] disabled:cursor-not-allowed disabled:opacity-70"
           >
             {isSubmitting ? 'Verification...' : 'Acceder'}
           </button>

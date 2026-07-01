@@ -57,7 +57,7 @@ export default function ContentTab({ club }: { club: Club }) {
       <div className="flex items-center gap-3">
         <span className="text-2xl">✨</span>
         <div>
-          <h2 className="text-xl font-extrabold text-[#1a1a2e]">Generer du contenu</h2>
+          <h2 className="text-xl font-extrabold text-[#111827]">Generer du contenu</h2>
           <p className="text-sm text-gray-500">Choisis le type de contenu adapte a ton club.</p>
         </div>
       </div>
@@ -70,7 +70,7 @@ export default function ContentTab({ club }: { club: Club }) {
           <button
             key={tab.key}
             onClick={() => setSection(tab.key as typeof section)}
-            className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${section === tab.key ? 'bg-white text-[#1a1a2e] shadow-sm' : 'text-gray-600 hover:text-[#1a1a2e]'}`}
+            className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${section === tab.key ? 'bg-white text-[#111827] shadow-sm' : 'text-gray-600 hover:text-[#111827]'}`}
           >
             {tab.label}
           </button>
@@ -95,13 +95,13 @@ export default function ContentTab({ club }: { club: Club }) {
       {section === 'match' && !generatedPosts && generatedMatch && (
         <div className="max-w-2xl space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-extrabold text-[#1a1a2e]">Ton visuel est pret 🖼️</h2>
+            <h2 className="text-xl font-extrabold text-[#111827]">Ton visuel est pret 🖼️</h2>
             <button
               onClick={() => {
                 setGeneratedMatch(null)
                 setGeneratedPhoto(null)
               }}
-              className="text-sm text-gray-500 hover:text-[#e94560] transition"
+              className="text-sm text-gray-500 hover:text-[#2563eb] transition"
             >
               ← Nouveau match
             </button>

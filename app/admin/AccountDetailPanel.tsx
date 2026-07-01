@@ -128,10 +128,10 @@ export default function AccountDetailPanel({
     <div className="fixed inset-0 z-40 flex justify-end bg-black/30">
       <div className="h-full w-full max-w-lg overflow-y-auto bg-white p-6 shadow-xl">
         <div className="mb-5 flex items-center justify-between">
-          <h2 className="text-lg font-bold text-[#1a1a2e]">
+          <h2 className="text-lg font-bold text-[#111827]">
             {type === 'organization' ? 'Organisation' : 'Club'}
           </h2>
-          <button type="button" onClick={onClose} className="text-2xl leading-none text-[#9ca3af] hover:text-[#1a1a2e]">
+          <button type="button" onClick={onClose} className="text-2xl leading-none text-[#9ca3af] hover:text-[#111827]">
             &times;
           </button>
         </div>
@@ -141,7 +141,7 @@ export default function AccountDetailPanel({
         {!loading && type === 'organization' && org && (
           <div className="space-y-6">
             <div>
-              <h3 className="text-xl font-extrabold text-[#1a1a2e]">{org.name}</h3>
+              <h3 className="text-xl font-extrabold text-[#111827]">{org.name}</h3>
               <p className="text-xs text-[#9ca3af]">Créée le {fmtLong(org.createdAt)}</p>
               {org.suspended && (
                 <span className="mt-2 inline-block rounded-full bg-[#fee2e2] px-3 py-1 text-xs font-semibold text-[#991b1b]">
@@ -151,7 +151,7 @@ export default function AccountDetailPanel({
             </div>
 
             <div>
-              <p className="mb-2 text-sm font-semibold text-[#1a1a2e]">Plan</p>
+              <p className="mb-2 text-sm font-semibold text-[#111827]">Plan</p>
               <div className="flex gap-2">
                 {PLANS.map((p) => (
                   <button
@@ -159,7 +159,7 @@ export default function AccountDetailPanel({
                     type="button"
                     onClick={() => changePlan(p)}
                     className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${
-                      org.plan === p ? 'bg-[#1a1a2e] text-white' : 'border border-[#e5e7eb] text-[#1a1a2e] hover:bg-[#f8f8f8]'
+                      org.plan === p ? 'bg-[#111827] text-white' : 'border border-[#e5e7eb] text-[#111827] hover:bg-[#f8fafc]'
                     }`}
                   >
                     {p}
@@ -169,7 +169,7 @@ export default function AccountDetailPanel({
             </div>
 
             <div>
-              <p className="mb-2 text-sm font-semibold text-[#1a1a2e]">Membres ({org.members.length})</p>
+              <p className="mb-2 text-sm font-semibold text-[#111827]">Membres ({org.members.length})</p>
               <div className="space-y-2">
                 {org.members.map((m) => (
                   <div key={m.id} className="flex items-center justify-between rounded-lg border border-[#f3f4f6] px-3 py-2 text-sm">
@@ -181,7 +181,7 @@ export default function AccountDetailPanel({
             </div>
 
             <div>
-              <p className="mb-2 text-sm font-semibold text-[#1a1a2e]">Clubs ({org.clubs.length})</p>
+              <p className="mb-2 text-sm font-semibold text-[#111827]">Clubs ({org.clubs.length})</p>
               <div className="space-y-2">
                 {org.clubs.map((c) => (
                   <div key={c.id} className="flex items-center justify-between rounded-lg border border-[#f3f4f6] px-3 py-2 text-sm">
@@ -196,21 +196,21 @@ export default function AccountDetailPanel({
               <button
                 type="button"
                 onClick={toggleSuspendOrg}
-                className="rounded-lg border border-[#e5e7eb] px-4 py-2 text-sm font-semibold text-[#1a1a2e] transition hover:bg-[#f8f8f8]"
+                className="rounded-lg border border-[#e5e7eb] px-4 py-2 text-sm font-semibold text-[#111827] transition hover:bg-[#f8fafc]"
               >
                 {org.suspended ? 'Réactiver' : 'Suspendre'}
               </button>
               <button
                 type="button"
                 onClick={() => setConfirmAction('delete-org-detach')}
-                className="rounded-lg border border-[#e94560] px-4 py-2 text-sm font-semibold text-[#e94560] transition hover:bg-[#e94560]/10"
+                className="rounded-lg border border-[#2563eb] px-4 py-2 text-sm font-semibold text-[#2563eb] transition hover:bg-[#2563eb]/10"
               >
                 Supprimer (détacher les clubs)
               </button>
               <button
                 type="button"
                 onClick={() => setConfirmAction('delete-org-cascade')}
-                className="rounded-lg bg-[#e94560] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#c73652]"
+                className="rounded-lg bg-[#2563eb] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#1d4ed8]"
               >
                 Supprimer (avec les clubs)
               </button>
@@ -222,7 +222,7 @@ export default function AccountDetailPanel({
           <div className="space-y-6">
             <div>
               <p className="text-xs text-[#9ca3af]">Propriétaire</p>
-              <p className="font-semibold text-[#1a1a2e]">{club.ownerEmail ?? club.userId}</p>
+              <p className="font-semibold text-[#111827]">{club.ownerEmail ?? club.userId}</p>
               {club.org && <p className="text-xs text-[#9ca3af]">Organisation : {club.org.name} ({club.org.plan})</p>}
               {club.suspended && (
                 <span className="mt-2 inline-block rounded-full bg-[#fee2e2] px-3 py-1 text-xs font-semibold text-[#991b1b]">
@@ -232,25 +232,25 @@ export default function AccountDetailPanel({
             </div>
 
             <div className="space-y-3">
-              <p className="text-sm font-semibold text-[#1a1a2e]">Édition</p>
+              <p className="text-sm font-semibold text-[#111827]">Édition</p>
               <input
                 value={edit.name ?? ''}
                 onChange={(e) => setEdit((p) => ({ ...p, name: e.target.value }))}
                 placeholder="Nom du club"
-                className="w-full rounded-lg border border-[#e5e7eb] px-3 py-2 text-sm outline-none focus:border-[#e94560]"
+                className="w-full rounded-lg border border-[#e5e7eb] px-3 py-2 text-sm outline-none focus:border-[#2563eb]"
               />
               <input
                 value={edit.sport ?? ''}
                 onChange={(e) => setEdit((p) => ({ ...p, sport: e.target.value }))}
                 placeholder="Sport"
-                className="w-full rounded-lg border border-[#e5e7eb] px-3 py-2 text-sm outline-none focus:border-[#e94560]"
+                className="w-full rounded-lg border border-[#e5e7eb] px-3 py-2 text-sm outline-none focus:border-[#2563eb]"
               />
               <div className="flex gap-3">
                 <label className="flex flex-1 items-center gap-2 text-xs text-[#6b7280]">
                   Couleur 1
                   <input
                     type="color"
-                    value={edit.primaryColor ?? '#1a1a2e'}
+                    value={edit.primaryColor ?? '#111827'}
                     onChange={(e) => setEdit((p) => ({ ...p, primaryColor: e.target.value }))}
                     className="h-8 w-12 rounded border border-[#e5e7eb]"
                   />
@@ -259,7 +259,7 @@ export default function AccountDetailPanel({
                   Couleur 2
                   <input
                     type="color"
-                    value={edit.secondaryColor ?? '#e94560'}
+                    value={edit.secondaryColor ?? '#2563eb'}
                     onChange={(e) => setEdit((p) => ({ ...p, secondaryColor: e.target.value }))}
                     className="h-8 w-12 rounded border border-[#e5e7eb]"
                   />
@@ -269,20 +269,20 @@ export default function AccountDetailPanel({
                 value={edit.logoUrl ?? ''}
                 onChange={(e) => setEdit((p) => ({ ...p, logoUrl: e.target.value }))}
                 placeholder="URL du logo"
-                className="w-full rounded-lg border border-[#e5e7eb] px-3 py-2 text-sm outline-none focus:border-[#e94560]"
+                className="w-full rounded-lg border border-[#e5e7eb] px-3 py-2 text-sm outline-none focus:border-[#2563eb]"
               />
               <button
                 type="button"
                 onClick={saveClubEdits}
                 disabled={saving}
-                className="rounded-lg bg-[#1a1a2e] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#2a2a4e] disabled:opacity-60"
+                className="rounded-lg bg-[#111827] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#1f2937] disabled:opacity-60"
               >
                 {saving ? 'Enregistrement...' : 'Enregistrer'}
               </button>
             </div>
 
             <div>
-              <p className="mb-2 text-sm font-semibold text-[#1a1a2e]">Derniers matchs ({club._count.matches})</p>
+              <p className="mb-2 text-sm font-semibold text-[#111827]">Derniers matchs ({club._count.matches})</p>
               <div className="space-y-2">
                 {club.matches.map((m) => (
                   <div key={m.id} className="rounded-lg border border-[#f3f4f6] px-3 py-2 text-sm">
@@ -298,14 +298,14 @@ export default function AccountDetailPanel({
               <button
                 type="button"
                 onClick={toggleSuspendClub}
-                className="rounded-lg border border-[#e5e7eb] px-4 py-2 text-sm font-semibold text-[#1a1a2e] transition hover:bg-[#f8f8f8]"
+                className="rounded-lg border border-[#e5e7eb] px-4 py-2 text-sm font-semibold text-[#111827] transition hover:bg-[#f8fafc]"
               >
                 {club.suspended ? 'Réactiver' : 'Suspendre'}
               </button>
               <button
                 type="button"
                 onClick={() => setConfirmAction('delete-club')}
-                className="rounded-lg bg-[#e94560] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#c73652]"
+                className="rounded-lg bg-[#2563eb] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#1d4ed8]"
               >
                 Supprimer le club
               </button>
