@@ -1,7 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import VisualGenerator from './VisualGenerator'
+import PublishPanel from './PublishPanel'
+import { PageHeader, GhostButton } from './ui'
 
 type Posts = { instagram: string; facebook: string; whatsapp: string }
 
@@ -43,6 +45,7 @@ export default function PostsResult({
 }) {
   const [copied, setCopied] = useState<string | null>(null)
   const [active, setActive] = useState<'instagram' | 'facebook' | 'whatsapp' | 'visual'>('instagram')
+  const canvasRef = useRef<HTMLCanvasElement | null>(null)
 
   function copyToClipboard(text: string, key: string) {
     navigator.clipboard.writeText(text)
@@ -50,83 +53,64 @@ export default function PostsResult({
     setTimeout(() => setCopied(null), 2000)
   }
 
+  async function getImageBlob(): Promise<Blob | null> {
+    const canvas = canvasRef.current
+    if (!canvas) return null
+    return new Promise(r => canvas.toBlob(r, 'image/png'))
+  }
+
   return (
-    <div className="max-w-2xl">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-extrabold text-[#111827]">Tes posts sont prêts ! 🎉</h2>
-        <button
-          onClick={onReset}
-          className="text-sm text-gray-500 hover:text-[#2563eb] transition"
-        >
-         Nouveau match
-        </button>
+    <div className="max-w-2xl space-y-6">
+      <div className="flex items-center justify-between">
+        <PageHeader icon="check" title="Vos posts sont prêts" tone="gold" />
+        <GhostButton icon="arrowLeft" onClick={onReset}>Nouveau match</GhostButton>
       </div>
 
       {/* Platform tabs */}
-      <div className="flex gap-2 mb-4">
+      <div className="flex flex-wrap gap-2">
         {PLATFORMS.map(p => (
           <button
             key={p.key}
             onClick={() => setActive(p.key)}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold border transition ${
-              active === p.key ? 'text-white border-transparent' : 'bg-white text-gray-600 border-gray-100 hover:border-gray-200'
+            className={`rounded-btn px-4 py-2 text-sm font-semibold border transition ${
+              active === p.key ? 'text-white border-transparent' : 'bg-white text-muted border-line hover:border-gray-300'
             }`}
             style={active === p.key ? { background: p.color, borderColor: p.color } : {}}
           >
-            {p.icon} {p.label}
+            {p.label}
           </button>
         ))}
       </div>
 
-      {/* Visual */}
-      {active === 'visual' && (
-        <VisualGenerator club={club} match={match} photoFile={photoFile} />
-      )}
+      {/* Visual — toujours monté (canvas capturé pour la publication), affiché sur l'onglet Visuel */}
+      <div className={active === 'visual' ? '' : 'hidden'}>
+        <VisualGenerator club={club} match={match} photoFile={photoFile} onCanvasReady={c => { canvasRef.current = c }} />
+      </div>
 
       {/* Post card */}
       {active !== 'visual' && PLATFORMS.map(p => p.key === active && (
-        <div key={p.key} className="bg-white rounded-card border border-line shadow-card p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <span className="text-lg">{p.icon}</span>
-              <span className="font-bold text-[#111827]">{p.label}</span>
-            </div>
+        <div key={p.key} className="rounded-card border border-line bg-white p-6 shadow-card">
+          <div className="mb-4 flex items-center justify-between">
+            <span className="font-bold text-ink">{p.label}</span>
             <button
               onClick={() => copyToClipboard(posts[p.key as keyof Posts], p.key)}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-white transition"
+              className="inline-flex items-center gap-1.5 rounded-btn px-4 py-2 text-sm font-semibold text-white transition"
               style={{ background: copied === p.key ? '#22c55e' : p.color }}
             >
-              {copied === p.key ? '✓ Copié !' : 'Copier'}
+              {copied === p.key ? 'Copié' : 'Copier'}
             </button>
           </div>
-          <div className="bg-gray-50 rounded-xl p-4 text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+          <div className="whitespace-pre-wrap rounded-btn bg-subtle p-4 text-sm leading-relaxed text-gray-700">
             {posts[p.key as keyof Posts]}
           </div>
-          <p className="text-xs text-gray-400 mt-3 text-right">
+          <p className="mt-3 text-right text-xs text-muted">
             {posts[p.key as keyof Posts].length} caractères
           </p>
         </div>
       ))}
 
-      {/* Copy all */}
-      {active !== 'visual' && (
-        <div className="mt-4 flex gap-3">
-          <button
-            onClick={() => {
-              const all = PLATFORMS.filter(p => p.key !== 'visual')
-                .map(p => `=== ${p.label} ===\n${posts[p.key as keyof Posts]}`).join('\n\n')
-              copyToClipboard(all, 'all')
-            }}
-            className={`flex-1 py-3 rounded-xl text-sm font-semibold border transition ${
-              copied === 'all'
-                ? 'bg-[#22c55e] text-white border-[#22c55e]'
-                : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
-            }`}
-          >
-            {copied === 'all' ? '✓ Tous copiés !' : 'Copier tous les posts'}
-          </button>
-        </div>
-      )}
+      {/* Publication directe */}
+      <PublishPanel posts={posts} getImageBlob={getImageBlob} />
     </div>
   )
 }

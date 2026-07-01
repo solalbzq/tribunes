@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import Logo from "@/components/Logo";
 import ClubSettings from "./ClubSettings";
 import ContentTab from "./ContentTab";
+import SocialTab from "./SocialTab";
 import { Icon } from "./icons";
 
 type Club = {
@@ -30,7 +31,7 @@ type Club = {
   }>;
 } | null;
 
-type View = "home" | "content" | "history" | "settings";
+type View = "home" | "content" | "history" | "reseaux" | "settings";
 
 const NAV: {
   key: View;
@@ -40,6 +41,7 @@ const NAV: {
   { key: "home", label: "Accueil", icon: "home" },
   { key: "content", label: "Générer du contenu", icon: "sparkles" },
   { key: "history", label: "Historique", icon: "clock" },
+  { key: "reseaux", label: "Réseaux", icon: "link" },
   { key: "settings", label: "Mon club", icon: "palette" },
 ];
 
@@ -52,6 +54,12 @@ export default function DashboardClient({
 }) {
   const router = useRouter();
   const [view, setView] = useState<View>("home");
+
+  // Ouvre l'onglet Réseaux au retour du flux OAuth (?tab=reseaux)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("tab") === "reseaux") setView("reseaux");
+  }, []);
 
   useEffect(() => {
     if (club) return;
@@ -193,6 +201,7 @@ export default function DashboardClient({
             />
           )}
           {view === "content" && <ContentTab club={club} />}
+          {view === "reseaux" && <SocialTab />}
           {view === "history" && (
             <HistoryView club={club} onNavigate={setView} />
           )}
@@ -351,15 +360,18 @@ function HomeView({
           )}
         </Card>
 
-        {/* Réseaux — bientôt */}
+        {/* Réseaux */}
         <Card>
           <CardHeader
             title="Réseaux sociaux"
-            subtitle="Statistiques à connecter"
+            subtitle="Publiez directement depuis Tribunes"
             action={
-              <span className="rounded-full bg-gold-soft px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-gold-hover">
-                Bientôt
-              </span>
+              <button
+                onClick={() => onNavigate("reseaux")}
+                className="text-sm font-semibold text-brand hover:underline"
+              >
+                Gérer
+              </button>
             }
           />
           <div className="grid grid-cols-3 gap-3">
@@ -380,14 +392,14 @@ function HomeView({
           </div>
           <div className="mt-4 flex items-center justify-between gap-4 rounded-btn border border-line bg-white p-4">
             <p className="text-sm text-muted">
-              Reliez Instagram, Facebook et WhatsApp pour suivre vos
-              performances.
+              Reliez votre Page Facebook et Instagram pour publier vos posts en
+              un clic.
             </p>
             <button
-              onClick={() => onNavigate("settings")}
-              className="shrink-0 rounded-btn bg-ink px-4 py-2 text-sm font-semibold text-white transition hover:bg-ink/90"
+              onClick={() => onNavigate("reseaux")}
+              className="shrink-0 rounded-btn bg-brand px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-hover"
             >
-              Préparer
+              Connecter
             </button>
           </div>
         </Card>

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { parseVisualConfig, loadImage, SIZE, drawElements } from '@/lib/visualLayout'
 import { getSportVocab, getDetailLines, getScoreLabel } from '@/lib/sports'
+import { Icon } from './icons'
 
 type Club = {
   name: string; sport: string
@@ -14,12 +15,15 @@ type MatchData = {
   extraData?: Record<string, unknown>
 }
 
-export default function VisualGenerator({ club, match, photoFile }: {
+export default function VisualGenerator({ club, match, photoFile, onCanvasReady }: {
   club: Club; match: MatchData; photoFile: File | null
+  onCanvasReady?: (canvas: HTMLCanvasElement) => void
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [ready, setReady] = useState(false)
   const [copied, setCopied] = useState(false)
+  const onReadyRef = useRef(onCanvasReady)
+  onReadyRef.current = onCanvasReady
 
   const clubScore = match.isHome ? match.homeScore : match.awayScore
   const oppScore  = match.isHome ? match.awayScore : match.homeScore
@@ -93,7 +97,10 @@ export default function VisualGenerator({ club, match, photoFile }: {
         scoreLabel,
       })
 
-      if (!cancelled) setReady(true)
+      if (!cancelled) {
+        setReady(true)
+        onReadyRef.current?.(canvas)
+      }
     }
     draw()
     return () => { cancelled = true }
@@ -119,25 +126,25 @@ export default function VisualGenerator({ club, match, photoFile }: {
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 p-6">
-      <div className="flex items-center justify-between mb-4">
-        <span className="font-bold text-[#1a1a2e]">🖼️ Visuel généré</span>
+    <div className="rounded-card border border-line bg-white p-6 shadow-card">
+      <div className="mb-4 flex items-center justify-between">
+        <span className="flex items-center gap-2 font-bold text-ink"><Icon name="image" className="h-[18px] w-[18px] text-brand" /> Visuel généré</span>
         <div className="flex gap-2">
           <button onClick={copyImage} disabled={!ready}
-            className="px-4 py-2 rounded-xl text-sm font-semibold text-white transition disabled:opacity-50"
-            style={{ background: copied ? '#10b981' : club.secondaryColor }}>
-            {copied ? '✓ Copié !' : '📋 Copier'}
+            className="inline-flex items-center gap-1.5 rounded-btn px-4 py-2 text-sm font-semibold text-white transition disabled:opacity-50"
+            style={{ background: copied ? '#22c55e' : '#2563eb' }}>
+            <Icon name={copied ? 'check' : 'copy'} className="h-4 w-4" /> {copied ? 'Copié' : 'Copier'}
           </button>
           <button onClick={download} disabled={!ready}
-            className="px-4 py-2 rounded-xl text-sm font-semibold bg-[#1a1a2e] text-white transition disabled:opacity-50">
-            ⬇ Télécharger
+            className="inline-flex items-center gap-1.5 rounded-btn bg-ink px-4 py-2 text-sm font-semibold text-white transition disabled:opacity-50">
+            <Icon name="download" className="h-4 w-4" /> Télécharger
           </button>
         </div>
       </div>
-      <div className="bg-gray-50 rounded-xl p-4 flex justify-center">
+      <div className="flex justify-center rounded-btn bg-subtle p-4">
         <canvas ref={canvasRef} className="w-full max-w-[420px] aspect-square rounded-xl shadow-lg" />
       </div>
-      {!ready && <p className="text-xs text-gray-400 text-center mt-2">Génération...</p>}
+      {!ready && <p className="mt-2 text-center text-xs text-muted">Génération…</p>}
     </div>
   )
 }
