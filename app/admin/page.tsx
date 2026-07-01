@@ -768,7 +768,7 @@ export default function AdminDashboardPage() {
                       <span className="text-[#6b7280]">Prix output (par 1M tokens)</span>
                       <span className="font-semibold">$10.00</span>
                     </div>
-                    <div className="flex items-center justify-between rounded-lg bg-[#fff0f3] px-4 py-3">
+                    <div className="flex items-center justify-between rounded-lg bg-[#eff4ff] px-4 py-3">
                       <span className="font-bold text-[#2563eb]">Total estimé</span>
                       <span className="text-lg font-extrabold text-[#2563eb]">${stats.estimatedCostUsd.toFixed(4)}</span>
                     </div>
@@ -791,7 +791,7 @@ export default function AdminDashboardPage() {
                       </p>
                       <p className="mt-1 text-xs font-semibold uppercase tracking-widest text-[#6b7280]">Tokens estimés</p>
                     </div>
-                    <div className="rounded-xl bg-[#fff0f3] p-4 text-center">
+                    <div className="rounded-xl bg-[#eff4ff] p-4 text-center">
                       <p className="text-3xl font-extrabold text-[#2563eb]">${stats.estimatedCostUsd.toFixed(2)}</p>
                       <p className="mt-1 text-xs font-semibold uppercase tracking-widest text-[#6b7280]">Coût estimé ($)</p>
                     </div>

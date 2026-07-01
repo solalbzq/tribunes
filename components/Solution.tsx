@@ -31,7 +31,7 @@ export function Solution() {
               key={feature.title}
               className="rounded-[12px] border border-white/10 bg-white/5 p-6 shadow-[0_1px_3px_rgba(0,0,0,0.08)]"
             >
-              <span className="inline-flex rounded-full bg-[#fff0f3] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.05em] text-[#2563eb]">
+              <span className="inline-flex rounded-full bg-[#eff4ff] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.05em] text-[#2563eb]">
                 Étape {index + 1}
               </span>
               <div className="mt-4 h-9 w-9 rounded-full bg-[#2563eb]/10 text-center text-lg leading-9 text-[#2563eb]">

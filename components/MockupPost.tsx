@@ -1,8 +1,9 @@
 export function MockupPost() {
   return (
-    <section className="bg-[#f8fafc] py-16">
+    <section id="mockup" className="bg-white py-20">
       <div className="mx-auto max-w-2xl px-4">
-        <h2 className="text-xl font-bold tracking-[-0.03em] text-[#111827]">
+        <span className="text-[13px] font-bold uppercase tracking-[0.14em] text-brand">Exemple</span>
+        <h2 className="mt-3 text-[clamp(1.6rem,3.5vw,2.2rem)] font-black tracking-[-0.03em] text-ink">
           À quoi ça ressemble
         </h2>
         <div className="mt-8 rounded-[12px] border border-[#e5e7eb] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.08)] sm:p-6">
@@ -43,7 +44,7 @@ export function MockupPost() {
             <span>WhatsApp</span>
           </div>
           <div className="mt-5 flex justify-end">
-            <span className="inline-flex rounded-full bg-[#fff0f3] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.05em] text-[#2563eb]">
+            <span className="inline-flex rounded-full bg-[#eff4ff] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.05em] text-[#2563eb]">
               Généré par Tribunes
             </span>
           </div>

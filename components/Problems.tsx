@@ -32,7 +32,7 @@ export function Problems() {
               key={problem.title}
               className="flex gap-4 rounded-[12px] border border-[#e5e7eb] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.08)]"
             >
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#fff0f3] text-sm font-semibold text-[#2563eb]">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#eff4ff] text-sm font-semibold text-[#2563eb]">
                 {problem.icon}
               </div>
               <div>

@@ -73,7 +73,7 @@ export function EmailForm({ placeholder, buttonLabel, note, className }: EmailFo
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           placeholder={placeholder}
-          className="sm:col-span-3 rounded-[8px] border border-[#e5e7eb] px-4 py-3 text-sm text-[#111827] outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#fff0f3]"
+          className="sm:col-span-3 rounded-[8px] border border-[#e5e7eb] px-4 py-3 text-sm text-[#111827] outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#eff4ff]"
         />
         <input
           name="clubName"
@@ -81,7 +81,7 @@ export function EmailForm({ placeholder, buttonLabel, note, className }: EmailFo
           value={clubName}
           onChange={(event) => setClubName(event.target.value)}
           placeholder="Nom du club (optionnel)"
-          className="rounded-[8px] border border-[#e5e7eb] px-4 py-3 text-sm text-[#111827] outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#fff0f3]"
+          className="rounded-[8px] border border-[#e5e7eb] px-4 py-3 text-sm text-[#111827] outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#eff4ff]"
         />
         <input
           name="sport"
@@ -89,7 +89,7 @@ export function EmailForm({ placeholder, buttonLabel, note, className }: EmailFo
           value={sport}
           onChange={(event) => setSport(event.target.value)}
           placeholder="Sport (optionnel)"
-          className="rounded-[8px] border border-[#e5e7eb] px-4 py-3 text-sm text-[#111827] outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#fff0f3]"
+          className="rounded-[8px] border border-[#e5e7eb] px-4 py-3 text-sm text-[#111827] outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#eff4ff]"
         />
         <button
           type="submit"
