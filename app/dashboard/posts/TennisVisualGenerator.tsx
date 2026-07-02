@@ -132,6 +132,127 @@ type Club = {
   logoUrl?: string | null
 }
 
+// ── Palette & fond partagés (schedule + résultat) ──────────────────────────
+
+type Palette = {
+  text: string; textMuted: string
+  accent: string
+  rowBg: string; rowBorder: string; rowText: string
+  timeBg: string; timeText: string; timeBorderOnly: boolean
+  vsColor: string; catColor: string
+  footerBg: string; footerText: string; topBar: string
+  divider: string; dividerW: number
+}
+
+function computeTennisPalette(p: string, s: string, onP: string, onS: string, neon: string, cfg: TennisVisualConfig): Palette {
+  switch (cfg.preset) {
+    case 'sobre': return {
+      text: p, textMuted: withAlpha(p, 0.45), accent: s,
+      rowBg: withAlpha(p, 0.04), rowBorder: withAlpha(p, 0.1), rowText: p,
+      timeBg: p, timeText: onP, timeBorderOnly: false,
+      vsColor: s, catColor: withAlpha(p, 0.38),
+      footerBg: withAlpha(p, 0.05), footerText: withAlpha(p, 0.55), topBar: s,
+      divider: withAlpha(p, 0.1), dividerW: 1,
+    }
+    case 'pro': return {
+      text: '#ffffff', textMuted: withAlpha('#fff', 0.5), accent: s,
+      rowBg: withAlpha('#fff', 0.07), rowBorder: 'transparent', rowText: '#ffffff',
+      timeBg: s, timeText: onS, timeBorderOnly: false,
+      vsColor: withAlpha(s, 0.9), catColor: withAlpha('#fff', 0.45),
+      footerBg: s, footerText: onS, topBar: s,
+      divider: withAlpha('#fff', 0.14), dividerW: 1,
+    }
+    case 'neon': return {
+      text: '#ffffff', textMuted: withAlpha('#fff', 0.38), accent: neon,
+      rowBg: withAlpha(neon, 0.07), rowBorder: withAlpha(neon, 0.28), rowText: '#ffffff',
+      timeBg: 'transparent', timeText: neon, timeBorderOnly: true,
+      vsColor: neon, catColor: withAlpha(neon, 0.55),
+      footerBg: withAlpha(neon, 0.07), footerText: neon, topBar: neon,
+      divider: withAlpha(neon, 0.2), dividerW: 1,
+    }
+    case 'glass': return {
+      text: '#ffffff', textMuted: withAlpha('#fff', 0.55), accent: withAlpha('#fff', 0.88),
+      rowBg: withAlpha('#fff', 0.1), rowBorder: withAlpha('#fff', 0.22), rowText: '#ffffff',
+      timeBg: withAlpha('#fff', 0.22), timeText: '#ffffff', timeBorderOnly: false,
+      vsColor: withAlpha('#fff', 0.52), catColor: withAlpha('#fff', 0.48),
+      footerBg: withAlpha('#fff', 0.07), footerText: withAlpha('#fff', 0.6), topBar: withAlpha('#fff', 0.42),
+      divider: withAlpha('#fff', 0.15), dividerW: 1,
+    }
+    case 'magazine': return {
+      text: '#ffffff', textMuted: withAlpha('#fff', 0.78), accent: '#ffffff',
+      rowBg: 'rgba(255,255,255,0.97)', rowBorder: 'rgba(255,255,255,0)', rowText: p,
+      timeBg: s, timeText: onS, timeBorderOnly: false,
+      vsColor: s, catColor: withAlpha(p, 0.4),
+      footerBg: p, footerText: onP === '#000000' ? withAlpha(p, 0.7) : '#ffffff', topBar: p,
+      divider: withAlpha('#fff', 0.28), dividerW: 1,
+    }
+    case 'classique': return {
+      text: onP, textMuted: withAlpha(onP, 0.45), accent: s,
+      rowBg: 'transparent', rowBorder: withAlpha(s, 0.2), rowText: onP,
+      timeBg: s, timeText: onS, timeBorderOnly: false,
+      vsColor: s, catColor: withAlpha(onP, 0.38),
+      footerBg: s, footerText: onS, topBar: s,
+      divider: withAlpha(s, 0.45), dividerW: 2,
+    }
+  }
+}
+
+function paintTennisBackground(ctx: CanvasRenderingContext2D, colors: Palette, p: string, s: string, onP: string, neon: string, cfg: TennisVisualConfig) {
+  const angle = cfg.gradientAngle * Math.PI / 180
+  const gx1 = SIZE / 2 - Math.cos(angle) * SIZE * 0.85
+  const gy1 = SIZE / 2 - Math.sin(angle) * SIZE * 0.85
+  const gx2 = SIZE / 2 + Math.cos(angle) * SIZE * 0.85
+  const gy2 = SIZE / 2 + Math.sin(angle) * SIZE * 0.85
+
+  switch (cfg.preset) {
+    case 'sobre':
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, SIZE, SIZE); break
+    case 'pro': {
+      const grad = ctx.createLinearGradient(gx1, gy1, gx2, gy2)
+      grad.addColorStop(0, p); grad.addColorStop(1, withAlpha(s, 0.65))
+      ctx.fillStyle = grad; ctx.fillRect(0, 0, SIZE, SIZE)
+      if (cfg.showGrid) {
+        ctx.strokeStyle = withAlpha('#fff', 0.04); ctx.lineWidth = 1
+        for (let x = 0; x < SIZE; x += 60) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, SIZE); ctx.stroke() }
+        for (let y = 0; y < SIZE; y += 60) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(SIZE, y); ctx.stroke() }
+      }
+      break
+    }
+    case 'neon': {
+      ctx.fillStyle = darkenHex(p, 0.9); ctx.fillRect(0, 0, SIZE, SIZE)
+      if (cfg.showGrid) {
+        ctx.fillStyle = withAlpha(neon, 0.07)
+        for (let x = 40; x < SIZE; x += 60) for (let y = 40; y < SIZE; y += 60) { ctx.beginPath(); ctx.arc(x, y, 2, 0, Math.PI * 2); ctx.fill() }
+      }
+      break
+    }
+    case 'glass': {
+      const rGrad = ctx.createRadialGradient(SIZE * 0.38, SIZE * 0.28, 0, SIZE / 2, SIZE / 2, SIZE * 0.88)
+      rGrad.addColorStop(0, withAlpha(s, 0.38)); rGrad.addColorStop(0.45, p); rGrad.addColorStop(1, darkenHex(p, 0.38))
+      ctx.fillStyle = rGrad; ctx.fillRect(0, 0, SIZE, SIZE); break
+    }
+    case 'magazine': {
+      ctx.fillStyle = s; ctx.fillRect(0, 0, SIZE, SIZE)
+      ctx.save(); ctx.translate(SIZE * 0.47, 0); ctx.rotate(-13 * Math.PI / 180)
+      ctx.fillStyle = p; ctx.fillRect(-80, -200, SIZE * 0.78, SIZE + 400); ctx.restore(); break
+    }
+    case 'classique': {
+      ctx.fillStyle = p; ctx.fillRect(0, 0, SIZE, SIZE)
+      if (cfg.showGrid) {
+        ctx.strokeStyle = withAlpha(onP, 0.03); ctx.lineWidth = 1
+        for (let i = -SIZE; i < SIZE * 2; i += 60) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i + SIZE, SIZE); ctx.stroke() }
+      }
+      break
+    }
+  }
+
+  // Barre d'accent haute
+  if (cfg.preset === 'neon') { ctx.shadowBlur = 18 * cfg.neonIntensity; ctx.shadowColor = neon }
+  ctx.fillStyle = colors.topBar
+  ctx.fillRect(0, 0, SIZE, 8)
+  ctx.shadowBlur = 0
+}
+
 // ── Main draw function ─────────────────────────────────────────────────────
 
 export async function drawTournamentSchedule(
@@ -154,165 +275,9 @@ export async function drawTournamentSchedule(
   const footerH = cfg.showFooter ? 80 : 0
   const neon = cfg.neonColor
 
-  // ── Per-preset color palette
-  type Palette = {
-    text: string; textMuted: string
-    accent: string
-    rowBg: string; rowBorder: string; rowText: string
-    timeBg: string; timeText: string; timeBorderOnly: boolean
-    vsColor: string; catColor: string
-    footerBg: string; footerText: string; topBar: string
-    divider: string; dividerW: number
-  }
-
-  const colors: Palette = (() => {
-    switch (cfg.preset) {
-      case 'sobre': return {
-        text: p, textMuted: withAlpha(p, 0.45),
-        accent: s,
-        rowBg: withAlpha(p, 0.04), rowBorder: withAlpha(p, 0.1), rowText: p,
-        timeBg: p, timeText: onP, timeBorderOnly: false,
-        vsColor: s, catColor: withAlpha(p, 0.38),
-        footerBg: withAlpha(p, 0.05), footerText: withAlpha(p, 0.55), topBar: s,
-        divider: withAlpha(p, 0.1), dividerW: 1,
-      }
-      case 'pro': return {
-        text: '#ffffff', textMuted: withAlpha('#fff', 0.5),
-        accent: s,
-        rowBg: withAlpha('#fff', 0.07), rowBorder: 'transparent', rowText: '#ffffff',
-        timeBg: s, timeText: onS, timeBorderOnly: false,
-        vsColor: withAlpha(s, 0.9), catColor: withAlpha('#fff', 0.45),
-        footerBg: s, footerText: onS, topBar: s,
-        divider: withAlpha('#fff', 0.14), dividerW: 1,
-      }
-      case 'neon': return {
-        text: '#ffffff', textMuted: withAlpha('#fff', 0.38),
-        accent: neon,
-        rowBg: withAlpha(neon, 0.07), rowBorder: withAlpha(neon, 0.28), rowText: '#ffffff',
-        timeBg: 'transparent', timeText: neon, timeBorderOnly: true,
-        vsColor: neon, catColor: withAlpha(neon, 0.55),
-        footerBg: withAlpha(neon, 0.07), footerText: neon, topBar: neon,
-        divider: withAlpha(neon, 0.2), dividerW: 1,
-      }
-      case 'glass': return {
-        text: '#ffffff', textMuted: withAlpha('#fff', 0.55),
-        accent: withAlpha('#fff', 0.88),
-        rowBg: withAlpha('#fff', 0.1), rowBorder: withAlpha('#fff', 0.22), rowText: '#ffffff',
-        timeBg: withAlpha('#fff', 0.22), timeText: '#ffffff', timeBorderOnly: false,
-        vsColor: withAlpha('#fff', 0.52), catColor: withAlpha('#fff', 0.48),
-        footerBg: withAlpha('#fff', 0.07), footerText: withAlpha('#fff', 0.6), topBar: withAlpha('#fff', 0.42),
-        divider: withAlpha('#fff', 0.15), dividerW: 1,
-      }
-      case 'magazine': return {
-        text: '#ffffff', textMuted: withAlpha('#fff', 0.78),
-        accent: '#ffffff',
-        rowBg: 'rgba(255,255,255,0.97)', rowBorder: 'rgba(255,255,255,0)', rowText: p,
-        timeBg: s, timeText: onS, timeBorderOnly: false,
-        vsColor: s, catColor: withAlpha(p, 0.4),
-        footerBg: p, footerText: onP === '#000000' ? withAlpha(p, 0.7) : '#ffffff', topBar: p,
-        divider: withAlpha('#fff', 0.28), dividerW: 1,
-      }
-      case 'classique': return {
-        text: onP, textMuted: withAlpha(onP, 0.45),
-        accent: s,
-        rowBg: 'transparent', rowBorder: withAlpha(s, 0.2), rowText: onP,
-        timeBg: s, timeText: onS, timeBorderOnly: false,
-        vsColor: s, catColor: withAlpha(onP, 0.38),
-        footerBg: s, footerText: onS, topBar: s,
-        divider: withAlpha(s, 0.45), dividerW: 2,
-      }
-    }
-  })()
-
-  // ── 1. Background ──────────────────────────────────────────────────────
-
-  const angle = cfg.gradientAngle * Math.PI / 180
-  const gx1 = SIZE / 2 - Math.cos(angle) * SIZE * 0.85
-  const gy1 = SIZE / 2 - Math.sin(angle) * SIZE * 0.85
-  const gx2 = SIZE / 2 + Math.cos(angle) * SIZE * 0.85
-  const gy2 = SIZE / 2 + Math.sin(angle) * SIZE * 0.85
-
-  switch (cfg.preset) {
-    case 'sobre':
-      ctx.fillStyle = '#ffffff'
-      ctx.fillRect(0, 0, SIZE, SIZE)
-      break
-
-    case 'pro': {
-      const grad = ctx.createLinearGradient(gx1, gy1, gx2, gy2)
-      grad.addColorStop(0, p)
-      grad.addColorStop(1, withAlpha(s, 0.65))
-      ctx.fillStyle = grad
-      ctx.fillRect(0, 0, SIZE, SIZE)
-      if (cfg.showGrid) {
-        ctx.strokeStyle = withAlpha('#fff', 0.04)
-        ctx.lineWidth = 1
-        for (let x = 0; x < SIZE; x += 60) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, SIZE); ctx.stroke() }
-        for (let y = 0; y < SIZE; y += 60) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(SIZE, y); ctx.stroke() }
-      }
-      break
-    }
-
-    case 'neon': {
-      const dark = darkenHex(p, 0.9)
-      ctx.fillStyle = dark
-      ctx.fillRect(0, 0, SIZE, SIZE)
-      if (cfg.showGrid) {
-        ctx.fillStyle = withAlpha(neon, 0.07)
-        for (let x = 40; x < SIZE; x += 60) {
-          for (let y = 40; y < SIZE; y += 60) {
-            ctx.beginPath(); ctx.arc(x, y, 2, 0, Math.PI * 2); ctx.fill()
-          }
-        }
-      }
-      break
-    }
-
-    case 'glass': {
-      const rGrad = ctx.createRadialGradient(SIZE * 0.38, SIZE * 0.28, 0, SIZE / 2, SIZE / 2, SIZE * 0.88)
-      rGrad.addColorStop(0, withAlpha(s, 0.38))
-      rGrad.addColorStop(0.45, p)
-      rGrad.addColorStop(1, darkenHex(p, 0.38))
-      ctx.fillStyle = rGrad
-      ctx.fillRect(0, 0, SIZE, SIZE)
-      break
-    }
-
-    case 'magazine': {
-      ctx.fillStyle = s
-      ctx.fillRect(0, 0, SIZE, SIZE)
-      ctx.save()
-      ctx.translate(SIZE * 0.47, 0)
-      ctx.rotate(-13 * Math.PI / 180)
-      ctx.fillStyle = p
-      ctx.fillRect(-80, -200, SIZE * 0.78, SIZE + 400)
-      ctx.restore()
-      break
-    }
-
-    case 'classique': {
-      ctx.fillStyle = p
-      ctx.fillRect(0, 0, SIZE, SIZE)
-      if (cfg.showGrid) {
-        ctx.strokeStyle = withAlpha(onP, 0.03)
-        ctx.lineWidth = 1
-        for (let i = -SIZE; i < SIZE * 2; i += 60) {
-          ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i + SIZE, SIZE); ctx.stroke()
-        }
-      }
-      break
-    }
-  }
-
-  // ── 2. Top accent bar ──────────────────────────────────────────────────
-
-  if (cfg.preset === 'neon') {
-    ctx.shadowBlur = 18 * cfg.neonIntensity
-    ctx.shadowColor = neon
-  }
-  ctx.fillStyle = colors.topBar
-  ctx.fillRect(0, 0, SIZE, 8)
-  ctx.shadowBlur = 0
+  // ── Palette + fond (partagés) ──────────────────────────────────────────
+  const colors = computeTennisPalette(p, s, onP, onS, neon, cfg)
+  paintTennisBackground(ctx, colors, p, s, onP, neon, cfg)
 
   // ── 3. Logo ────────────────────────────────────────────────────────────
 
@@ -609,6 +574,174 @@ export async function drawTournamentSchedule(
     ctx.fillStyle = cfg.preset === 'neon' ? withAlpha(neon, 0.55) : colors.footerText
     ctx.fillText(tag, SIZE - 56, SIZE - 40)
   }
+}
+
+// ── Visuel RÉSULTAT (score global) ──────────────────────────────────────────
+
+export type TennisResultData = {
+  teamName: string
+  opponent: string
+  clubScore: number
+  oppScore: number
+  division?: string
+  journee?: string
+}
+
+export async function drawTennisResult(
+  canvas: HTMLCanvasElement,
+  club: Club,
+  data: TennisResultData,
+  cfg: TennisVisualConfig = DEFAULT_TENNIS_CONFIG,
+) {
+  const ctx = canvas.getContext('2d')!
+  canvas.width = SIZE
+  canvas.height = SIZE
+
+  const p = club.primaryColor
+  const s = club.secondaryColor
+  const onP = textColor(p)
+  const onS = textColor(s)
+  const fs = cfg.fontScale
+  const neon = cfg.neonColor
+  const colors = computeTennisPalette(p, s, onP, onS, neon, cfg)
+  paintTennisBackground(ctx, colors, p, s, onP, neon, cfg)
+
+  const isWin = data.clubScore > data.oppScore
+  const isLoss = data.clubScore < data.oppScore
+  const outcome = isWin ? 'VICTOIRE' : isLoss ? 'DÉFAITE' : 'MATCH NUL'
+  const badgeBg = isWin ? '#22c55e' : isLoss ? '#ef4444' : '#6b7280'
+
+  const glow = (on: boolean) => {
+    if (cfg.preset === 'neon' && on) { ctx.shadowBlur = 14 * cfg.neonIntensity; ctx.shadowColor = neon }
+    else ctx.shadowBlur = 0
+  }
+
+  // ── Logo (haut droite, optionnel)
+  const logoSizePx = { hidden: 0, sm: 80, md: 120, lg: 160 }[cfg.logoSize]
+  if (club.logoUrl && cfg.logoSize !== 'hidden') {
+    try {
+      const logo = await loadImage(club.logoUrl)
+      const ratio = Math.min(logoSizePx / logo.width, logoSizePx / logo.height)
+      const dw = logo.width * ratio, dh = logo.height * ratio
+      const lx = SIZE - logoSizePx - 56, ly = 48
+      if (cfg.logoBubble) {
+        roundRect(ctx, lx - 14, ly - 14, logoSizePx + 28, logoSizePx + 28, 22)
+        ctx.fillStyle = withAlpha('#ffffff', cfg.preset === 'sobre' ? 0.07 : 0.13)
+        ctx.fill()
+      }
+      ctx.drawImage(logo, lx + (logoSizePx - dw) / 2, ly + (logoSizePx - dh) / 2, dw, dh)
+    } catch { /* ok */ }
+  }
+
+  ctx.textBaseline = 'top'
+  ctx.textAlign = 'left'
+
+  // ── Nom du club
+  glow(true)
+  ctx.fillStyle = colors.text
+  ctx.font = `800 ${Math.round(56 * fs)}px Inter, sans-serif`
+  const cname = truncateText(ctx, formatPlayerName(club.name, cfg.namesFormat), SIZE - 112 - logoSizePx - 24)
+  ctx.fillText(cname, 56, 44)
+  glow(false)
+
+  // ── Eyebrow "RÉSULTAT · division"
+  ctx.fillStyle = colors.accent
+  ctx.font = `800 ${Math.round(22 * fs)}px Inter, sans-serif`
+  const eyebrow = `RÉSULTAT${data.division ? ` · ${data.division.toUpperCase()}` : ''}`
+  ctx.fillText(eyebrow, 56, 44 + Math.round(56 * fs) + 14)
+
+  // ── Bloc central (vertical, centré)
+  ctx.textAlign = 'center'
+  const cx = SIZE / 2
+
+  // Équipe du club
+  glow(true)
+  ctx.fillStyle = colors.text
+  ctx.font = `800 ${Math.round(52 * fs)}px Inter, sans-serif`
+  ctx.fillText(truncateText(ctx, data.teamName, SIZE - 140), cx, SIZE * 0.34)
+  glow(false)
+
+  // Score géant
+  glow(true)
+  ctx.fillStyle = colors.text
+  ctx.font = `900 ${Math.round(170 * fs)}px Inter, sans-serif`
+  ctx.fillText(`${data.clubScore}`, cx - Math.round(150 * fs), SIZE * 0.42)
+  ctx.fillStyle = colors.textMuted
+  ctx.fillText('–', cx, SIZE * 0.42)
+  ctx.fillStyle = colors.text
+  ctx.fillText(`${data.oppScore}`, cx + Math.round(150 * fs), SIZE * 0.42)
+  glow(false)
+
+  // Adversaire
+  ctx.fillStyle = colors.textMuted
+  ctx.font = `600 ${Math.round(40 * fs)}px Inter, sans-serif`
+  ctx.fillText(truncateText(ctx, data.opponent, SIZE - 160), cx, SIZE * 0.64)
+
+  // ── Badge résultat (pill)
+  ctx.font = `800 ${Math.round(30 * fs)}px Inter, sans-serif`
+  const bw = ctx.measureText(outcome).width + 72
+  const bh = Math.round(66 * fs)
+  const by = SIZE * 0.74
+  glow(true)
+  roundRect(ctx, cx - bw / 2, by, bw, bh, bh / 2)
+  ctx.fillStyle = badgeBg
+  ctx.fill()
+  glow(false)
+  ctx.fillStyle = '#ffffff'
+  ctx.textBaseline = 'middle'
+  ctx.fillText(outcome, cx, by + bh / 2 + 2)
+  ctx.textBaseline = 'top'
+
+  // ── Journée / date
+  if (data.journee) {
+    ctx.fillStyle = colors.textMuted
+    ctx.font = `600 ${Math.round(26 * fs)}px Inter, sans-serif`
+    ctx.fillText(data.journee, cx, by + bh + 26)
+  }
+
+  // ── Footer
+  if (cfg.showFooter) {
+    ctx.fillStyle = colors.footerBg
+    ctx.fillRect(0, SIZE - 80, SIZE, 80)
+    ctx.fillStyle = colors.footerText
+    ctx.textAlign = 'left'
+    ctx.font = `700 ${Math.round(24 * fs)}px Inter, sans-serif`
+    ctx.fillText(cfg.footerTag || 'tribunes.app', 56, SIZE - 80 + 28)
+  }
+}
+
+// ── Aperçu du visuel RÉSULTAT (canvas exposé) ───────────────────────────────
+
+export function TennisResultVisual({
+  club, data, config = DEFAULT_TENNIS_CONFIG, onCanvasReady,
+}: {
+  club: Club
+  data: TennisResultData
+  config?: TennisVisualConfig
+  onCanvasReady?: (canvas: HTMLCanvasElement) => void
+}) {
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const [ready, setReady] = useState(false)
+  const onReadyRef = useRef(onCanvasReady)
+  onReadyRef.current = onCanvasReady
+
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    let cancelled = false
+    setReady(false)
+    drawTennisResult(canvas, club, data, config)
+      .then(() => { if (!cancelled) { setReady(true); onReadyRef.current?.(canvas) } })
+      .catch(console.error)
+    return () => { cancelled = true }
+  }, [club, data, config])
+
+  return (
+    <div className="flex justify-center rounded-btn bg-subtle p-4">
+      <canvas ref={canvasRef} className="w-full max-w-[420px] aspect-square rounded-xl shadow-lg" />
+      {!ready && <p className="sr-only">Rendu…</p>}
+    </div>
+  )
 }
 
 // ── Single canvas page ─────────────────────────────────────────────────────
