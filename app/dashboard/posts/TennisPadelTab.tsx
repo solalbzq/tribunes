@@ -6,6 +6,7 @@ import GenerateForm from '../GenerateForm'
 import PostsResult from '../PostsResult'
 import VisualGenerator from '../VisualGenerator'
 import TennisProgrammeSection from './TennisProgrammeSection'
+import TennisResultSection from './TennisResultSection'
 import TennisVisualGenerator, { type TennisVisualConfig, DEFAULT_TENNIS_CONFIG } from './TennisVisualGenerator'
 import { PageHeader, Segmented, GhostButton } from '../ui'
 import { Icon } from '../icons'
@@ -339,98 +340,6 @@ function TournamentSection({ club }: { club: Club }) {
 }
 
 
-function ResultsSection({ club }: { club: Club }) {
-  const [loading, setLoading] = useState(false)
-  const [matches, setMatches] = useState<Array<{
-    id: string; date: string; opponent: string; globalScore: string
-    teamName: string | null; division: string | null
-    hasPosts: boolean
-  }>>([])
-  const [posts, setPosts] = useState<Record<string, Record<string, string>>>({})
-  const [generating, setGenerating] = useState<string | null>(null)
-  const [error, setError] = useState('')
-
-  async function loadMatches() {
-    setLoading(true)
-    const res = await fetch('/api/posts/tennis/interclub/matches')
-    if (res.ok) {
-      const data = await res.json()
-      setMatches(data)
-    }
-    setLoading(false)
-  }
-
-  async function generateResult(matchId: string, regenerate = false) {
-    setGenerating(matchId); setError('')
-    const res = await fetch('/api/posts/tennis/interclub/result', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ matchResultId: matchId, regenerate }),
-    })
-    const data = await res.json()
-    setGenerating(null)
-    if (!res.ok) { setError(data.error); return }
-    setPosts(prev => ({ ...prev, [matchId]: data.posts }))
-  }
-
-  return (
-    <div className="space-y-6">
-      <div className="bg-white rounded-card border border-line shadow-card p-6 space-y-4">
-        <PageHeader
-          icon="trophy"
-          title="Résultats interclubs"
-          subtitle="Générez le post d'un résultat de rencontre."
-          action={
-            <button onClick={loadMatches} disabled={loading}
-              className="inline-flex items-center gap-2 rounded-btn bg-ink px-4 py-2 text-sm font-semibold text-white transition hover:bg-ink/90 disabled:opacity-60">
-              <Icon name="refresh" className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} /> {loading ? 'Chargement…' : 'Charger'}
-            </button>
-          }
-        />
-
-        {matches.length === 0 && !loading && (
-          <p className="text-sm text-gray-400 text-center py-4">
-            Clique sur "Charger" pour voir les matchs interclubs récents.
-          </p>
-        )}
-
-        {matches.map(m => (
-          <div key={m.id} className="border border-gray-100 rounded-xl p-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-semibold text-[#111827]">
-                  {m.teamName ?? club.name} <span className="text-[#2563eb] font-bold">{m.globalScore}</span> {m.opponent}
-                </p>
-                <p className="text-xs text-gray-400">
-                  {new Date(m.date).toLocaleDateString('fr-FR')} · {m.division ?? ''}
-                </p>
-              </div>
-              {!posts[m.id] && (
-                <button onClick={() => generateResult(m.id)} disabled={generating === m.id}
-                  className="px-3 py-2 bg-[#2563eb] text-white text-sm font-semibold rounded-xl hover:bg-[#1d4ed8] transition disabled:opacity-60 whitespace-nowrap">
-                  {generating === m.id ? '...' : 'Générer'}
-                </button>
-              )}
-            </div>
-            {posts[m.id] && (
-              <>
-                <PostDisplay posts={posts[m.id]} />
-                <button onClick={() => generateResult(m.id, true)} disabled={generating === m.id}
-                  className="text-xs font-semibold text-gray-500 hover:text-[#2563eb] transition disabled:opacity-60"
-                  title="Régénérer de nouveaux textes (rappelle l'IA)">
-                  {generating === m.id ? 'Régénération...' : 'Régénérer'}
-                </button>
-              </>
-            )}
-          </div>
-        ))}
-
-        {error && <p className="text-sm text-red-500">{error}</p>}
-      </div>
-    </div>
-  )
-}
-
 // ── Main component ─────────────────────────────────────────────────────────
 
 export default function TennisPadelTab({ club }: { club: Club }) {
@@ -459,7 +368,7 @@ export default function TennisPadelTab({ club }: { club: Club }) {
       {section === 'match'      && <MatchSection            club={club} />}
       {section === 'programme'  && <TennisProgrammeSection  club={club} />}
       {section === 'tournament' && <TournamentSection       club={club} />}
-      {section === 'results'    && <ResultsSection          club={club} />}
+      {section === 'results'    && <TennisResultSection     club={club} />}
     </div>
   )
 }
