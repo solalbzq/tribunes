@@ -7,6 +7,7 @@ import PostsResult from '../PostsResult'
 import VisualGenerator from '../VisualGenerator'
 import TennisProgrammeSection from './TennisProgrammeSection'
 import TennisResultSection from './TennisResultSection'
+import TennisActions from './TennisActions'
 import TennisVisualGenerator, { type TennisVisualConfig, DEFAULT_TENNIS_CONFIG } from './TennisVisualGenerator'
 import { PageHeader, Segmented, GhostButton } from '../ui'
 import { Icon } from '../icons'
@@ -151,6 +152,12 @@ function TournamentSection({ club }: { club: Club }) {
   const [posts, setPosts] = useState<Record<string, string> | null>(null)
   const [showVisualOnly, setShowVisualOnly] = useState(false)
   const [error, setError] = useState('')
+  const canvasRef = useRef<HTMLCanvasElement | null>(null)
+  async function getImageBlob(): Promise<Blob | null> {
+    const canvas = canvasRef.current
+    if (!canvas) return null
+    return new Promise(r => canvas.toBlob(r, 'image/png'))
+  }
 
   async function handleParse() {
     if (!file) return
@@ -325,14 +332,23 @@ function TournamentSection({ club }: { club: Club }) {
 
       {posts && <PostDisplay posts={posts} />}
       {(showVisualOnly || posts) && parseResult && parseResult.clubMatches.length > 0 && (
-        <TennisVisualGenerator
-          club={club}
-          matches={parseResult.clubMatches}
-          tournamentName={parseResult.tournamentName}
-          matchDate={new Date(parseResult.matchDate)}
-          label={`Tournoi · ${new Date(parseResult.matchDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}`}
-          config={club.tennisVisualConfig ?? DEFAULT_TENNIS_CONFIG}
-        />
+        <>
+          <TennisVisualGenerator
+            club={club}
+            matches={parseResult.clubMatches}
+            tournamentName={parseResult.tournamentName}
+            matchDate={new Date(parseResult.matchDate)}
+            label={`Tournoi · ${new Date(parseResult.matchDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}`}
+            config={club.tennisVisualConfig ?? DEFAULT_TENNIS_CONFIG}
+            onCanvasReady={c => { canvasRef.current = c }}
+          />
+          <TennisActions
+            getImageBlob={getImageBlob}
+            defaultCaption={`${parseResult.tournamentName} : retrouvez nos joueurs engagés ! 🎾`}
+            aiPosts={posts ? (posts as { instagram: string; facebook: string; whatsapp: string }) : null}
+            filename="tournoi-tennis"
+          />
+        </>
       )}
       {error && <p className="text-sm text-red-500 bg-red-50 rounded-xl p-4">{error}</p>}
     </div>

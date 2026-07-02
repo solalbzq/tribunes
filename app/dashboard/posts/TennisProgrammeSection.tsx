@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import type { TournamentMatch } from '@/lib/services/fft-pdf-parser'
 import TennisVisualGenerator, { type TennisVisualConfig, DEFAULT_TENNIS_CONFIG } from './TennisVisualGenerator'
+import TennisActions from './TennisActions'
 import { Icon } from '../icons'
 
 type Club = {
@@ -117,6 +118,20 @@ export default function TennisProgrammeSection({ club }: { club: Club }) {
     scope === 'day'
       ? autoDate.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
       : `Semaine du ${autoDate.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}`
+
+  // Contenu actif (selon le mode) + capture du visuel pour la publication
+  const canvasRef = useRef<HTMLCanvasElement | null>(null)
+  const activeMatches = mode === 'manual' ? manualMatches : autoMatches
+  const activeDate = mode === 'manual' ? new Date(rows.find(r => r.date)?.date ?? Date.now()) : autoDate
+  const activeLabel = mode === 'manual' ? 'Programme' : autoLabel
+  const programmeCaption = activeMatches.length
+    ? `Programme ${activeLabel.toLowerCase()} : ${activeMatches.length} rencontre${activeMatches.length > 1 ? 's' : ''}. Venez soutenir nos équipes ! 🎾`
+    : ''
+  async function getImageBlob(): Promise<Blob | null> {
+    const canvas = canvasRef.current
+    if (!canvas) return null
+    return new Promise(r => canvas.toBlob(r, 'image/png'))
+  }
 
   return (
     <div className="space-y-6">
@@ -261,26 +276,20 @@ export default function TennisProgrammeSection({ club }: { club: Club }) {
         )}
       </div>
 
-      {/* Visuel généré */}
-      {mode === 'manual' && manualMatches.length > 0 && (
-        <TennisVisualGenerator
-          club={club}
-          matches={manualMatches}
-          tournamentName="Programme du club"
-          matchDate={new Date(rows.find(r => r.date)?.date ?? Date.now())}
-          label="Programme"
-          config={cfg}
-        />
-      )}
-      {mode === 'auto' && autoMatches.length > 0 && (
-        <TennisVisualGenerator
-          club={club}
-          matches={autoMatches}
-          tournamentName="Programme du club"
-          matchDate={autoDate}
-          label={autoLabel}
-          config={cfg}
-        />
+      {/* Visuel généré + actions */}
+      {activeMatches.length > 0 && (
+        <>
+          <TennisVisualGenerator
+            club={club}
+            matches={activeMatches}
+            tournamentName="Programme du club"
+            matchDate={activeDate}
+            label={activeLabel}
+            config={cfg}
+            onCanvasReady={c => { canvasRef.current = c }}
+          />
+          <TennisActions getImageBlob={getImageBlob} defaultCaption={programmeCaption} filename="programme-tennis" />
+        </>
       )}
     </div>
   )

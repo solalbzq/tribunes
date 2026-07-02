@@ -747,21 +747,24 @@ export function TennisResultVisual({
 // ── Single canvas page ─────────────────────────────────────────────────────
 
 function VisualPage({
-  club, matches, tournamentName, matchDate, page, total, config,
+  club, matches, tournamentName, matchDate, page, total, config, onCanvasReady,
 }: {
   club: Club; matches: TournamentMatch[]; tournamentName: string
   matchDate: Date; page: number; total: number; config: TennisVisualConfig
+  onCanvasReady?: (canvas: HTMLCanvasElement) => void
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [ready, setReady] = useState(false)
   const [copied, setCopied] = useState(false)
+  const onReadyRef = useRef(onCanvasReady)
+  onReadyRef.current = onCanvasReady
 
   useEffect(() => {
     if (!canvasRef.current || matches.length === 0) return
     let cancelled = false
     setReady(false)
     drawTournamentSchedule(canvasRef.current, club, matches, tournamentName, matchDate, config)
-      .then(() => { if (!cancelled) setReady(true) })
+      .then(() => { if (!cancelled) { setReady(true); onReadyRef.current?.(canvasRef.current!) } })
       .catch(console.error)
     return () => { cancelled = true }
   }, [club, matches, tournamentName, matchDate, config])
@@ -785,27 +788,27 @@ function VisualPage({
   }
 
   return (
-    <div className="bg-gray-50 rounded-xl p-4 space-y-3">
+    <div className="rounded-btn bg-subtle p-4 space-y-3">
       <div className="flex items-center justify-between">
-        <span className="text-sm font-semibold text-gray-600">
+        <span className="text-sm font-semibold text-muted">
           Visuel {page}{total > 1 ? ` / ${total}` : ''}
         </span>
         <div className="flex gap-2">
           <button onClick={copyImage} disabled={!ready}
-            className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition disabled:opacity-50"
-            style={{ background: copied ? '#10b981' : club.secondaryColor }}>
-            {copied ? '✓ Copié' : '📋 Copier'}
+            className="rounded-btn px-3 py-1.5 text-xs font-semibold text-white transition disabled:opacity-50"
+            style={{ background: copied ? '#22c55e' : '#2563eb' }}>
+            {copied ? 'Copié' : "Copier"}
           </button>
           <button onClick={download} disabled={!ready}
-            className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#1a1a2e] text-white transition disabled:opacity-50">
-            ⬇ DL
+            className="rounded-btn bg-ink px-3 py-1.5 text-xs font-semibold text-white transition disabled:opacity-50">
+            Télécharger
           </button>
         </div>
       </div>
       <div className="flex justify-center">
         <canvas ref={canvasRef} className="w-full max-w-[380px] aspect-square rounded-xl shadow-md" />
       </div>
-      {!ready && <p className="text-xs text-gray-400 text-center animate-pulse">Rendu...</p>}
+      {!ready && <p className="text-center text-xs text-muted animate-pulse">Rendu…</p>}
     </div>
   )
 }
@@ -813,10 +816,11 @@ function VisualPage({
 // ── Main component ─────────────────────────────────────────────────────────
 
 export default function TennisVisualGenerator({
-  club, matches, tournamentName, matchDate, label = 'Programme', config,
+  club, matches, tournamentName, matchDate, label = 'Programme', config, onCanvasReady,
 }: {
   club: Club; matches: TournamentMatch[]; tournamentName: string
   matchDate: Date; label?: string; config?: TennisVisualConfig
+  onCanvasReady?: (canvas: HTMLCanvasElement) => void
 }) {
   if (matches.length === 0) return null
 
@@ -827,24 +831,25 @@ export default function TennisVisualGenerator({
   for (let i = 0; i < matches.length; i += perPage) pages.push(matches.slice(i, i + perPage))
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
+    <div className="rounded-card border border-line bg-white p-6 shadow-card space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <span className="font-bold text-[#1a1a2e]">🖼️ Visuels — {label}</span>
+          <span className="font-bold text-ink">Visuels — {label}</span>
           {pages.length > 1 && (
-            <span className="ml-2 text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
+            <span className="ml-2 rounded-full bg-subtle px-2 py-0.5 text-xs text-muted">
               {pages.length} visuels · {matches.length} matchs
             </span>
           )}
         </div>
-        <span className="text-xs text-gray-400 capitalize bg-gray-50 px-2 py-1 rounded-full border border-gray-100">
+        <span className="rounded-full border border-line bg-subtle px-2 py-1 text-xs capitalize text-muted">
           {cfg.preset}
         </span>
       </div>
       <div className={`grid gap-4 ${pages.length > 1 ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1'}`}>
         {pages.map((pageMatches, i) => (
           <VisualPage key={i} club={club} matches={pageMatches} tournamentName={tournamentName}
-            matchDate={matchDate} page={i + 1} total={pages.length} config={cfg} />
+            matchDate={matchDate} page={i + 1} total={pages.length} config={cfg}
+            onCanvasReady={i === 0 ? onCanvasReady : undefined} />
         ))}
       </div>
     </div>
