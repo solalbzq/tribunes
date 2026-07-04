@@ -27,9 +27,14 @@ type Club = {
     isHome: boolean;
     competition: string | null;
     date: string;
-    posts: Array<{ platform: string; content: string }>;
+    posts: Array<{ platform: string; content: string; status: string }>;
   }>;
 } | null;
+
+type SocialConnection = {
+  id: string;
+  provider: string;
+};
 
 type View = "home" | "content" | "history" | "reseaux" | "settings";
 
@@ -225,23 +230,56 @@ function HomeView({
   onNavigate: (v: View) => void;
   initials: string;
 }) {
+  const [connections, setConnections] = useState<SocialConnection[] | null>(null);
   const totalPosts = club.matches.reduce((acc, m) => acc + m.posts.length, 0);
   const recent = [...club.matches]
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
     .slice(0, 4);
-  const wins = club.matches.filter((m) => score(m).us > score(m).them).length;
-  const losses = club.matches.filter((m) => score(m).us < score(m).them).length;
-  const draws = club.matches.length - wins - losses;
-  const winRate = club.matches.length
-    ? Math.round((wins / club.matches.length) * 100)
-    : 0;
+  const coveredEvents = club.matches.filter((m) => m.posts.length > 0).length;
+  const estimatedMinutesSaved = totalPosts * 12;
+  const scheduledPosts = club.matches.reduce(
+    (acc, match) =>
+      acc + match.posts.filter((post) => post.status === "PUBLISHED").length,
+    0,
+  );
+  const pendingPosts = club.matches.reduce(
+    (acc, match) =>
+      acc +
+      match.posts.filter((post) => post.status !== "PUBLISHED").length,
+    0,
+  );
 
+  useEffect(() => {
+    let cancelled = false;
+
+    fetch("/api/social/connections", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!cancelled) {
+          setConnections(data?.connections ?? []);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setConnections([]);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const todayActions = buildTodayActions({
+    club,
+    connections,
+    onNavigate,
+  });
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 sm:space-y-8">
       {/* Welcome + primary action */}
       <section className="overflow-hidden rounded-card border border-line bg-white shadow-card">
         <div className="relative p-6 sm:p-8">
-          {/* accent club discret */}
           <div
             className="pointer-events-none absolute right-0 top-0 h-40 w-40 rounded-full opacity-[0.07] blur-2xl"
             style={{ background: club.primaryColor }}
@@ -266,13 +304,6 @@ function HomeView({
                 <Icon name="sparkles" className="h-[18px] w-[18px]" />
                 Générer une publication
               </button>
-              <button
-                onClick={() => onNavigate("settings")}
-                className="inline-flex items-center gap-2 rounded-btn border border-line bg-white px-5 py-3 text-sm font-semibold text-ink transition hover:bg-subtle"
-              >
-                <Icon name="palette" className="h-[18px] w-[18px]" />
-                Personnaliser
-              </button>
             </div>
           </div>
         </div>
@@ -282,50 +313,86 @@ function HomeView({
         </p>
       </section>
 
-      {/* Stats */}
+      <Card>
+        <CardHeader
+          title="A faire aujourd'hui"
+          subtitle="Les prochaines actions utiles pour la communication du club"
+        />
+        {todayActions.length === 0 ? (
+          <EmptyState
+            icon="check"
+            title="Tout est en place"
+            text="Votre club est configure et aucune action urgente n'attend une publication."
+            cta={
+              <button
+                onClick={() => onNavigate("content")}
+                className="rounded-btn bg-brand px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-hover"
+              >
+                Générer un contenu
+              </button>
+            }
+          />
+        ) : (
+          <div className="space-y-3">
+            {todayActions.map((action) => (
+              <button
+                key={action.label}
+                onClick={action.onClick}
+                className="flex w-full items-start gap-3 rounded-btn border border-line bg-white px-4 py-4 text-left transition hover:border-brand/30 hover:bg-subtle/70"
+              >
+                <span
+                  className={`mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${action.tone.bg} ${action.tone.fg}`}
+                >
+                  <Icon name={action.icon} className="h-[18px] w-[18px]" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-ink">{action.label}</p>
+                  <p className="mt-1 text-sm text-muted">{action.description}</p>
+                </div>
+                <Icon
+                  name="arrowRight"
+                  className="mt-1 h-4 w-4 shrink-0 text-muted"
+                />
+              </button>
+            ))}
+          </div>
+        )}
+      </Card>
+
       <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatTile
           icon="fileText"
-          label="Posts générés"
+          label="Publications creees"
           value={String(totalPosts)}
           tone="brand"
         />
         <StatTile
           icon="calendar"
-          label="Matchs suivis"
-          value={String(club.matches.length)}
+          label="Evenements couverts"
+          value={String(coveredEvents)}
           tone="ink"
         />
         <StatTile
-          icon="trophy"
-          label="Taux de victoire"
-          value={`${winRate}%`}
-          tone="gold"
-          helper={
-            club.matches.length
-              ? `${wins}V · ${losses}D · ${draws}N`
-              : undefined
-          }
+          icon="clock"
+          label="Temps economise"
+          value={formatSavedTime(estimatedMinutesSaved)}
+          tone="success"
+          helper="Estimation moyenne"
         />
         <StatTile
-          icon="trending"
-          label="Posts / match"
-          value={
-            club.matches.length
-              ? (totalPosts / club.matches.length).toFixed(1)
-              : "0"
-          }
-          tone="success"
+          icon="sparkles"
+          label={scheduledPosts > 0 ? "Publications publiees" : "Publications en attente"}
+          value={String(scheduledPosts > 0 ? scheduledPosts : pendingPosts)}
+          tone={scheduledPosts > 0 ? "gold" : "brand"}
+          helper={scheduledPosts > 0 ? "Deja envoyees" : "Pretes a relire"}
         />
       </section>
 
-      {/* Two columns */}
       <section className="grid gap-4 lg:grid-cols-2">
-        {/* Recent activity */}
         <Card>
           <CardHeader
             title="Activité récente"
-            subtitle="Vos derniers matchs"
+            subtitle="Les derniers contenus prepares par Tribunes"
             action={
               club.matches.length > 0 ? (
                 <button
@@ -360,50 +427,76 @@ function HomeView({
           )}
         </Card>
 
-        {/* Réseaux */}
         <Card>
           <CardHeader
             title="Réseaux sociaux"
-            subtitle="Publiez directement depuis Tribunes"
+            subtitle="Etat actuel de vos connexions"
             action={
               <button
                 onClick={() => onNavigate("reseaux")}
                 className="text-sm font-semibold text-brand hover:underline"
               >
-                Gérer
+                Gérer les connexions
               </button>
             }
           />
-          <div className="grid grid-cols-3 gap-3">
-            {[
-              { label: "Audience", value: "—", icon: "users" as const },
-              { label: "Engagement", value: "—", icon: "heart" as const },
-              { label: "Portée", value: "—", icon: "trending" as const },
-            ].map((s) => (
+          <div className="space-y-3">
+            {buildConnectionItems(connections).map((network) => (
               <div
-                key={s.label}
-                className="rounded-btn bg-subtle p-4 text-center"
+                key={network.label}
+                className="flex items-center justify-between rounded-btn border border-line bg-subtle/50 px-4 py-3"
               >
-                <Icon name={s.icon} className="mx-auto h-5 w-5 text-muted" />
-                <p className="mt-2 text-2xl font-black text-ink">{s.value}</p>
-                <p className="text-xs text-muted">{s.label}</p>
+                <div>
+                  <p className="text-sm font-semibold text-ink">{network.label}</p>
+                  <p className="text-xs text-muted">{network.helper}</p>
+                </div>
+                <span
+                  className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ${network.connected ? "bg-emerald-50 text-emerald-700" : "bg-subtle text-muted"}`}
+                >
+                  <span
+                    className={`h-1.5 w-1.5 rounded-full ${network.connected ? "bg-emerald-500" : "bg-line"}`}
+                  />
+                  {network.connected ? "Connecté" : "À connecter"}
+                </span>
               </div>
             ))}
           </div>
-          <div className="mt-4 flex items-center justify-between gap-4 rounded-btn border border-line bg-white p-4">
-            <p className="text-sm text-muted">
-              Reliez votre Page Facebook et Instagram pour publier vos posts en
-              un clic.
-            </p>
-            <button
-              onClick={() => onNavigate("reseaux")}
-              className="shrink-0 rounded-btn bg-brand px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-hover"
-            >
-              Connecter
-            </button>
-          </div>
         </Card>
       </section>
+
+      <Card>
+        <CardHeader
+          title="Historique"
+          subtitle="Retrouvez toutes les publications et rencontres deja traitees"
+          action={
+            club.matches.length > 0 ? (
+              <button
+                onClick={() => onNavigate("history")}
+                className="text-sm font-semibold text-brand hover:underline"
+              >
+                Voir tout l'historique
+              </button>
+            ) : undefined
+          }
+        />
+        <div className="grid gap-3 sm:grid-cols-3">
+          <HistoryMiniStat
+            label="Publications"
+            value={String(totalPosts)}
+            helper="Generees au total"
+          />
+          <HistoryMiniStat
+            label="Dernier evenement"
+            value={recent[0] ? formatShortDate(recent[0].date) : "-"}
+            helper={recent[0]?.competition ?? "Aucun historique"}
+          />
+          <HistoryMiniStat
+            label="Dernier statut"
+            value={recent[0] ? getMatchStatusLabel(recent[0]) : "-"}
+            helper="Sur vos contenus recents"
+          />
+        </div>
+      </Card>
 
       <p className="text-center text-xs text-muted">
         Connecté en tant que {userEmail}
@@ -637,6 +730,21 @@ function MatchRow({
         <p className="mt-0.5 pl-8 text-[12px] text-muted">
           {match.competition ?? "Match amical"} · {formatDate(match.date)}
         </p>
+        {match.posts.length > 0 && (
+          <div className="mt-2 flex flex-wrap items-center gap-2 pl-8">
+            {uniquePlatforms(match.posts).map((platform) => (
+              <span
+                key={platform}
+                className="rounded-full bg-subtle px-2.5 py-1 text-[11px] font-semibold text-muted"
+              >
+                {formatPlatform(platform)}
+              </span>
+            ))}
+            <span className="rounded-full bg-brand-soft px-2.5 py-1 text-[11px] font-semibold text-brand">
+              {getMatchStatusLabel(match)}
+            </span>
+          </div>
+        )}
       </div>
       <span className="shrink-0 text-xs text-muted">
         {match.posts.length} post{match.posts.length > 1 ? "s" : ""}
@@ -670,6 +778,28 @@ function EmptyState({
   );
 }
 
+function HistoryMiniStat({
+  label,
+  value,
+  helper,
+}: {
+  label: string;
+  value: string;
+  helper: string;
+}) {
+  return (
+    <div className="rounded-btn bg-subtle/60 px-4 py-4">
+      <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted">
+        {label}
+      </p>
+      <p className="mt-2 text-lg font-black tracking-[-0.02em] text-ink">
+        {value}
+      </p>
+      <p className="mt-1 text-xs text-muted">{helper}</p>
+    </div>
+  );
+}
+
 function score(m: NonNullable<Club>["matches"][number]) {
   return {
     us: m.isHome ? m.homeScore : m.awayScore,
@@ -683,4 +813,164 @@ function formatDate(date: string) {
     month: "short",
     year: "numeric",
   });
+}
+
+function formatShortDate(date: string) {
+  return new Date(date).toLocaleDateString("fr-FR", {
+    day: "numeric",
+    month: "short",
+  });
+}
+
+function formatSavedTime(totalMinutes: number) {
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
+  if (hours === 0) {
+    return `${minutes} min`;
+  }
+
+  return `${hours} h ${String(minutes).padStart(2, "0")}`;
+}
+
+function uniquePlatforms(posts: Array<{ platform: string }>) {
+  return [...new Set(posts.map((post) => post.platform))];
+}
+
+function formatPlatform(platform: string) {
+  const labels: Record<string, string> = {
+    facebook: "Facebook",
+    instagram: "Instagram",
+    linkedin: "LinkedIn",
+    whatsapp: "WhatsApp",
+  };
+
+  return labels[platform] ?? platform;
+}
+
+function getMatchStatusLabel(match: NonNullable<Club>["matches"][number]) {
+  if (match.posts.some((post) => post.status === "PUBLISHED")) {
+    return "Publié";
+  }
+
+  if (match.posts.length > 0) {
+    return "Brouillon";
+  }
+
+  return "A créer";
+}
+
+function buildTodayActions({
+  club,
+  connections,
+  onNavigate,
+}: {
+  club: NonNullable<Club>;
+  connections: SocialConnection[] | null;
+  onNavigate: (v: View) => void;
+}) {
+  const actions: Array<{
+    kind: string;
+    label: string;
+    description: string;
+    icon: Parameters<typeof Icon>[0]["name"];
+    onClick: () => void;
+    tone: { bg: string; fg: string };
+  }> = [];
+  const sortedMatches = [...club.matches].sort(
+    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
+  );
+  const nextUnpublished = sortedMatches.find((match) => match.posts.length === 0);
+  const lastDraft = [...sortedMatches]
+    .reverse()
+    .find((match) => match.posts.some((post) => post.status !== "PUBLISHED"));
+  const hasFacebook =
+    connections?.some((connection) => connection.provider === "facebook") ?? false;
+  const hasInstagram =
+    connections?.some((connection) => connection.provider === "instagram") ?? false;
+  const needsBrandSetup =
+    !club.logoUrl ||
+    club.primaryColor === "#1a1a2e" ||
+    club.secondaryColor === "#e94560";
+
+  if (lastDraft) {
+    actions.push({
+      kind: "draft",
+      label: `Finaliser ${getResultLabel(lastDraft)}`,
+      description: `Un brouillon est deja pret pour ${formatDate(lastDraft.date).toLowerCase()}.`,
+      icon: "fileText",
+      onClick: () => onNavigate("history"),
+      tone: { bg: "bg-emerald-50", fg: "text-emerald-700" },
+    });
+  }
+
+  if (nextUnpublished) {
+    actions.push({
+      kind: "generate",
+      label: `Generer ${getResultLabel(nextUnpublished)}`,
+      description: `${nextUnpublished.competition ?? "Cette rencontre"} n'a pas encore de publication associee.`,
+      icon: "sparkles",
+      onClick: () => onNavigate("content"),
+      tone: { bg: "bg-brand-soft", fg: "text-brand" },
+    });
+  }
+
+  if (!hasInstagram || !hasFacebook) {
+    actions.push({
+      kind: "social",
+      label: !hasInstagram ? "Connecter Instagram" : "Connecter Facebook",
+      description:
+        "Publiez directement depuis Tribunes sans repasser par un autre outil.",
+      icon: "link",
+      onClick: () => onNavigate("reseaux"),
+      tone: { bg: "bg-amber-50", fg: "text-amber-700" },
+    });
+  }
+
+  if (needsBrandSetup) {
+    actions.push({
+      kind: "branding",
+      label: "Ajouter les couleurs du club",
+      description:
+        "Personnalisez l'identite visuelle pour gagner du temps sur chaque publication.",
+      icon: "palette",
+      onClick: () => onNavigate("settings"),
+      tone: { bg: "bg-violet-50", fg: "text-violet-700" },
+    });
+  }
+
+  return actions.slice(0, 4);
+}
+
+function getResultLabel(match: NonNullable<Club>["matches"][number]) {
+  return new Date(match.date).getTime() <= Date.now()
+    ? `le resultat contre ${match.opponent}`
+    : `l'annonce du match contre ${match.opponent}`;
+}
+
+function buildConnectionItems(connections: SocialConnection[] | null) {
+  const providers = new Set((connections ?? []).map((connection) => connection.provider));
+
+  return [
+    {
+      label: "Facebook",
+      helper: "Page reliee a Tribunes",
+      connected: providers.has("facebook"),
+    },
+    {
+      label: "Instagram",
+      helper: "Compte professionnel relie",
+      connected: providers.has("instagram"),
+    },
+    {
+      label: "LinkedIn",
+      helper: "Connexion non activee",
+      connected: providers.has("linkedin"),
+    },
+    {
+      label: "Meta Business Suite",
+      helper: "Pilote Facebook et Instagram",
+      connected: providers.has("facebook") || providers.has("instagram"),
+    },
+  ];
 }
