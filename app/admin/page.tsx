@@ -17,6 +17,7 @@ import {
 import AccountDetailPanel from './AccountDetailPanel'
 import ConfirmDialog from './ConfirmDialog'
 import Logo from '@/components/Logo'
+import { PLAN_KEYS } from '@/lib/plans'
 
 type StatsResponse = {
   // Waitlist
@@ -104,7 +105,7 @@ type UserRow = {
   createdAt: string
   suspended: boolean
   club: { name: string; sport: string } | null
-  membership: { role: string; org: { id: string; name: string; plan: string } } | null
+  memberships: Array<{ role: string; org: { id: string; name: string; plan: string } }>
 }
 
 type PaginatedResponse<TKey extends string, TItem> = {
@@ -191,8 +192,8 @@ function ChartTooltipWaitlist({
 function PlanBadge({ plan, count }: { plan: string; count: number }) {
   const colors: Record<string, string> = {
     FREE: 'bg-[#f3f4f6] text-[#4b5563]',
-    PRO: 'bg-[#dbeafe] text-[#1d4ed8]',
-    STRUCTURE: 'bg-[#dcfce7] text-[#166534]',
+    CLUB: 'bg-[#dbeafe] text-[#1d4ed8]',
+    PRO: 'bg-[#dcfce7] text-[#166534]',
   }
   return (
     <div className="flex items-center justify-between rounded-lg border border-[#e5e7eb] bg-white px-4 py-3">
@@ -200,6 +201,16 @@ function PlanBadge({ plan, count }: { plan: string; count: number }) {
         {plan}
       </span>
       <span className="text-lg font-bold text-[#111827]">{count}</span>
+    </div>
+  )
+}
+
+function MiniStat({ label, value, help }: { label: string; value: string | number; help: string }) {
+  return (
+    <div className="rounded-xl border border-[#e5e7eb] bg-white p-4 shadow-sm">
+      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#9ca3af]">{label}</p>
+      <p className="mt-2 text-2xl font-extrabold text-[#111827]">{value}</p>
+      <p className="mt-1 text-sm text-[#6b7280]">{help}</p>
     </div>
   )
 }
@@ -447,7 +458,7 @@ export default function AdminDashboardPage() {
               <div className="rounded-xl border border-[#e5e7eb] bg-white p-5 shadow-sm">
                 <SectionTitle>Répartition des plans</SectionTitle>
                 <div className="grid gap-3 sm:grid-cols-3">
-                  {['FREE', 'PRO', 'STRUCTURE'].map((plan) => (
+                  {PLAN_KEYS.map((plan) => (
                     <PlanBadge key={plan} plan={plan} count={stats.planCounts[plan] ?? 0} />
                   ))}
                 </div>
@@ -649,7 +660,7 @@ export default function AdminDashboardPage() {
               <div className="rounded-xl border border-[#e5e7eb] bg-white p-5 shadow-sm">
                 <SectionTitle>Organisations par plan</SectionTitle>
                 <div className="grid gap-3 sm:grid-cols-3">
-                  {['FREE', 'PRO', 'STRUCTURE'].map((plan) => (
+                  {PLAN_KEYS.map((plan) => (
                     <PlanBadge key={plan} plan={plan} count={stats.planCounts[plan] ?? 0} />
                   ))}
                 </div>
@@ -807,12 +818,18 @@ export default function AdminDashboardPage() {
           <div className="space-y-6">
             <h1 className="text-2xl font-extrabold text-[#111827]">Gestion des comptes</h1>
 
+            <div className="grid gap-4 md:grid-cols-3">
+              <MiniStat label="Organisations" value={stats?.totalOrgs ?? '—'} help="Espaces de facturation et de collaboration" />
+              <MiniStat label="Clubs" value={stats?.totalClubs ?? '—'} help="Espaces sportifs rattachés ou non à une organisation" />
+              <MiniStat label="Comptes" value={usersData?.total ?? '—'} help="Utilisateurs pouvant appartenir à plusieurs organisations" />
+            </div>
+
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex gap-2">
                 {([
                   { id: 'orgs', label: 'Organisations' },
                   { id: 'clubs', label: 'Clubs' },
-                  { id: 'users', label: 'Users' },
+                  { id: 'users', label: 'Comptes' },
                 ] as const).map((v) => (
                   <button
                     key={v.id}
@@ -939,7 +956,7 @@ export default function AdminDashboardPage() {
                       <tr className="text-[#6b7280]">
                         <th className="border-b border-[#e5e7eb] px-4 py-3 font-semibold">Email</th>
                         <th className="border-b border-[#e5e7eb] px-4 py-3 font-semibold">Club</th>
-                        <th className="border-b border-[#e5e7eb] px-4 py-3 font-semibold">Organisation</th>
+                        <th className="border-b border-[#e5e7eb] px-4 py-3 font-semibold">Organisations</th>
                         <th className="border-b border-[#e5e7eb] px-4 py-3 font-semibold">Inscrit le</th>
                         <th className="border-b border-[#e5e7eb] px-4 py-3 font-semibold">Statut</th>
                         <th className="border-b border-[#e5e7eb] px-4 py-3 font-semibold">Actions</th>
@@ -952,9 +969,24 @@ export default function AdminDashboardPage() {
                         usersData.users.map((u) => (
                           <tr key={u.id}>
                             <td className="border-b border-[#f3f4f6] px-4 py-3 font-medium">{u.email ?? '—'}</td>
-                            <td className="border-b border-[#f3f4f6] px-4 py-3">{u.club?.name ?? '—'}</td>
                             <td className="border-b border-[#f3f4f6] px-4 py-3">
-                              {u.membership ? `${u.membership.org.name} (${u.membership.role})` : '—'}
+                              {u.club ? (
+                                <div>
+                                  <p className="font-medium text-[#111827]">{u.club.name}</p>
+                                  <p className="text-xs text-[#6b7280]">{u.club.sport}</p>
+                                </div>
+                              ) : '—'}
+                            </td>
+                            <td className="border-b border-[#f3f4f6] px-4 py-3">
+                              {u.memberships.length ? (
+                                <div className="flex flex-wrap gap-2">
+                                  {u.memberships.map((membership) => (
+                                    <span key={`${u.id}-${membership.org.id}`} className="rounded-full border border-[#e5e7eb] bg-[#f8fafc] px-2.5 py-1 text-xs font-semibold text-[#4b5563]">
+                                      {membership.org.name} · {membership.role === 'OWNER' ? 'Propriétaire' : 'Membre'}
+                                    </span>
+                                  ))}
+                                </div>
+                              ) : '—'}
                             </td>
                             <td className="border-b border-[#f3f4f6] px-4 py-3 text-[#6b7280]">{fmtLong(u.createdAt)}</td>
                             <td className="border-b border-[#f3f4f6] px-4 py-3">
@@ -1057,8 +1089,8 @@ export default function AdminDashboardPage() {
 function PlanBadgeInline({ plan }: { plan: string }) {
   const colors: Record<string, string> = {
     FREE: 'bg-[#f3f4f6] text-[#4b5563]',
-    PRO: 'bg-[#dbeafe] text-[#1d4ed8]',
-    STRUCTURE: 'bg-[#dcfce7] text-[#166534]',
+    CLUB: 'bg-[#dbeafe] text-[#1d4ed8]',
+    PRO: 'bg-[#dcfce7] text-[#166534]',
   }
   return (
     <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${colors[plan] ?? 'bg-[#f3f4f6] text-[#4b5563]'}`}>

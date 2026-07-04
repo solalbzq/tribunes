@@ -1,29 +1,31 @@
 import { NextResponse } from 'next/server'
+import { getActiveOrganizationId } from '@/lib/active-organization'
 import { createClient } from '@/lib/supabase/server'
 import { prisma } from '@/lib/prisma'
-import Stripe from 'stripe'
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2024-06-20' })
-
-const PRICE_IDS: Record<string, string> = {
-  PRO: process.env.STRIPE_PRICE_PRO ?? '',
-  STRUCTURE: process.env.STRIPE_PRICE_STRUCTURE ?? '',
-}
+import { getStripe, getPriceId } from '@/lib/stripe'
+import { getOrCreateOrgForUser } from '@/lib/org'
 
 export async function POST(req: Request) {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { action, plan } = await req.json() // action: 'checkout' | 'portal'
+  const { action, plan, interval } = await req.json() as {
+    action: 'checkout' | 'portal'
+    plan?: 'CLUB' | 'PRO'
+    interval?: 'monthly' | 'yearly'
+  }
 
-  const membership = await prisma.organizationMember.findFirst({
-    where: { userId: user.id, role: 'OWNER' },
-    include: { org: true },
-  })
-  if (!membership) return NextResponse.json({ error: 'Not an owner' }, { status: 403 })
+  const { org, role } = await getOrCreateOrgForUser(
+    user.id,
+    user.email?.split('@')[0] ?? 'Mon club',
+    getActiveOrganizationId(),
+  )
+  if (role !== 'OWNER') {
+    return NextResponse.json({ error: 'Seul le propriétaire de l’organisation peut gérer la facturation.' }, { status: 403 })
+  }
 
-  const org = membership.org
+  const stripe = getStripe()
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL!
 
   if (action === 'portal' && org.stripeCustomerId) {
@@ -34,9 +36,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ url: session.url })
   }
 
-  if (action === 'checkout' && plan) {
-    const priceId = PRICE_IDS[plan]
-    if (!priceId) return NextResponse.json({ error: 'Invalid plan' }, { status: 400 })
+  if (action === 'checkout') {
+    if (plan !== 'CLUB' && plan !== 'PRO') {
+      return NextResponse.json({ error: 'Plan invalide' }, { status: 400 })
+    }
+    const priceId = getPriceId(plan, interval === 'yearly' ? 'yearly' : 'monthly')
+    if (!priceId) {
+      return NextResponse.json({ error: 'Prix non configuré pour ce plan.' }, { status: 500 })
+    }
 
     // Create or reuse Stripe customer
     let customerId = org.stripeCustomerId

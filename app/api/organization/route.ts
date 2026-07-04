@@ -1,25 +1,21 @@
 import { NextResponse } from 'next/server'
+import { getActiveOrganizationId, setActiveOrganizationId } from '@/lib/active-organization'
 import { createClient } from '@/lib/supabase/server'
 import { prisma } from '@/lib/prisma'
+import { getOrCreateOrgForUser } from '@/lib/org'
 
 export async function GET() {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const member = await prisma.organizationMember.findFirst({
-    where: { userId: user.id },
-    include: {
-      org: {
-        include: {
-          members: true,
-          clubs: { select: { id: true, name: true, sport: true } },
-        },
-      },
-    },
-  })
+  const { org } = await getOrCreateOrgForUser(
+    user.id,
+    user.email?.split('@')[0] ?? 'Mon club',
+    getActiveOrganizationId(),
+  )
 
-  return NextResponse.json(member?.org ?? null)
+  return NextResponse.json(org)
 }
 
 export async function POST(req: Request) {
@@ -41,6 +37,7 @@ export async function POST(req: Request) {
       members: { create: { userId: user.id, role: 'OWNER' } },
     },
   })
+  setActiveOrganizationId(org.id)
   // Link existing club to this org
   await prisma.club.updateMany({ where: { userId: user.id }, data: { orgId: org.id } })
 

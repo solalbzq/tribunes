@@ -52,12 +52,18 @@ export async function GET(request: NextRequest) {
     prisma.club.findMany({ where: { userId: { in: userIds } }, select: { userId: true, name: true, sport: true } }),
     prisma.organizationMember.findMany({
       where: { userId: { in: userIds } },
+      orderBy: { createdAt: 'asc' },
       select: { userId: true, role: true, org: { select: { id: true, name: true, plan: true } } },
     }),
   ])
 
   const clubByUser = new Map(clubs.map((c) => [c.userId, c]))
-  const membershipByUser = new Map(memberships.map((m) => [m.userId, m]))
+  const membershipsByUser = new Map<string, typeof memberships>()
+  memberships.forEach((membership) => {
+    const current = membershipsByUser.get(membership.userId) ?? []
+    current.push(membership)
+    membershipsByUser.set(membership.userId, current)
+  })
 
   const users = pageUsers.map((u) => ({
     id: u.id,
@@ -65,7 +71,7 @@ export async function GET(request: NextRequest) {
     createdAt: u.createdAt,
     suspended: Boolean(u.bannedUntil && new Date(u.bannedUntil) > new Date()),
     club: clubByUser.get(u.id) ?? null,
-    membership: membershipByUser.get(u.id) ?? null,
+    memberships: membershipsByUser.get(u.id) ?? [],
   }))
 
   return NextResponse.json({

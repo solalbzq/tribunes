@@ -1,18 +1,24 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Logo from '@/components/Logo'
 
 export default function LoginPage() {
-  const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [oauthLoading, setOauthLoading] = useState<'google' | 'apple' | null>(null)
+  const [invite, setInvite] = useState<string | null>(null)
+  const [next, setNext] = useState('/dashboard')
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    setInvite(params.get('invite'))
+    setNext(params.get('next') ?? '/dashboard')
+  }, [])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -24,8 +30,7 @@ export default function LoginPage() {
       setError('Email ou mot de passe incorrect.')
       setLoading(false)
     } else {
-      router.push('/dashboard')
-      router.refresh()
+      window.location.href = invite ? `/api/organization/invitations/accept?token=${encodeURIComponent(invite)}` : next
     }
   }
 
@@ -35,7 +40,7 @@ export default function LoginPage() {
     await supabase.auth.signInWithOAuth({
       provider,
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}${invite ? `&invite=${encodeURIComponent(invite)}` : ''}`,
       },
     })
   }
@@ -110,9 +115,9 @@ export default function LoginPage() {
             </button>
             <p className="text-center text-sm text-gray-500">
               Pas encore de compte ?{' '}
-              <Link href="/signup" className="text-[#2563eb] font-semibold hover:underline">
+              <a href={invite ? `/signup?invite=${encodeURIComponent(invite)}&next=${encodeURIComponent(next)}` : '/signup'} className="text-[#2563eb] font-semibold hover:underline">
                 Créer un compte
-              </Link>
+              </a>
             </p>
           </form>
         </div>
