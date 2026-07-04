@@ -3,9 +3,8 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import Logo from '@/components/Logo'
-import { PLANS, PLAN_KEYS, normalizePlan, yearlyAsMonthly, type BillingInterval, type PlanKey } from '@/lib/plans'
 
 type Org = {
   id: string
@@ -13,8 +12,7 @@ type Org = {
   plan: string
   stripeCustomerId: string | null
   members: Array<{ userId: string; role: string; createdAt: string }>
-  clubs: Array<{ id: string; name: string; sport: string }>
-}
+} | null
 
 type ResolvedMember = {
   id: string
@@ -24,58 +22,41 @@ type ResolvedMember = {
   email: string | null
 }
 
-type OrganizationOption = {
-  id: string
-  name: string
-  role: string
-  plan: string
-  memberCount: number
-}
-
-const PLAN_COLORS: Record<PlanKey, string> = {
-  FREE: '#6b7280',
-  CLUB: '#3b82f6',
-  PRO: '#2563eb',
+const PLAN_LABELS: Record<string, { label: string; color: string; desc: string; price: string }> = {
+  FREE:       { label: 'Gratuit',    color: '#6b7280', desc: '1 compte, fonctionnalités limitées', price: '0€' },
+  PRO:        { label: 'Pro',        color: '#3b82f6', desc: '1 compte, tout illimité',            price: '10€/mois' },
+  STRUCTURE:  { label: 'Structure',  color: '#2563eb', desc: 'Comptes illimités dans votre équipe', price: '25€/mois' },
 }
 
 export default function AccountClient({
-  userEmail, userId, club, org, organizations, role, usage,
+  userEmail, userId, club, org, role,
 }: {
   userEmail: string
   userId: string
   club: { name: string; sport: string } | null
   org: Org
-  organizations: OrganizationOption[]
   role: string | null
-  usage: { used: number; limit: number | null } | null
 }) {
   const router = useRouter()
-  const searchParams = useSearchParams()
-  const [tab, setTab] = useState<'profil' | 'structure' | 'abonnement'>(
-    searchParams.get('tab') === 'abonnement' ? 'abonnement' : 'profil'
-  )
-  const [billing, setBilling] = useState<BillingInterval>('monthly')
+  const [tab, setTab] = useState<'profil' | 'structure' | 'abonnement'>('profil')
+  const [orgName, setOrgName] = useState(org?.name ?? club?.name ?? '')
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteError, setInviteError] = useState('')
   const [inviteOk, setInviteOk] = useState(false)
+  const [creating, setCreating] = useState(false)
   const [loading, setLoading] = useState(false)
   const [members, setMembers] = useState<ResolvedMember[]>([])
   const [membersLoading, setMembersLoading] = useState(false)
   const [memberActionError, setMemberActionError] = useState('')
   const [memberActionId, setMemberActionId] = useState<string | null>(null)
-  const [switchingOrg, setSwitchingOrg] = useState(false)
 
-  const plan = normalizePlan(org.plan)
-  const planDef = PLANS[plan]
-  const planColor = PLAN_COLORS[plan]
-  const isOwner = role === 'OWNER'
+  const plan = org?.plan ?? 'FREE'
+  const planInfo = PLAN_LABELS[plan]
+  const isOwner = role === 'OWNER' || !org
   const ownerCount = members.filter((m) => m.role === 'OWNER').length
-  const maxMembers = planDef.quotas.maxMembers
-  const canInvite = maxMembers == null || org.members.length < maxMembers
-  const organizationsSorted = [...organizations].sort((a, b) => (a.id === org.id ? -1 : b.id === org.id ? 1 : a.name.localeCompare(b.name)))
 
   useEffect(() => {
-    if (tab !== 'structure') return
+    if (tab !== 'structure' || !org) return
     let mounted = true
     setMembersLoading(true)
     fetch('/api/organization/members')
@@ -83,20 +64,7 @@ export default function AccountClient({
       .then((data) => { if (mounted) setMembers(data) })
       .finally(() => { if (mounted) setMembersLoading(false) })
     return () => { mounted = false }
-  }, [tab])
-
-  async function switchOrganization(orgId: string) {
-    if (orgId === org.id) return
-    setSwitchingOrg(true)
-    const res = await fetch('/api/organization/active', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ orgId }),
-    })
-    setSwitchingOrg(false)
-    if (!res.ok) return
-    router.refresh()
-  }
+  }, [tab, org])
 
   async function changeRole(memberId: string, newRole: string) {
     setMemberActionError(''); setMemberActionId(memberId)
@@ -120,6 +88,16 @@ export default function AccountClient({
     setMembers((prev) => prev.filter((m) => m.id !== memberId))
   }
 
+  async function createOrg() {
+    setCreating(true)
+    await fetch('/api/organization', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: orgName }),
+    })
+    setCreating(false)
+    router.refresh()
+  }
+
   async function invite() {
     setInviteError(''); setInviteOk(false); setLoading(true)
     const res = await fetch('/api/organization/invite', {
@@ -133,10 +111,10 @@ export default function AccountClient({
     router.refresh()
   }
 
-  async function goToPortal(action: 'checkout' | 'portal', planKey?: PlanKey) {
+  async function goToPortal(action: string, plan?: string) {
     const res = await fetch('/api/organization/portal', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action, plan: planKey, interval: billing }),
+      body: JSON.stringify({ action, plan }),
     })
     const data = await res.json()
     if (data.url) window.location.href = data.url
@@ -183,74 +161,33 @@ export default function AccountClient({
 
         {/* ── PROFIL */}
         {tab === 'profil' && (
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-3xl">
-              <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
-                <h3 className="font-bold text-[#111827]">Informations</h3>
-                <div>
-                  <label className="text-xs text-gray-400 block mb-1">Email</label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-2xl">
+            <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
+              <h3 className="font-bold text-[#111827]">Informations</h3>
+              <div>
+                <label className="text-xs text-gray-400 block mb-1">Email</label>
                 <p className="font-semibold text-[#111827]">{userEmail}</p>
               </div>
-                {club && (
-                  <div>
-                    <label className="text-xs text-gray-400 block mb-1">Club principal</label>
-                    <p className="font-semibold text-[#111827]">{club.name} <span className="text-gray-400 font-normal text-sm">({club.sport})</span></p>
-                  </div>
-                )}
-              </div>
-              <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
-                <h3 className="font-bold text-[#111827]">Plan actuel</h3>
-                <div className="flex items-center gap-3">
-                  <span className="px-3 py-1 rounded-full text-sm font-bold text-white" style={{ background: planColor }}>
-                  {planDef.label}
-                </span>
-                <span className="text-sm font-bold text-[#111827]">
-                  {plan === 'FREE' ? 'Gratuit' : `${planDef.priceDisplay.monthly}/mois`}
-                </span>
-              </div>
-              <p className="text-sm text-gray-500">{planDef.tagline}</p>
-                <button onClick={() => setTab('abonnement')}
-                  className="text-sm font-semibold text-[#2563eb] hover:underline">
-                  Gérer l'abonnement →
-                </button>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-2xl border border-gray-100 p-6">
-              <div className="flex items-start justify-between gap-4 mb-5">
+              {club && (
                 <div>
-                  <h3 className="font-bold text-[#111827] text-lg">Tes organisations</h3>
-                  <p className="text-sm text-gray-500 mt-1">Choisis l’espace actif pour gérer les membres, les invitations et la facturation.</p>
+                  <label className="text-xs text-gray-400 block mb-1">Club principal</label>
+                  <p className="font-semibold text-[#111827]">{club.name} <span className="text-gray-400 font-normal text-sm">({club.sport})</span></p>
                 </div>
-                <span className="text-xs bg-gray-100 text-gray-500 px-2.5 py-1 rounded-full">{organizations.length} espace{organizations.length > 1 ? 's' : ''}</span>
+              )}
+            </div>
+            <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
+              <h3 className="font-bold text-[#111827]">Plan actuel</h3>
+              <div className="flex items-center gap-3">
+                <span className="px-3 py-1 rounded-full text-sm font-bold text-white" style={{ background: planInfo.color }}>
+                  {planInfo.label}
+                </span>
+                <span className="text-sm font-bold text-[#111827]">{planInfo.price}</span>
               </div>
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                {organizationsSorted.map((organization) => {
-                  const organizationPlan = PLANS[normalizePlan(organization.plan)]
-                  const isActiveOrg = organization.id === org.id
-                  return (
-                    <button
-                      key={organization.id}
-                      type="button"
-                      onClick={() => switchOrganization(organization.id)}
-                      disabled={switchingOrg}
-                      className={`rounded-2xl border p-4 text-left transition ${isActiveOrg ? 'border-[#2563eb] bg-[#eff6ff]' : 'border-gray-100 bg-[#fbfdff] hover:border-[#cbd5e1]'}`}
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <p className="font-bold text-[#111827] truncate">{organization.name}</p>
-                        <span className={`text-[11px] font-bold px-2 py-1 rounded-full ${isActiveOrg ? 'bg-[#2563eb] text-white' : 'bg-white text-gray-500 border border-gray-200'}`}>
-                          {switchingOrg && isActiveOrg ? 'Active' : isActiveOrg ? 'Active' : 'Changer'}
-                        </span>
-                      </div>
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        <span className="text-xs px-2 py-1 rounded-full bg-white border border-gray-200 text-gray-600">{organization.role === 'OWNER' ? 'Propriétaire' : 'Membre'}</span>
-                        <span className="text-xs px-2 py-1 rounded-full bg-white border border-gray-200 text-[#2563eb]">{organizationPlan.label}</span>
-                      </div>
-                      <p className="mt-3 text-sm text-gray-500">{organization.memberCount} compte{organization.memberCount > 1 ? 's' : ''} · structure de travail partagée</p>
-                    </button>
-                  )
-                })}
-              </div>
+              <p className="text-sm text-gray-500">{planInfo.desc}</p>
+              <button onClick={() => setTab('abonnement')}
+                className="text-sm font-semibold text-[#2563eb] hover:underline">
+                Gérer l'abonnement →
+              </button>
             </div>
           </div>
         )}
@@ -258,201 +195,154 @@ export default function AccountClient({
         {/* ── STRUCTURE */}
         {tab === 'structure' && (
           <div className="max-w-2xl space-y-6">
-            <div className="bg-white rounded-2xl border border-gray-100 p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h3 className="font-bold text-[#111827] text-lg">{org.name}</h3>
-                  <span className="text-xs px-2 py-0.5 rounded-full text-white font-semibold" style={{ background: planColor }}>
-                    Plan {planDef.label}
-                  </span>
-                </div>
-                <span className="text-sm text-gray-400">{org.members.length} membre{org.members.length > 1 ? 's' : ''}</span>
-              </div>
-
-              <div className="grid gap-3 sm:grid-cols-3 mb-6">
-                <div className="rounded-xl border border-gray-100 bg-[#f8fafc] p-4">
-                  <p className="text-xs uppercase tracking-[0.14em] text-gray-400 font-semibold">Rôle</p>
-                  <p className="mt-2 font-bold text-[#111827]">{isOwner ? 'Propriétaire' : 'Membre'}</p>
-                </div>
-                <div className="rounded-xl border border-gray-100 bg-[#f8fafc] p-4">
-                  <p className="text-xs uppercase tracking-[0.14em] text-gray-400 font-semibold">Comptes</p>
-                  <p className="mt-2 font-bold text-[#111827]">{org.members.length}</p>
-                </div>
-                <div className="rounded-xl border border-gray-100 bg-[#f8fafc] p-4">
-                  <p className="text-xs uppercase tracking-[0.14em] text-gray-400 font-semibold">Clubs rattachés</p>
-                  <p className="mt-2 font-bold text-[#111827]">{org.clubs.length}</p>
+            {!org ? (
+              <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center space-y-4">
+                <p className="text-2xl">🏢</p>
+                <h3 className="font-bold text-[#111827]">Créer votre structure sportive</h3>
+                <p className="text-sm text-gray-500">
+                  Une structure regroupe votre club et vos collaborateurs (coachs, bénévoles, staff). Créez-la pour inviter des membres.
+                </p>
+                <div className="flex gap-3 max-w-sm mx-auto">
+                  <input type="text" value={orgName} onChange={e => setOrgName(e.target.value)}
+                    placeholder="Nom de votre structure"
+                    className="flex-1 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2563eb]/30" />
+                  <button onClick={createOrg} disabled={creating || !orgName}
+                    className="bg-[#2563eb] text-white font-bold px-4 py-2.5 rounded-xl hover:bg-[#1d4ed8] transition disabled:opacity-60">
+                    {creating ? '...' : 'Créer'}
+                  </button>
                 </div>
               </div>
-
-              <div className="mb-6">
-                <div className="flex items-center justify-between mb-3">
-                  <p className="text-sm font-semibold text-[#111827]">Clubs de la structure</p>
-                  <span className="text-xs text-gray-400">Le plan et les accès se gèrent au niveau organisation</span>
-                </div>
-                {org.clubs.length ? (
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    {org.clubs.map((clubItem) => (
-                      <div key={clubItem.id} className="rounded-xl border border-gray-100 bg-[#fbfdff] px-4 py-3">
-                        <p className="font-semibold text-[#111827]">{clubItem.name}</p>
-                        <p className="text-sm text-gray-500 mt-1">{clubItem.sport}</p>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="rounded-xl border border-dashed border-gray-200 bg-[#fafafa] px-4 py-4 text-sm text-gray-500">
-                    Aucun club n'est encore rattaché à cette organisation.
-                  </div>
-                )}
-              </div>
-
-              {/* Membres */}
-              <div className="space-y-2 mb-6">
-                {membersLoading ? (
-                  <p className="text-sm text-gray-400 py-2">Chargement des membres...</p>
-                ) : (
-                  members.map((m, i) => {
-                    const isLastOwner = m.role === 'OWNER' && ownerCount <= 1
-                    const busy = memberActionId === m.id
-                    return (
-                      <div key={m.id} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#111827] to-[#2563eb] flex items-center justify-center text-white text-xs font-bold">
-                            {i + 1}
-                          </div>
-                          <div>
-                            <p className="text-sm font-semibold text-[#111827]">{m.email ?? 'Email indisponible'}</p>
-                            <p className="text-xs text-gray-400">{m.role === 'OWNER' ? 'Propriétaire' : 'Membre'}</p>
-                          </div>
-                        </div>
-                        {isOwner && (
-                          <div className="flex items-center gap-2">
-                            {!isLastOwner && (
-                              <button
-                                type="button"
-                                disabled={busy}
-                                onClick={() => changeRole(m.id, m.role === 'OWNER' ? 'MEMBER' : 'OWNER')}
-                                className="text-xs font-semibold text-gray-500 bg-gray-50 hover:bg-gray-100 px-2.5 py-1.5 rounded-full transition disabled:opacity-50"
-                              >
-                                {m.role === 'OWNER' ? 'Rétrograder' : 'Promouvoir'}
-                              </button>
-                            )}
-                            {!isLastOwner && (
-                              <button
-                                type="button"
-                                disabled={busy}
-                                onClick={() => removeMember(m.id)}
-                                className="text-xs font-semibold text-[#2563eb] bg-[#2563eb]/10 hover:bg-[#2563eb]/20 px-2.5 py-1.5 rounded-full transition disabled:opacity-50"
-                              >
-                                Retirer
-                              </button>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    )
-                  })
-                )}
-                {memberActionError && <p className="text-xs text-red-500 mt-2">{memberActionError}</p>}
-              </div>
-
-              {/* Inviter */}
-              {isOwner && (
-                <div>
-                  <p className="text-sm font-semibold text-[#111827] mb-2">Inviter un collaborateur</p>
-                  {canInvite ? (
-                    <div className="flex gap-3">
-                      <input type="email" value={inviteEmail} onChange={e => setInviteEmail(e.target.value)}
-                        placeholder="email@collaborateur.com"
-                        className="flex-1 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2563eb]/30" />
-                      <button onClick={invite} disabled={loading || !inviteEmail}
-                        className="bg-[#111827] text-white font-bold px-4 py-2.5 rounded-xl hover:bg-[#1f2937] transition disabled:opacity-60">
-                        {loading ? '...' : 'Inviter'}
-                      </button>
+            ) : (
+              <>
+                <div className="bg-white rounded-2xl border border-gray-100 p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h3 className="font-bold text-[#111827] text-lg">{org.name}</h3>
+                      <span className="text-xs px-2 py-0.5 rounded-full text-white font-semibold" style={{ background: planInfo.color }}>
+                        Plan {planInfo.label}
+                      </span>
                     </div>
-                  ) : (
-                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center justify-between">
-                      <p className="text-sm text-amber-700">L'invitation de membres supplémentaires nécessite le plan Pro.</p>
-                      <button onClick={() => setTab('abonnement')}
-                        className="text-sm font-bold text-[#2563eb] hover:underline shrink-0 ml-3">
-                        Passer à Pro →
-                      </button>
+                    <span className="text-sm text-gray-400">{org.members.length} membre{org.members.length > 1 ? 's' : ''}</span>
+                  </div>
+
+                  {/* Membres */}
+                  <div className="space-y-2 mb-6">
+                    {membersLoading ? (
+                      <p className="text-sm text-gray-400 py-2">Chargement des membres...</p>
+                    ) : (
+                      members.map((m, i) => {
+                        const isLastOwner = m.role === 'OWNER' && ownerCount <= 1
+                        const busy = memberActionId === m.id
+                        return (
+                          <div key={m.id} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#111827] to-[#2563eb] flex items-center justify-center text-white text-xs font-bold">
+                                {i + 1}
+                              </div>
+                              <div>
+                                <p className="text-sm font-semibold text-[#111827]">{m.email ?? 'Email indisponible'}</p>
+                                <p className="text-xs text-gray-400">{m.role === 'OWNER' ? 'Propriétaire' : 'Membre'}</p>
+                              </div>
+                            </div>
+                            {isOwner && (
+                              <div className="flex items-center gap-2">
+                                {!isLastOwner && (
+                                  <button
+                                    type="button"
+                                    disabled={busy}
+                                    onClick={() => changeRole(m.id, m.role === 'OWNER' ? 'MEMBER' : 'OWNER')}
+                                    className="text-xs font-semibold text-gray-500 bg-gray-50 hover:bg-gray-100 px-2.5 py-1.5 rounded-full transition disabled:opacity-50"
+                                  >
+                                    {m.role === 'OWNER' ? 'Rétrograder' : 'Promouvoir'}
+                                  </button>
+                                )}
+                                {!isLastOwner && (
+                                  <button
+                                    type="button"
+                                    disabled={busy}
+                                    onClick={() => removeMember(m.id)}
+                                    className="text-xs font-semibold text-[#2563eb] bg-[#2563eb]/10 hover:bg-[#2563eb]/20 px-2.5 py-1.5 rounded-full transition disabled:opacity-50"
+                                  >
+                                    Retirer
+                                  </button>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })
+                    )}
+                    {memberActionError && <p className="text-xs text-red-500 mt-2">{memberActionError}</p>}
+                  </div>
+
+                  {/* Inviter */}
+                  {isOwner && (
+                    <div>
+                      <p className="text-sm font-semibold text-[#111827] mb-2">Inviter un collaborateur</p>
+                      {plan === 'STRUCTURE' ? (
+                        <div className="flex gap-3">
+                          <input type="email" value={inviteEmail} onChange={e => setInviteEmail(e.target.value)}
+                            placeholder="email@collaborateur.com"
+                            className="flex-1 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2563eb]/30" />
+                          <button onClick={invite} disabled={loading || !inviteEmail}
+                            className="bg-[#111827] text-white font-bold px-4 py-2.5 rounded-xl hover:bg-[#1f2937] transition disabled:opacity-60">
+                            {loading ? '...' : 'Inviter'}
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center justify-between">
+                          <p className="text-sm text-amber-700">L'invitation de membres nécessite le plan Structure.</p>
+                          <button onClick={() => setTab('abonnement')}
+                            className="text-sm font-bold text-[#2563eb] hover:underline shrink-0 ml-3">
+                            Passer à Structure →
+                          </button>
+                        </div>
+                      )}
+                      {inviteError && <p className="text-xs text-red-500 mt-2">{inviteError}</p>}
+                      {inviteOk && <p className="text-xs text-green-600 mt-2">✓ Membre ajouté avec succès !</p>}
                     </div>
                   )}
-                  {inviteError && <p className="text-xs text-red-500 mt-2">{inviteError}</p>}
-                  {inviteOk && <p className="text-xs text-green-600 mt-2">✓ Invitation envoyée par email.</p>}
                 </div>
-              )}
-            </div>
+              </>
+            )}
           </div>
         )}
 
         {/* ── ABONNEMENT */}
         {tab === 'abonnement' && (
           <div className="space-y-6 max-w-3xl">
-            {/* Conso du mois (plans avec quota) */}
-            {usage && usage.limit != null && (
-              <div className="bg-white rounded-2xl border border-gray-100 p-6">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-bold text-[#111827]">Générations IA ce mois-ci</h3>
-                  <span className="text-sm font-bold text-[#111827]">{Math.min(usage.used, usage.limit)} / {usage.limit}</span>
-                </div>
-                <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                  <div className="h-full bg-[#2563eb] rounded-full transition-all"
-                    style={{ width: `${Math.min(100, (usage.used / usage.limit) * 100)}%` }} />
-                </div>
-                <p className="text-xs text-gray-400 mt-2">
-                  Le compteur se réinitialise chaque début de mois. Passez au plan Club pour des générations illimitées.
-                </p>
-              </div>
-            )}
-
-            {/* Toggle mensuel / annuel */}
-            <div className="flex justify-center">
-              <div className="inline-flex rounded-xl border border-gray-200 bg-white p-1">
-                {(['monthly', 'yearly'] as const).map(i => (
-                  <button key={i} onClick={() => setBilling(i)}
-                    className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition ${
-                      billing === i ? 'bg-[#111827] text-white' : 'text-gray-500 hover:text-[#111827]'
-                    }`}>
-                    {i === 'monthly' ? 'Mensuel' : 'Annuel'}
-                  </button>
-                ))}
-              </div>
-            </div>
-
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {PLAN_KEYS.map(key => {
-                const def = PLANS[key]
-                const isCurrent = plan === key
-                const isPaid = def.price.monthly != null
-                const monthlyEq = yearlyAsMonthly(def)
+              {[
+                { key: 'FREE',      price: '0€',     period: '',         features: ['1 compte', '5 visuels/mois', 'Fonctionnalités de base'] },
+                { key: 'PRO',       price: '10€',    period: '/mois',    features: ['1 compte', 'Visuels illimités', 'Posts IA illimités', 'Éditeur avancé'] },
+                { key: 'STRUCTURE', price: '25€',    period: '/mois',    features: ['Comptes illimités', 'Tout de Pro', 'Gestion d\'équipe', 'Support prioritaire'] },
+              ].map(p => {
+                const info = PLAN_LABELS[p.key]
+                const isCurrent = plan === p.key
                 return (
-                  <div key={key} className={`bg-white rounded-2xl border-2 p-6 flex flex-col ${isCurrent ? 'border-[#2563eb]' : 'border-gray-100'}`}>
+                  <div key={p.key} className={`bg-white rounded-2xl border-2 p-6 flex flex-col ${isCurrent ? 'border-[#2563eb]' : 'border-gray-100'}`}>
                     {isCurrent && <span className="text-xs font-bold text-[#2563eb] mb-2">Plan actuel</span>}
-                    <h3 className="font-extrabold text-[#111827] text-lg">{def.label}</h3>
+                    <h3 className="font-extrabold text-[#111827] text-lg">{info.label}</h3>
                     <div className="flex items-baseline gap-1 my-2">
-                      <span className="text-3xl font-black text-[#111827]">{isPaid ? def.priceDisplay[billing] : 'Gratuit'}</span>
-                      {isPaid && <span className="text-sm text-gray-400">{billing === 'monthly' ? '/mois' : '/an'}</span>}
+                      <span className="text-3xl font-black text-[#111827]">{p.price}</span>
+                      <span className="text-sm text-gray-400">{p.period}</span>
                     </div>
-                    <p className="h-4 text-xs text-gray-400 mb-2">
-                      {isPaid && billing === 'yearly' && monthlyEq ? `soit ${monthlyEq}/mois` : ''}
-                    </p>
                     <ul className="space-y-1.5 flex-1 mb-4">
-                      {def.features.map(f => (
+                      {p.features.map(f => (
                         <li key={f} className="text-sm text-gray-600 flex items-center gap-2">
                           <span className="text-[#22c55e]">✓</span> {f}
                         </li>
                       ))}
                     </ul>
-                    {!isCurrent && isPaid && (
+                    {!isCurrent && p.key !== 'FREE' && (
                       <button
-                        onClick={() => goToPortal('checkout', key)}
+                        onClick={() => goToPortal('checkout', p.key)}
                         className="w-full py-2.5 rounded-xl font-bold text-sm text-white transition"
-                        style={{ background: PLAN_COLORS[key] }}>
-                        Passer à {def.label}
+                        style={{ background: info.color }}>
+                        Passer à {info.label}
                       </button>
                     )}
-                    {isCurrent && plan !== 'FREE' && org.stripeCustomerId && (
+                    {isCurrent && plan !== 'FREE' && org?.stripeCustomerId && (
                       <button onClick={() => goToPortal('portal')}
                         className="w-full py-2.5 rounded-xl font-bold text-sm border border-gray-200 text-gray-600 hover:bg-gray-50 transition">
                         Gérer / Annuler

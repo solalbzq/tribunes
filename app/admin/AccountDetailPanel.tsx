@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import ConfirmDialog from './ConfirmDialog'
-import { PLAN_KEYS } from '@/lib/plans'
 
 type OrgDetail = {
   id: string
@@ -38,7 +37,7 @@ type ClubDetail = {
   }>
 }
 
-const PLANS: string[] = PLAN_KEYS
+const PLANS = ['FREE', 'PRO', 'STRUCTURE']
 
 function fmtLong(value: string) {
   return new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))
@@ -148,23 +147,8 @@ export default function AccountDetailPanel({
                 <span className="mt-2 inline-block rounded-full bg-[#fee2e2] px-3 py-1 text-xs font-semibold text-[#991b1b]">
                   Suspendue
                 </span>
-                )}
-              </div>
-
-              <div className="grid gap-3 sm:grid-cols-3">
-                <div className="rounded-xl border border-[#e5e7eb] bg-[#f8fafc] p-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#9ca3af]">Plan</p>
-                  <p className="mt-2 text-lg font-bold text-[#111827]">{org.plan}</p>
-                </div>
-                <div className="rounded-xl border border-[#e5e7eb] bg-[#f8fafc] p-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#9ca3af]">Comptes</p>
-                  <p className="mt-2 text-lg font-bold text-[#111827]">{org.members.length}</p>
-                </div>
-                <div className="rounded-xl border border-[#e5e7eb] bg-[#f8fafc] p-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#9ca3af]">Clubs</p>
-                  <p className="mt-2 text-lg font-bold text-[#111827]">{org.clubs.length}</p>
-                </div>
-              </div>
+              )}
+            </div>
 
             <div>
               <p className="mb-2 text-sm font-semibold text-[#111827]">Plan</p>
@@ -188,12 +172,9 @@ export default function AccountDetailPanel({
               <p className="mb-2 text-sm font-semibold text-[#111827]">Membres ({org.members.length})</p>
               <div className="space-y-2">
                 {org.members.map((m) => (
-                  <div key={m.id} className="flex items-center justify-between rounded-xl border border-[#f3f4f6] bg-[#fbfdff] px-3 py-3 text-sm">
-                    <div>
-                      <p className="font-semibold text-[#111827]">{m.email ?? m.userId}</p>
-                      <p className="mt-1 text-xs text-[#9ca3af]">Ajouté le {fmtLong(m.createdAt)}</p>
-                    </div>
-                    <span className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-[#6b7280]">{m.role}</span>
+                  <div key={m.id} className="flex items-center justify-between rounded-lg border border-[#f3f4f6] px-3 py-2 text-sm">
+                    <span>{m.email ?? m.userId}</span>
+                    <span className="text-xs font-semibold text-[#6b7280]">{m.role}</span>
                   </div>
                 ))}
               </div>
@@ -203,20 +184,12 @@ export default function AccountDetailPanel({
               <p className="mb-2 text-sm font-semibold text-[#111827]">Clubs ({org.clubs.length})</p>
               <div className="space-y-2">
                 {org.clubs.map((c) => (
-                  <div key={c.id} className="flex items-center justify-between rounded-xl border border-[#f3f4f6] bg-[#fbfdff] px-3 py-3 text-sm">
-                    <div>
-                      <p className="font-semibold text-[#111827]">{c.name}</p>
-                      <p className="mt-1 text-xs text-[#9ca3af]">{fmtLong(c.createdAt)}</p>
-                    </div>
-                    <span className="rounded-full bg-white px-2.5 py-1 text-xs text-[#6b7280]">{c.sport}</span>
+                  <div key={c.id} className="flex items-center justify-between rounded-lg border border-[#f3f4f6] px-3 py-2 text-sm">
+                    <span>{c.name}</span>
+                    <span className="text-xs text-[#6b7280]">{c.sport}</span>
                   </div>
                 ))}
               </div>
-            </div>
-
-            <div className="rounded-xl border border-[#e5e7eb] bg-[#f8fafc] p-4">
-              <p className="mb-2 text-sm font-semibold text-[#111827]">Facturation</p>
-              <p className="text-sm text-[#6b7280]">{org.stripeCustomerId ? `Client Stripe connecté (${org.stripeCustomerId})` : 'Aucun client Stripe rattaché.'}</p>
             </div>
 
             <div className="flex flex-col gap-2 border-t border-[#f3f4f6] pt-4">

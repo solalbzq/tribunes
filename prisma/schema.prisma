@@ -40,13 +40,12 @@ model WaitlistEntry {
 model Organization {
   id               String               @id @default(cuid())
   name             String
-  plan             String               @default("FREE") // FREE | CLUB | PRO
+  plan             String               @default("FREE") // FREE | PRO | STRUCTURE
   stripeCustomerId String?
   stripeSubId      String?
   suspended        Boolean              @default(false)
   createdAt        DateTime             @default(now())
   members          OrganizationMember[]
-  invitations      OrganizationInvitation[]
   clubs            Club[]
 }
 
@@ -59,21 +58,6 @@ model OrganizationMember {
   createdAt DateTime     @default(now())
 
   @@unique([orgId, userId])
-}
-
-model OrganizationInvitation {
-  id              String       @id @default(cuid())
-  orgId           String
-  org             Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  email           String
-  role            String       @default("MEMBER")
-  invitedByUserId String
-  tokenHash       String       @unique
-  acceptedAt      DateTime?
-  expiresAt       DateTime
-  createdAt       DateTime     @default(now())
-
-  @@index([orgId, email])
 }
 
 model Club {

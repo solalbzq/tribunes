@@ -1,13 +1,15 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Logo from '@/components/Logo'
 
 const SPORTS = ['Football', 'Rugby', 'Basketball', 'Handball', 'Volleyball', 'Tennis', 'Badminton', 'Padel', 'Autre']
 
 export default function SignupPage() {
+  const router = useRouter()
   const [step, setStep] = useState<'account' | 'club'>('account')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -18,25 +20,13 @@ export default function SignupPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [oauthLoading, setOauthLoading] = useState<'google' | 'apple' | null>(null)
-  const [invite, setInvite] = useState<string | null>(null)
-  const [next, setNext] = useState('/dashboard')
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
-    setInvite(params.get('invite'))
-    setNext(params.get('next') ?? '/dashboard')
-  }, [])
-
-  function getAuthRedirectTo() {
-    return `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}${invite ? `&invite=${encodeURIComponent(invite)}` : ''}`
-  }
 
   async function handleOAuth(provider: 'google' | 'apple') {
     setOauthLoading(provider)
     const supabase = createClient()
     await supabase.auth.signInWithOAuth({
       provider,
-      options: { redirectTo: getAuthRedirectTo() },
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
     })
   }
 
@@ -53,17 +43,13 @@ export default function SignupPage() {
     setError('')
     const supabase = createClient()
 
-    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { emailRedirectTo: getAuthRedirectTo() },
-    })
+    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({ email, password })
     if (signUpError) { setError(signUpError.message); setLoading(false); return }
 
     const token = signUpData.session?.access_token
     if (!token) {
       sessionStorage.setItem('pending_club', JSON.stringify({ name: clubName, sport, structureName: createStructure ? structureName : undefined }))
-      window.location.href = invite ? `/login?confirm=1&invite=${encodeURIComponent(invite)}&next=${encodeURIComponent(next)}` : '/login?confirm=1'
+      router.push('/login?confirm=1')
       return
     }
 
@@ -84,7 +70,8 @@ export default function SignupPage() {
       })
     }
 
-    window.location.href = invite ? `/api/organization/invitations/accept?token=${encodeURIComponent(invite)}` : next
+    router.push('/dashboard')
+    router.refresh()
   }
 
   return (

@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server'
-import { getActiveOrganizationId } from '@/lib/active-organization'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { prisma } from '@/lib/prisma'
@@ -9,9 +8,7 @@ export async function GET() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const membership = await prisma.organizationMember.findFirst({
-    where: { userId: user.id, orgId: getActiveOrganizationId() ?? undefined },
-  }) ?? await prisma.organizationMember.findFirst({ where: { userId: user.id } })
+  const membership = await prisma.organizationMember.findFirst({ where: { userId: user.id } })
   if (!membership) return NextResponse.json({ error: 'No organization' }, { status: 404 })
 
   const members = await prisma.organizationMember.findMany({
