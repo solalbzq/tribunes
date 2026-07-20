@@ -6,6 +6,8 @@ import { interclubResultPromptAll, ScoreDetail } from '@/lib/prompts/tennis-post
 import { padelInterclubResultPromptAll, PadelScoreDetail } from '@/lib/prompts/padel-posts'
 import { splitPlatformPosts } from '@/lib/prompts/splitPlatforms'
 import { logAiUsage } from '@/lib/usage'
+import { checkAiQuota, quotaExceededResponse } from '@/lib/quota'
+import { resolveInitialStatus, runAutomationSideEffects } from '@/lib/automation'
 
 export async function POST(req: Request) {
   const supabase = createClient()
@@ -15,7 +17,7 @@ export async function POST(req: Request) {
   const club = await prisma.club.findUnique({ where: { userId: user.id } })
   if (!club) return NextResponse.json({ error: 'Club not found' }, { status: 404 })
 
-  const { matchResultId, platforms = ['instagram', 'facebook', 'whatsapp'], regenerate = false } = await req.json()
+  const { matchResultId, platforms = ['instagram', 'facebook', 'whatsapp'], regenerate = false, tone, mvpName } = await req.json()
   if (!matchResultId) return NextResponse.json({ error: 'matchResultId manquant' }, { status: 400 })
 
   const match = await prisma.matchResult.findUnique({
@@ -35,21 +37,26 @@ export async function POST(req: Request) {
     }
   }
 
+  // Quota vérifié après le cache : relire des posts existants reste gratuit.
+  const quota = await checkAiQuota(club)
+  if (!quota.allowed) return quotaExceededResponse(quota)
+
   const sport = match.sport ?? club.sport
   const isPadel = sport === 'Padel' || sport === 'PADEL'
   const globalScore = match.globalScore ?? `${match.homeScore}-${match.awayScore}`
   const homeAway = (match.homeAway ?? 'DOMICILE') as 'DOMICILE' | 'EXTERIEUR'
   const scoreDetail = (match.scoreDetail ?? []) as ScoreDetail[] | PadelScoreDetail[]
+  const voice = tone || club.contentTone
 
   // Un seul appel IA pour les 3 plateformes.
   const prompt = isPadel
     ? padelInterclubResultPromptAll(
         club.name, match.teamName ?? club.name, match.opponent, globalScore,
-        match.division ?? '', match.round ?? '', homeAway, scoreDetail as PadelScoreDetail[]
+        match.division ?? '', match.round ?? '', homeAway, scoreDetail as PadelScoreDetail[], voice, mvpName || undefined
       )
     : interclubResultPromptAll(
         club.name, match.teamName ?? club.name, match.opponent, globalScore,
-        match.division ?? '', match.round ?? '', homeAway, scoreDetail as ScoreDetail[]
+        match.division ?? '', match.round ?? '', homeAway, scoreDetail as ScoreDetail[], voice, mvpName || undefined
       )
 
   const completion = await openai.chat.completions.create({
@@ -64,17 +71,24 @@ export async function POST(req: Request) {
   const posts: Record<string, string> = {}
   for (const platform of requested) posts[platform] = all[platform]
 
+  const initialStatus = await resolveInitialStatus(club)
+
   // Remplace les anciens posts de ce match pour éviter les doublons.
   await prisma.generatedPost.deleteMany({ where: { matchId: match.id, postType: 'INTERCLUB_RESULT' } })
-  await prisma.generatedPost.createMany({
-    data: Object.entries(posts).map(([platform, content]) => ({
-      matchId: match.id,
-      platform,
-      content,
-      postType: 'INTERCLUB_RESULT',
-      status: 'DRAFT',
-    })),
-  })
+  const created = await prisma.$transaction(
+    Object.entries(posts).map(([platform, content]) =>
+      prisma.generatedPost.create({
+        data: {
+          matchId: match.id,
+          platform,
+          content,
+          postType: 'INTERCLUB_RESULT',
+          status: initialStatus,
+        },
+      })
+    )
+  )
+  await runAutomationSideEffects(club, created)
 
   return NextResponse.json({ posts, matchId: match.id })
 }

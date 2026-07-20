@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { parseVisualConfig, loadImage, SIZE, drawElements } from '@/lib/visualLayout'
+import { parseVisualConfig, loadImage, SIZE, drawElements, drawWatermark } from '@/lib/visualLayout'
 import { getSportVocab, getDetailLines, getScoreLabel } from '@/lib/sports'
 import { Icon } from './icons'
 
@@ -9,6 +9,7 @@ type Club = {
   name: string; sport: string
   primaryColor: string; secondaryColor: string
   logoUrl: string | null; visualConfig?: unknown
+  watermark?: boolean
 }
 type MatchData = {
   opponent: string; homeScore: number; awayScore: number; isHome: boolean; competition: string
@@ -96,6 +97,8 @@ export default function VisualGenerator({ club, match, photoFile, onCanvasReady 
         detailLines,
         scoreLabel,
       })
+
+      if (club.watermark) drawWatermark(ctx, SIZE)
 
       if (!cancelled) {
         setReady(true)

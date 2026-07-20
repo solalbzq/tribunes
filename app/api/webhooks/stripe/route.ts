@@ -1,15 +1,10 @@
 import { NextResponse } from 'next/server'
 import type Stripe from 'stripe'
 
-import { getStripe } from '@/lib/stripe'
+import { getStripe, planFromPriceId } from '@/lib/stripe'
 import { prisma } from '@/lib/prisma'
 
 export const runtime = 'nodejs'
-
-const PRICE_TO_PLAN: Record<string, string> = {
-  [process.env.STRIPE_PRICE_PRO ?? '']: 'PRO',
-  [process.env.STRIPE_PRICE_STRUCTURE ?? '']: 'STRUCTURE',
-}
 
 export async function POST(request: Request) {
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
@@ -37,7 +32,7 @@ export async function POST(request: Request) {
       const session = event.data.object as Stripe.Checkout.Session
       const orgId = session.metadata?.orgId
       const plan = session.metadata?.plan
-      if (orgId && plan) {
+      if (orgId && (plan === 'CLUB' || plan === 'PRO')) {
         await prisma.organization.update({
           where: { id: orgId },
           data: {
@@ -52,16 +47,27 @@ export async function POST(request: Request) {
     case 'customer.subscription.updated': {
       const subscription = event.data.object as Stripe.Subscription
       const customerId = typeof subscription.customer === 'string' ? subscription.customer : subscription.customer.id
-      const priceId = subscription.items.data[0]?.price.id
-      const plan = priceId ? PRICE_TO_PLAN[priceId] : undefined
 
       const org = await prisma.organization.findFirst({ where: { stripeCustomerId: customerId } })
-      if (org) {
+      if (!org) break
+
+      if (subscription.status === 'canceled' || subscription.status === 'unpaid') {
         await prisma.organization.update({
           where: { id: org.id },
-          data: { stripeSubId: subscription.id, ...(plan ? { plan } : {}) },
+          data: { plan: 'FREE', stripeSubId: null },
         })
+        break
       }
+
+      // On n'applique le plan que pour un abonnement réellement actif ;
+      // les états transitoires (past_due, incomplete…) ne changent rien,
+      // Stripe retente et subscription.deleted gère le cas terminal.
+      const active = subscription.status === 'active' || subscription.status === 'trialing'
+      const plan = planFromPriceId(subscription.items.data[0]?.price.id)
+      await prisma.organization.update({
+        where: { id: org.id },
+        data: { stripeSubId: subscription.id, ...(active && plan ? { plan } : {}) },
+      })
       break
     }
 

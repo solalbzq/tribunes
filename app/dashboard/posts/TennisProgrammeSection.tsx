@@ -4,7 +4,12 @@ import { useRef, useState } from 'react'
 import type { TournamentMatch } from '@/lib/services/fft-pdf-parser'
 import TennisVisualGenerator, { type TennisVisualConfig, DEFAULT_TENNIS_CONFIG } from './TennisVisualGenerator'
 import TennisActions from './TennisActions'
+import TextPostsPanel from '../TextPostsPanel'
+import ToneSelector from '../ToneSelector'
 import { Icon } from '../icons'
+
+type Posts = { instagram: string; facebook: string; whatsapp: string }
+type PostIds = Partial<Record<keyof Posts, string>>
 
 type Club = {
   name: string
@@ -131,6 +136,48 @@ export default function TennisProgrammeSection({ club }: { club: Club }) {
     const canvas = canvasRef.current
     if (!canvas) return null
     return new Promise(r => canvas.toBlob(r, 'image/png'))
+  }
+
+  // ── Légendes IA ────────────────────────────────────────────────────────
+  const [tone, setTone] = useState('')
+  const [generating, setGenerating] = useState(false)
+  const [genError, setGenError] = useState<string | null>(null)
+  const [posts, setPosts] = useState<Posts | null>(null)
+  const [postIds, setPostIds] = useState<PostIds | null>(null)
+
+  async function generateCaptions() {
+    setGenerating(true); setGenError(null)
+    try {
+      const res = await fetch('/api/posts/tennis/programme', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          matches: activeMatches,
+          label: activeLabel,
+          matchDate: activeDate.toISOString(),
+          tone: tone || undefined,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Échec de la génération')
+      setPosts(data.posts)
+      setPostIds(data.postIds ?? null)
+    } catch (err) {
+      setGenError((err as Error).message)
+    } finally {
+      setGenerating(false)
+    }
+  }
+
+  if (posts) {
+    return (
+      <TextPostsPanel
+        posts={posts}
+        postIds={postIds}
+        title="Vos légendes de programme sont prêtes"
+        onReset={() => { setPosts(null); setPostIds(null) }}
+      />
+    )
   }
 
   return (
@@ -289,6 +336,24 @@ export default function TennisProgrammeSection({ club }: { club: Club }) {
             onCanvasReady={c => { canvasRef.current = c }}
           />
           <TennisActions getImageBlob={getImageBlob} defaultCaption={programmeCaption} filename="programme-tennis" />
+
+          <div className="bg-white rounded-card border border-line shadow-card p-6 space-y-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand">IA</p>
+              <h3 className="text-lg font-extrabold text-[#111827] mt-1">Légendes réseaux sociaux</h3>
+            </div>
+            <ToneSelector value={tone} onChange={setTone} />
+            <button
+              onClick={generateCaptions}
+              disabled={generating}
+              className="w-full inline-flex items-center justify-center gap-2 py-3 rounded-2xl bg-[#2563eb] text-white text-sm font-semibold hover:bg-[#1d4fd8] transition disabled:opacity-60"
+            >
+              {generating
+                ? <><Icon name="refresh" className="h-[18px] w-[18px] animate-spin" /> Génération…</>
+                : <><Icon name="sparkles" className="h-[18px] w-[18px]" /> Générer les légendes IA</>}
+            </button>
+            {genError && <p className="text-xs text-red-500">{genError}</p>}
+          </div>
         </>
       )}
     </div>

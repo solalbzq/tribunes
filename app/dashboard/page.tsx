@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { prisma } from '@/lib/prisma'
 import { redirect } from 'next/navigation'
+import { checkAutomationAllowed } from '@/lib/automation'
 import DashboardClient from './DashboardClient'
 
 export default async function DashboardPage() {
@@ -19,14 +20,103 @@ export default async function DashboardPage() {
     },
   })
 
+  const drafts = club
+    ? await prisma.generatedPost.findMany({
+        where: {
+          status: { in: ['DRAFT', 'PENDING_REVIEW'] },
+          OR: [
+            { match: { clubId: club.id } },
+            { tournamentSchedule: { clubId: club.id } },
+            { weeklySchedule: { clubId: club.id } },
+            { seasonRecap: { clubId: club.id } },
+          ],
+        },
+        orderBy: { createdAt: 'desc' },
+        include: {
+          match: {
+            select: {
+              id: true,
+              opponent: true,
+              competition: true,
+              date: true,
+            },
+          },
+          tournamentSchedule: {
+            select: {
+              id: true,
+              tournamentName: true,
+              matchDate: true,
+            },
+          },
+          weeklySchedule: {
+            select: {
+              id: true,
+              weekStart: true,
+              weekEnd: true,
+            },
+          },
+          seasonRecap: {
+            select: {
+              id: true,
+              periodStart: true,
+              periodEnd: true,
+              wins: true,
+              draws: true,
+              losses: true,
+            },
+          },
+        },
+      })
+    : []
+
+  const automationEnabled = club ? await checkAutomationAllowed(club) : false
+
   // Sérialise les dates en string pour le passage server→client
   const serialized = club ? {
     ...club,
+    automationEnabled,
     matches: club.matches.map(m => ({
       ...m,
       date: m.date.toISOString(),
     })),
   } : null
 
-  return <DashboardClient club={serialized} userEmail={user.email ?? ''} />
+  const serializedDrafts = drafts.map(draft => ({
+    ...draft,
+    createdAt: draft.createdAt.toISOString(),
+    match: draft.match
+      ? {
+          ...draft.match,
+          date: draft.match.date.toISOString(),
+        }
+      : null,
+    tournamentSchedule: draft.tournamentSchedule
+      ? {
+          ...draft.tournamentSchedule,
+          matchDate: draft.tournamentSchedule.matchDate.toISOString(),
+        }
+      : null,
+    weeklySchedule: draft.weeklySchedule
+      ? {
+          ...draft.weeklySchedule,
+          weekStart: draft.weeklySchedule.weekStart.toISOString(),
+          weekEnd: draft.weeklySchedule.weekEnd.toISOString(),
+        }
+      : null,
+    seasonRecap: draft.seasonRecap
+      ? {
+          ...draft.seasonRecap,
+          periodStart: draft.seasonRecap.periodStart.toISOString(),
+          periodEnd: draft.seasonRecap.periodEnd.toISOString(),
+        }
+      : null,
+  }))
+
+  return (
+    <DashboardClient
+      club={serialized}
+      drafts={serializedDrafts}
+      userEmail={user.email ?? ''}
+    />
+  )
 }

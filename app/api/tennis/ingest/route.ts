@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { prisma } from '@/lib/prisma'
 import { openai } from '@/lib/openai'
 import { logAiUsage } from '@/lib/usage'
+import { checkAiQuota, quotaExceededResponse } from '@/lib/quota'
 
 // Lecture d'une capture d'écran Ten'Up (résultats ou programme) par GPT-4o vision.
 // C'est le contournement de Queue-it : l'utilisateur photographie sa page Ten'Up,
@@ -37,6 +38,9 @@ export async function POST(req: Request) {
 
   const club = await prisma.club.findUnique({ where: { userId: user.id } })
   if (!club) return NextResponse.json({ error: 'Club introuvable' }, { status: 404 })
+
+  const quota = await checkAiQuota(club)
+  if (!quota.allowed) return quotaExceededResponse(quota)
 
   const form = await req.formData()
   const image = form.get('image') as File | null

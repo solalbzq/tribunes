@@ -1,0 +1,115 @@
+'use client'
+
+import { useState } from 'react'
+import TextPostsPanel from './TextPostsPanel'
+import ToneSelector from './ToneSelector'
+import { FIELD, PageHeader } from './ui'
+import { Icon } from './icons'
+
+type Posts = { instagram: string; facebook: string; whatsapp: string }
+type PostIds = Partial<Record<keyof Posts, string>>
+
+function startOfYear(): string {
+  return `${new Date().getFullYear()}-01-01`
+}
+
+function today(): string {
+  return new Date().toISOString().split('T')[0]
+}
+
+/**
+ * Bilan de saison/période — disponible pour tous les sports, tennis/padel
+ * inclus : s'appuie uniquement sur MatchResult (déjà commun à tous les flux),
+ * pas de logique spécifique à un sport.
+ */
+export default function SeasonRecapTab() {
+  const [periodStart, setPeriodStart] = useState(startOfYear())
+  const [periodEnd, setPeriodEnd] = useState(today())
+  const [periodLabel, setPeriodLabel] = useState('de la saison')
+  const [rankingNote, setRankingNote] = useState('')
+  const [tone, setTone] = useState('')
+  const [generating, setGenerating] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [posts, setPosts] = useState<Posts | null>(null)
+  const [postIds, setPostIds] = useState<PostIds | null>(null)
+  const [record, setRecord] = useState<{ wins: number; draws: number; losses: number } | null>(null)
+
+  async function generate() {
+    setGenerating(true); setError(null)
+    try {
+      const res = await fetch('/api/posts/season-recap', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          periodStart,
+          periodEnd,
+          periodLabel,
+          rankingNote: rankingNote || undefined,
+          tone: tone || undefined,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Échec de la génération')
+      setPosts(data.posts)
+      setPostIds(data.postIds ?? null)
+      setRecord(data.record ?? null)
+    } catch (err) {
+      setError((err as Error).message)
+    } finally {
+      setGenerating(false)
+    }
+  }
+
+  if (posts) {
+    return (
+      <TextPostsPanel
+        posts={posts}
+        postIds={postIds}
+        title={record ? `Bilan prêt — ${record.wins}V ${record.draws}N ${record.losses}D` : 'Votre bilan est prêt'}
+        onReset={() => { setPosts(null); setPostIds(null); setRecord(null) }}
+      />
+    )
+  }
+
+  return (
+    <div className="max-w-2xl space-y-4">
+      <PageHeader
+        icon="trophy"
+        title="Bilan de saison"
+        subtitle="Le résultat (victoires/nuls/défaites) est calculé automatiquement depuis vos matchs enregistrés sur la période."
+      />
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label className="block text-xs text-gray-400 mb-1">Depuis le</label>
+          <input type="date" value={periodStart} onChange={e => setPeriodStart(e.target.value)} className={FIELD} />
+        </div>
+        <div>
+          <label className="block text-xs text-gray-400 mb-1">Jusqu'au</label>
+          <input type="date" value={periodEnd} onChange={e => setPeriodEnd(e.target.value)} className={FIELD} />
+        </div>
+      </div>
+      <div>
+        <label className="block text-xs text-gray-400 mb-1">Intitulé de la période</label>
+        <input value={periodLabel} onChange={e => setPeriodLabel(e.target.value)} className={FIELD} placeholder="Ex: de la saison 2025-2026, du 1er trimestre..." />
+      </div>
+      <div>
+        <label className="block text-xs text-gray-400 mb-1">Classement / fait marquant (optionnel)</label>
+        <input value={rankingNote} onChange={e => setRankingNote(e.target.value)} className={FIELD} placeholder="Ex: 2e du classement départemental, montée en division supérieure..." />
+      </div>
+
+      <ToneSelector value={tone} onChange={setTone} />
+
+      <button
+        onClick={generate}
+        disabled={generating}
+        className="w-full inline-flex items-center justify-center gap-2 py-3 rounded-2xl bg-[#2563eb] text-white text-sm font-semibold hover:bg-[#1d4fd8] transition disabled:opacity-60"
+      >
+        {generating
+          ? <><Icon name="refresh" className="h-[18px] w-[18px] animate-spin" /> Calcul et génération…</>
+          : <><Icon name="sparkles" className="h-[18px] w-[18px]" /> Générer le bilan</>}
+      </button>
+      {error && <p className="text-xs text-red-500">{error}</p>}
+    </div>
+  )
+}

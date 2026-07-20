@@ -3,6 +3,8 @@
 import { useState, useRef } from 'react'
 import { PageHeader, PrimaryButton, GhostButton } from './ui'
 import { Icon } from './icons'
+import { ErrorNotice, toUiError, type UiError } from './apiError'
+import ToneSelector from './ToneSelector'
 
 type Club = { name: string; sport: string }
 type Posts = { instagram: string; facebook: string; whatsapp: string }
@@ -236,12 +238,14 @@ export default function GenerateForm({
   const [competition, setCompetition] = useState('')
   const [date, setDate] = useState(new Date().toISOString().split('T')[0])
   const [notes, setNotes] = useState('')
+  const [mvpName, setMvpName] = useState('')
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [photoPreview, setPhotoPreview] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [loadingVisual, setLoadingVisual] = useState(false)
-  const [error, setError] = useState('')
+  const [error, setError] = useState<UiError>(null)
   const [extra, setExtraState] = useState<Record<string, unknown>>({})
+  const [tone, setTone] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
 
   const sport = club.sport
@@ -279,7 +283,7 @@ export default function GenerateForm({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
-    setError('')
+    setError(null)
     try {
       const res = await fetch('/api/generate', {
         method: 'POST',
@@ -293,9 +297,15 @@ export default function GenerateForm({
           date,
           notes,
           extraData: Object.keys(extra).length ? extra : undefined,
+          tone: tone || undefined,
+          mvpName: mvpName || undefined,
         }),
       })
-      if (!res.ok) throw new Error('Erreur serveur')
+      if (!res.ok) {
+        const json = await res.json().catch(() => null)
+        setError(toUiError(json, 'Une erreur est survenue. Réessaie.'))
+        return
+      }
       const data = await res.json()
       const postIds = Object.fromEntries(
         ((data.match?.posts as Array<{ id: string; platform: keyof Posts }> | undefined) ?? [])
@@ -303,7 +313,7 @@ export default function GenerateForm({
       ) as PostIds
       onSuccess(data.posts, getMatchData(), photoFile, postIds)
     } catch {
-      setError('Une erreur est survenue. Réessaie.')
+      setError({ message: 'Une erreur est survenue. Réessaie.', quota: false })
     } finally {
       setLoading(false)
     }
@@ -424,6 +434,20 @@ export default function GenerateForm({
           <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
         </div>
 
+        {/* Joueur du match */}
+        <div>
+          <label className="block text-sm font-semibold text-[#111827] mb-1">
+            Joueur·se du match <span className="font-normal text-gray-400">(optionnel)</span>
+          </label>
+          <input
+            type="text"
+            value={mvpName}
+            onChange={e => setMvpName(e.target.value)}
+            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#2563eb]/30"
+            placeholder="Ex: Camille Martin"
+          />
+        </div>
+
         {/* Notes */}
         <div>
           <label className="block text-sm font-semibold text-[#111827] mb-1">
@@ -441,7 +465,9 @@ export default function GenerateForm({
             } />
         </div>
 
-        {error && <p className="text-sm text-red-500">{error}</p>}
+        <ToneSelector value={tone} onChange={setTone} />
+
+        <ErrorNotice error={error} />
 
         <div className="flex gap-3">
           <PrimaryButton type="submit" disabled={loading || loadingVisual} loading={loading} icon={loading ? undefined : 'sparkles'} className="flex-1 py-3.5">

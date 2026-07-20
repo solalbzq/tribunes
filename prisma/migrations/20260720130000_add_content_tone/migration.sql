@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Club" ADD COLUMN     "contentTone" TEXT NOT NULL DEFAULT 'STANDARD';

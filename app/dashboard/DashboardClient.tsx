@@ -19,6 +19,10 @@ type Club = {
   visualConfig: unknown;
   tennisVisualConfig?: unknown;
   tenupUrl?: string | null;
+  automationMode: string;
+  telegramChatId: string | null;
+  automationEnabled: boolean;
+  contentTone: string;
   matches: Array<{
     id: string;
     opponent: string;
@@ -27,13 +31,46 @@ type Club = {
     isHome: boolean;
     competition: string | null;
     date: string;
-    posts: Array<{ platform: string; content: string; status: string }>;
+    posts: Array<{ id: string; platform: string; content: string; status: string }>;
   }>;
 } | null;
 
 type SocialConnection = {
   id: string;
   provider: string;
+};
+
+type Draft = {
+  id: string;
+  platform: string;
+  content: string;
+  postType: string;
+  status: string;
+  createdAt: string;
+  match: {
+    id: string;
+    opponent: string;
+    competition: string | null;
+    date: string;
+  } | null;
+  tournamentSchedule: {
+    id: string;
+    tournamentName: string;
+    matchDate: string;
+  } | null;
+  weeklySchedule: {
+    id: string;
+    weekStart: string;
+    weekEnd: string;
+  } | null;
+  seasonRecap: {
+    id: string;
+    periodStart: string;
+    periodEnd: string;
+    wins: number;
+    draws: number;
+    losses: number;
+  } | null;
 };
 
 type View = "home" | "content" | "history" | "reseaux" | "settings";
@@ -52,9 +89,11 @@ const NAV: {
 
 export default function DashboardClient({
   club,
+  drafts,
   userEmail,
 }: {
   club: Club;
+  drafts: Draft[];
   userEmail: string;
 }) {
   const router = useRouter();
@@ -208,7 +247,7 @@ export default function DashboardClient({
           {view === "content" && <ContentTab club={club} />}
           {view === "reseaux" && <SocialTab />}
           {view === "history" && (
-            <HistoryView club={club} onNavigate={setView} />
+            <HistoryView club={club} drafts={drafts} onNavigate={setView} />
           )}
           {view === "settings" && <ClubSettings club={club} />}
         </main>
@@ -509,35 +548,45 @@ function HomeView({
 
 function HistoryView({
   club,
+  drafts,
   onNavigate,
 }: {
   club: NonNullable<Club>;
+  drafts: Draft[];
   onNavigate: (v: View) => void;
 }) {
-  if (club.matches.length === 0) {
-    return (
-      <Card>
-        <EmptyState
-          icon="clock"
-          title="Aucun match enregistré"
-          text="Vos matchs et les publications générées apparaîtront ici."
-          cta={
-            <button
-              onClick={() => onNavigate("content")}
-              className="rounded-btn bg-brand px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-hover"
-            >
-              Générer un contenu
-            </button>
-          }
-        />
-      </Card>
-    );
-  }
   const sorted = [...club.matches].sort(
     (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
   );
+  const draftMatches = new Set(drafts.map((draft) => draft.match?.id).filter(Boolean));
+
+  if (club.matches.length === 0) {
+    return (
+      <div className="space-y-4">
+        {drafts.length > 0 && (
+          <DraftsPanel drafts={drafts} />
+        )}
+        <Card>
+          <EmptyState
+            icon="clock"
+            title="Aucun match enregistré"
+            text="Vos matchs et les publications générées apparaîtront ici."
+            cta={
+              <button
+                onClick={() => onNavigate("content")}
+                className="rounded-btn bg-brand px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-hover"
+              >
+                Générer un contenu
+              </button>
+            }
+          />
+        </Card>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <div>
         <h1 className="text-xl font-black tracking-[-0.02em] text-ink">
           Historique
@@ -548,12 +597,24 @@ function HistoryView({
           {club.matches.reduce((a, m) => a + m.posts.length, 0) > 1 ? "s" : ""}
         </p>
       </div>
-      <Card padded={false}>
-        <ul className="divide-y divide-line">
-          {sorted.map((m) => (
-            <MatchRow key={m.id} club={club} match={m} />
+
+      {drafts.length > 0 && <DraftsPanel drafts={drafts} />}
+
+      <Card>
+        <CardHeader
+          title="Rencontres et publications"
+          subtitle={`${sorted.length} evenement${sorted.length > 1 ? "s" : ""} dans l'historique`}
+        />
+        <div className="space-y-3">
+          {sorted.map((match) => (
+            <HistoryMatchCard
+              key={match.id}
+              club={club}
+              match={match}
+              hasDraft={draftMatches.has(match.id)}
+            />
           ))}
-        </ul>
+        </div>
       </Card>
     </div>
   );
@@ -800,6 +861,253 @@ function HistoryMiniStat({
   );
 }
 
+function DraftsPanel({ drafts }: { drafts: Draft[] }) {
+  return (
+    <Card>
+      <CardHeader
+        title="Brouillons"
+        subtitle="Retouchez vos textes avant publication"
+        action={
+          <span className="rounded-full bg-brand-soft px-3 py-1 text-xs font-semibold text-brand">
+            {drafts.length} brouillon{drafts.length > 1 ? "s" : ""}
+          </span>
+        }
+      />
+      <div className="space-y-4">
+        {drafts.map((draft) => (
+          <DraftEditorCard key={draft.id} draft={draft} />
+        ))}
+      </div>
+    </Card>
+  );
+}
+
+function DraftEditorCard({ draft }: { draft: Draft }) {
+  const [content, setContent] = useState(draft.content);
+  const [savedContent, setSavedContent] = useState(draft.content);
+  const [status, setStatus] = useState(draft.status);
+  const [saving, setSaving] = useState(false);
+  const [reviewing, setReviewing] = useState<"publish" | "reject" | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+  const dirty = content !== savedContent;
+  const pendingReview = status === "PENDING_REVIEW";
+
+  async function handleSave() {
+    setSaving(true);
+    setMessage(null);
+
+    try {
+      const res = await fetch(`/api/generated-posts/${draft.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content }),
+      });
+
+      if (!res.ok) {
+        setMessage("Impossible d'enregistrer ce brouillon.");
+        return;
+      }
+
+      const data = await res.json();
+      setContent(data.content);
+      setSavedContent(data.content);
+      setMessage("Brouillon mis a jour.");
+    } catch {
+      setMessage("Impossible d'enregistrer ce brouillon.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleReject() {
+    setReviewing("reject");
+    setMessage(null);
+    try {
+      const res = await fetch(`/api/generated-posts/${draft.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "REJECTED" }),
+      });
+      if (!res.ok) {
+        setMessage("Impossible de rejeter ce post.");
+        return;
+      }
+      setStatus("REJECTED");
+      setMessage("Post rejeté.");
+    } catch {
+      setMessage("Impossible de rejeter ce post.");
+    } finally {
+      setReviewing(null);
+    }
+  }
+
+  async function handlePublish() {
+    setReviewing("publish");
+    setMessage(null);
+    try {
+      const connsRes = await fetch("/api/social/connections", { cache: "no-store" });
+      const connsData = await connsRes.json();
+      const targets: string[] = (connsData.connections ?? [])
+        .filter((c: { provider: string }) => c.provider === draft.platform)
+        .map((c: { id: string }) => c.id);
+
+      if (targets.length === 0) {
+        setMessage("Aucun réseau connecté pour cette plateforme.");
+        return;
+      }
+
+      const fd = new FormData();
+      fd.append("text", content);
+      fd.append("targets", JSON.stringify(targets));
+      fd.append("generatedPostId", draft.id);
+      const res = await fetch("/api/social/publish", { method: "POST", body: fd });
+      const data = await res.json();
+      if (!res.ok && res.status !== 207) {
+        setMessage(data.error ?? "Échec de la publication.");
+        return;
+      }
+      const allOk = (data.results ?? []).every((r: { ok: boolean }) => r.ok);
+      setStatus(allOk ? "PUBLISHED" : "PARTIAL");
+      setMessage(allOk ? "Publié." : "Publication partielle.");
+    } catch {
+      setMessage("Échec de la publication.");
+    } finally {
+      setReviewing(null);
+    }
+  }
+
+  return (
+    <div className="rounded-card border border-line bg-subtle/40 p-4 sm:p-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-ink shadow-card">
+              {formatPostType(draft.postType)}
+            </span>
+            <span className="rounded-full bg-brand-soft px-3 py-1 text-xs font-semibold text-brand">
+              {formatPlatform(draft.platform)}
+            </span>
+            {pendingReview && (
+              <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
+                En attente de validation
+              </span>
+            )}
+          </div>
+          <p className="text-sm font-semibold text-ink">{describeDraftContext(draft)}</p>
+          <p className="text-xs text-muted">
+            Cree le {formatDateTime(draft.createdAt)}
+          </p>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          {pendingReview && (
+            <>
+              <button
+                onClick={handleReject}
+                disabled={reviewing !== null}
+                className="inline-flex items-center justify-center rounded-btn border border-line px-4 py-2 text-sm font-semibold text-danger transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {reviewing === "reject" ? "Rejet..." : "Rejeter"}
+              </button>
+              <button
+                onClick={handlePublish}
+                disabled={reviewing !== null}
+                className="inline-flex items-center justify-center rounded-btn bg-success px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {reviewing === "publish" ? "Publication..." : "Publier"}
+              </button>
+            </>
+          )}
+          <button
+            onClick={handleSave}
+            disabled={!dirty || saving || !content.trim()}
+            className="inline-flex items-center justify-center rounded-btn bg-brand px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {saving ? "Enregistrement..." : "Enregistrer"}
+          </button>
+        </div>
+      </div>
+
+      <textarea
+        value={content}
+        onChange={(event) => setContent(event.target.value)}
+        rows={7}
+        className="mt-4 w-full rounded-btn border border-line bg-white px-4 py-3 text-sm leading-relaxed text-ink outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/15"
+      />
+
+      <div className="mt-3 flex flex-col gap-2 text-xs text-muted sm:flex-row sm:items-center sm:justify-between">
+        <span>{content.length} caracteres</span>
+        <span className={message === "Brouillon mis a jour." ? "text-emerald-700" : "text-muted"}>
+          {message ?? (dirty ? "Modifications non enregistrees" : "" )}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function HistoryMatchCard({
+  club,
+  match,
+  hasDraft,
+}: {
+  club: NonNullable<Club>;
+  match: NonNullable<Club>["matches"][number];
+  hasDraft: boolean;
+}) {
+  const { us, them } = score(match);
+  const result = us > them ? "Victoire" : us < them ? "Defaite" : "Nul";
+  const status = getMatchStatusLabel(match);
+
+  return (
+    <div className="rounded-card border border-line bg-white p-4 shadow-card sm:p-5">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0 space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${resultTone(result)}`}>
+              {result}
+            </span>
+            <span className="rounded-full bg-subtle px-3 py-1 text-xs font-semibold text-muted">
+              {formatDate(match.date)}
+            </span>
+            {hasDraft && (
+              <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
+                Brouillon en cours
+              </span>
+            )}
+          </div>
+          <p className="text-base font-bold text-ink sm:text-lg">
+            {club.name} <span className="tabular-nums">{us}–{them}</span> {match.opponent}
+          </p>
+          <p className="text-sm text-muted">
+            {match.competition ?? "Match amical"}
+          </p>
+        </div>
+
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          <span className="rounded-full bg-brand-soft px-3 py-1 text-xs font-semibold text-brand">
+            {status}
+          </span>
+          <span className="rounded-full bg-subtle px-3 py-1 text-xs font-semibold text-muted">
+            {match.posts.length} post{match.posts.length > 1 ? "s" : ""}
+          </span>
+        </div>
+      </div>
+
+      {match.posts.length > 0 && (
+        <div className="mt-4 flex flex-wrap gap-2">
+          {match.posts.map((post) => (
+            <span
+              key={post.id}
+              className="rounded-full border border-line bg-subtle/70 px-3 py-1 text-xs font-semibold text-muted"
+            >
+              {formatPlatform(post.platform)} · {formatPostStatus(post.status)}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function score(m: NonNullable<Club>["matches"][number]) {
   return {
     us: m.isHome ? m.homeScore : m.awayScore,
@@ -846,6 +1154,68 @@ function formatPlatform(platform: string) {
   };
 
   return labels[platform] ?? platform;
+}
+
+function formatPostType(postType: string) {
+  const labels: Record<string, string> = {
+    MATCH_RESULT: "Resultat",
+    INTERCLUB_RESULT: "Resultat interclubs",
+    WEEKLY_SCHEDULE: "Programme",
+    TOURNAMENT_SCHEDULE: "Tournoi",
+    SEASON_RECAP: "Bilan",
+  };
+
+  return labels[postType] ?? postType;
+}
+
+function formatPostStatus(status: string) {
+  const labels: Record<string, string> = {
+    DRAFT: "Brouillon",
+    PENDING_REVIEW: "En attente de validation",
+    PUBLISHED: "Publie",
+    PARTIAL: "Partiel",
+    FAILED: "Echec",
+    REJECTED: "Rejete",
+  };
+
+  return labels[status] ?? status;
+}
+
+function describeDraftContext(draft: Draft) {
+  if (draft.match) {
+    return `${draft.match.competition ?? "Match"} contre ${draft.match.opponent} · ${formatDate(draft.match.date)}`;
+  }
+
+  if (draft.tournamentSchedule) {
+    return `${draft.tournamentSchedule.tournamentName} · ${formatDate(draft.tournamentSchedule.matchDate)}`;
+  }
+
+  if (draft.weeklySchedule) {
+    return `Programme de la semaine du ${formatShortDate(draft.weeklySchedule.weekStart)} au ${formatShortDate(draft.weeklySchedule.weekEnd)}`;
+  }
+
+  if (draft.seasonRecap) {
+    const r = draft.seasonRecap;
+    return `Bilan du ${formatShortDate(r.periodStart)} au ${formatShortDate(r.periodEnd)} · ${r.wins}V ${r.draws}N ${r.losses}D`;
+  }
+
+  return "Brouillon Tribunes";
+}
+
+function formatDateTime(date: string) {
+  return new Date(date).toLocaleDateString("fr-FR", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function resultTone(result: string) {
+  if (result === "Victoire") return "bg-emerald-50 text-emerald-700";
+  if (result === "Defaite") return "bg-brand-soft text-brand";
+  return "bg-subtle text-muted";
 }
 
 function getMatchStatusLabel(match: NonNullable<Club>["matches"][number]) {

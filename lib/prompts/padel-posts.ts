@@ -1,5 +1,6 @@
 import type { TournamentMatch } from '../services/fft-pdf-parser'
 import { MULTI_PLATFORM_FORMAT } from './splitPlatforms'
+import { getVoiceInstruction } from '../voice'
 
 const PADEL_GRADES = ['P25', 'P100', 'P250', 'P500', 'P1000', 'Open']
 
@@ -30,12 +31,14 @@ export function padelTournamentSchedulePromptAll(
   grade: string,
   matchDate: Date,
   venue: string,
-  clubMatches: TournamentMatch[]
+  clubMatches: TournamentMatch[],
+  voice: string = 'STANDARD'
 ): string {
   const dateStr = matchDate.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
   const matchList = formatMatchList(clubMatches)
   const gradeLabel = grade ? ` (${formatGrade(grade)})` : ''
   const tag = clubName.toLowerCase().replace(/\s/g, '')
+  const voiceInstruction = getVoiceInstruction(voice)
 
   return `Tu es le community manager du club de padel "${clubName}".
 Rédige les posts réseaux sociaux pour annoncer la programmation de nos joueurs au tournoi "${tournamentName}"${gradeLabel}.
@@ -51,6 +54,7 @@ Vocabulaire padel obligatoire (pour les 3 posts) :
 - "duo" ou "paire" (jamais "équipe" pour un double), "partenaire" (jamais "coéquipier")
 - "smash", "bandeja", "vibora" si pertinent ; "couloir", "grille", "fond de court" pour les zones
 - Cite chaque paire nominalement (Joueur1 / Joueur2), avec horaire et court
+${voiceInstruction ? `- ${voiceInstruction}` : ''}
 
 Contraintes par plateforme :
 - Instagram : commence par 🎾 ou 🏸, 5-7 hashtags (#padel #padelfrance #${tag} #${(grade || 'tournoi').toLowerCase()} #fft)
@@ -76,12 +80,14 @@ export function padelWeeklySchedulePromptAll(
   clubName: string,
   weekStart: Date,
   weekEnd: Date,
-  matches: PadelWeeklyMatch[]
+  matches: PadelWeeklyMatch[],
+  voice: string = 'STANDARD'
 ): string {
   const weekStr = `du ${weekStart.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })} au ${weekEnd.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}`
   const matchList = matches.map(m =>
     `${m.homeAway === 'DOMICILE' ? '🏠' : '✈️'} ${m.teamName} vs ${m.opponent} · ${m.day} ${m.time} · ${m.division}${m.venue ? ` · ${m.venue}` : ''}`
   ).join('\n')
+  const voiceInstruction = getVoiceInstruction(voice)
 
   return `Tu es le community manager du club de padel "${clubName}".
 Rédige les posts réseaux sociaux pour le programme interclubs padel de la semaine ${weekStr}.
@@ -92,6 +98,7 @@ ${matchList}
 Vocabulaire padel interclubs (pour les 3 posts) :
 - "rencontre par équipes" ou "interclubs", "capitaine de piste", "division" (pas "poule")
 - Un match par ligne, emoji domicile 🏠 / extérieur ✈️, mentionne la division
+${voiceInstruction ? `- ${voiceInstruction}` : ''}
 
 Contraintes par plateforme :
 - Instagram : 4-6 hashtags (#padel #interclubs #padelfrance #fft)
@@ -118,10 +125,14 @@ export function padelInterclubResultPromptAll(
   division: string,
   round: string,
   homeAway: 'DOMICILE' | 'EXTERIEUR',
-  scoreDetail: PadelScoreDetail[]
+  scoreDetail: PadelScoreDetail[],
+  voice: string = 'STANDARD',
+  mvpName?: string
 ): string {
   const [us, them] = globalScore.split('-').map(Number)
   const outcome = us > them ? 'victoire' : us < them ? 'défaite' : 'match nul'
+  const voiceInstruction = getVoiceInstruction(voice)
+  const mvpInstruction = mvpName ? `Joueur/joueuse du match à mettre en avant : ${mvpName}. Cite-le/la nommément et valorise sa performance dans au moins un des posts.` : ''
 
   const detailList = scoreDetail.map(s =>
     `${s.pair1} vs ${s.pair2} : ${s.score} → ${s.won ? 'Victoire' : 'Défaite'}`
@@ -147,6 +158,8 @@ Vocabulaire padel (pour les 3 posts) :
 - "paire" ou "duo" (pas "équipe" pour un binôme), "partenaire" pour l'associé
 - "set" et "jeu" pour le score (ex: 6-4, 7-5)
 - ${toneInstruction}
+${voiceInstruction ? `- ${voiceInstruction}` : ''}
+${mvpInstruction ? `- ${mvpInstruction}` : ''}
 
 Contraintes par plateforme :
 - Instagram : 4-5 hashtags (#padel #interclubs #${outcome} #padelfrance)

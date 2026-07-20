@@ -164,6 +164,51 @@ export function formatExtraForPrompt(sport: string, extra: Record<string, unknow
   return lines.length ? '\n' + lines.map(l => `- ${l}`).join('\n') : ''
 }
 
+// ── Vocabulary hints injected verbatim into AI prompts ────────────────────
+export function getVocabHints(sport: string): string {
+  switch (sport) {
+    case 'Football':
+      return `- Un but = "but" (pas "point")
+- Deux périodes de 45 minutes = "première mi-temps", "deuxième mi-temps"
+- Penalty = "penalty" ou "tir au but"
+- Gardien de but = "gardien"
+- Carte jaune/rouge, corner, hors-jeu`
+
+    case 'Tennis':
+      return `- Une manche = "set"
+- Un jeu dans un set = "jeu"
+- Point décisif dans un jeu = "jeu décisif" ou "tie-break"
+- Zéro = "zéro" ou "love"
+- Servir un ace, faire un break, défendre son service
+- En interclubs : "rencontre", "équipe", "capitaine"`
+
+    case 'Basketball':
+      return `- Un panier vaut 2 points, à 3 points derrière la ligne
+- Quart-temps (Q1, Q2, Q3, Q4), prolongation (OT)
+- Rebond offensif/défensif, passe décisive, interception
+- Lay-up, dunk, shoot à mi-distance
+- "Poster" une action = la mettre en valeur`
+
+    case 'Volleyball':
+      return `- On joue en sets (et non en manches ou mi-temps)
+- Gagner un set = atteindre 25 points (15 au tie-break)
+- Ace = service direct gagnant
+- Smash ou attaque, contre (block), réception, passe
+- Le libéro joue en défense
+- Score final en sets : "3 sets à 2"`
+
+    case 'Handball':
+      return `- Un but = "but" (jamais "panier" ou "point")
+- Deux mi-temps de 30 minutes
+- Gardien, tir de 7 mètres, jet franc
+- Pivot, ailier, arrière, demi-centre
+- "Tir en suspension", "contre-attaque"`
+
+    default:
+      return ''
+  }
+}
+
 // ── Score display label (for visuals) ────────────────────────────────────
 export function getScoreLabel(sport: string): string {
   if (sport === 'Volleyball') return 'SETS'

@@ -74,6 +74,10 @@ model Club {
   tennisVisualConfig  Json?
   tenupUrl            String?
   suspended           Boolean              @default(false)
+  automationMode      String               @default("MANUAL") // MANUAL | AUTO_REVIEW | FULL_AUTO
+  telegramChatId      String?
+  telegramLinkCode    String?              @unique
+  contentTone         String               @default("STANDARD") // STANDARD | FUN | SOBER
   createdAt           DateTime             @default(now())
   matches             MatchResult[]
   tournamentSchedules TournamentSchedule[]
@@ -81,6 +85,7 @@ model Club {
   tenupSchedules      TenupSchedule[]
   usageEvents         UsageEvent[]
   socialConnections   SocialConnection[]
+  seasonRecaps        SeasonRecap[]
 }
 
 model SocialConnection {
@@ -181,6 +186,20 @@ model WeeklySchedule {
   posts     GeneratedPost[]
 }
 
+model SeasonRecap {
+  id          String          @id @default(cuid())
+  clubId      String
+  club        Club            @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  periodStart DateTime
+  periodEnd   DateTime
+  wins        Int
+  draws       Int
+  losses      Int
+  rankingNote String?
+  createdAt   DateTime        @default(now())
+  posts       GeneratedPost[]
+}
+
 model GeneratedPost {
   id                   String              @id @default(cuid())
   matchId              String?
@@ -189,9 +208,31 @@ model GeneratedPost {
   tournamentSchedule   TournamentSchedule? @relation(fields: [tournamentScheduleId], references: [id], onDelete: Cascade)
   weeklyScheduleId     String?
   weeklySchedule       WeeklySchedule?     @relation(fields: [weeklyScheduleId], references: [id], onDelete: Cascade)
+  seasonRecapId        String?
+  seasonRecap          SeasonRecap?        @relation(fields: [seasonRecapId], references: [id], onDelete: Cascade)
   platform             String
   content              String              @db.Text
   postType             String              @default("MATCH_RESULT")
+  // DRAFT | PENDING_REVIEW | PUBLISHED | PARTIAL | FAILED | REJECTED
   status               String              @default("DRAFT")
+  imageUrl             String?
+  publishedAt          DateTime?
+  rejectedReason       String?
   createdAt            DateTime            @default(now())
+  telegramMessages     TelegramMessage[]
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+model TelegramMessage {
+  id              String        @id @default(cuid())
+  generatedPostId String
+  generatedPost   GeneratedPost @relation(fields: [generatedPostId], references: [id], onDelete: Cascade)
+  chatId          String
+  messageId       String
+  kind            String // 'preview' | 'digest'
+  createdAt       DateTime      @default(now())
+
+  @@index([generatedPostId])
 }

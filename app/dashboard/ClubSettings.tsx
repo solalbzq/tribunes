@@ -21,6 +21,10 @@ type Club = {
   visualConfig: unknown
   tennisVisualConfig?: unknown
   tenupUrl?: string | null
+  automationMode: string
+  telegramChatId: string | null
+  automationEnabled: boolean
+  contentTone: string
 }
 
 type ClubProfile = {
@@ -98,7 +102,15 @@ export default function ClubSettings({ club }: { club: Club }) {
   const [logoUrl, setLogoUrl] = useState<string | null>(club.logoUrl)
   const [logoPreview, setLogoPreview] = useState<string | null>(club.logoUrl)
   const [tenupUrl, setTenupUrl] = useState(club.tenupUrl ?? '')
+  const [contentTone, setContentTone] = useState(club.contentTone)
   const [profile, setProfile] = useState<ClubProfile>({ ...EMPTY_PROFILE, ...initialVisualConfig.clubProfile })
+  const [automationMode, setAutomationMode] = useState(club.automationMode)
+  const [savingAutomation, setSavingAutomation] = useState(false)
+  const [automationError, setAutomationError] = useState<string | null>(null)
+  const [telegramConnected, setTelegramConnected] = useState(Boolean(club.telegramChatId))
+  const [telegramLinkUrl, setTelegramLinkUrl] = useState<string | null>(null)
+  const [telegramLoading, setTelegramLoading] = useState(false)
+  const [telegramError, setTelegramError] = useState<string | null>(null)
 
   const [mainTab, setMainTab] = useState<'management' | 'art'>('management')
   const [artTab, setArtTab] = useState<'identity' | 'result' | 'tennis'>('identity')
@@ -107,6 +119,66 @@ export default function ClubSettings({ club }: { club: Club }) {
   const [uploading, setUploading] = useState(false)
   const [savedManagement, setSavedManagement] = useState(false)
   const [savedIdentity, setSavedIdentity] = useState(false)
+
+  async function handleChangeAutomationMode(mode: string) {
+    setSavingAutomation(true)
+    setAutomationError(null)
+    const previous = automationMode
+    setAutomationMode(mode)
+    try {
+      const res = await fetch('/api/clubs/automation', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ automationMode: mode }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => null)
+        setAutomationMode(previous)
+        setAutomationError(data?.error ?? 'Échec de la mise à jour du mode.')
+      }
+    } catch {
+      setAutomationMode(previous)
+      setAutomationError('Échec de la mise à jour du mode.')
+    } finally {
+      setSavingAutomation(false)
+    }
+  }
+
+  async function handleConnectTelegram() {
+    setTelegramLoading(true)
+    setTelegramError(null)
+    try {
+      const res = await fetch('/api/telegram/link-code', { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok) {
+        setTelegramError(data.error ?? "Échec de la connexion Telegram.")
+        return
+      }
+      setTelegramLinkUrl(data.linkUrl)
+    } catch {
+      setTelegramError("Échec de la connexion Telegram.")
+    } finally {
+      setTelegramLoading(false)
+    }
+  }
+
+  async function handleDisconnectTelegram() {
+    setTelegramLoading(true)
+    setTelegramError(null)
+    try {
+      const res = await fetch('/api/telegram/link-code', { method: 'DELETE' })
+      if (!res.ok) {
+        setTelegramError("Échec de la déconnexion.")
+        return
+      }
+      setTelegramConnected(false)
+      setTelegramLinkUrl(null)
+    } catch {
+      setTelegramError("Échec de la déconnexion.")
+    } finally {
+      setTelegramLoading(false)
+    }
+  }
 
   const isTennisPadel = sport === 'Tennis' || sport === 'Padel'
   const communitySize = firstNumber(profile.memberCount) || firstNumber(profile.playerCount) + firstNumber(profile.volunteerCount) + firstNumber(profile.staffCount)
@@ -138,6 +210,7 @@ export default function ClubSettings({ club }: { club: Club }) {
         primaryColor: primary,
         secondaryColor: secondary,
         tenupUrl,
+        contentTone,
         ...(extra.visualConfig !== undefined ? { visualConfig: extra.visualConfig } : {}),
         ...(extra.tennisVisualConfig !== undefined ? { tennisVisualConfig: extra.tennisVisualConfig } : {}),
       }),
@@ -216,6 +289,13 @@ export default function ClubSettings({ club }: { club: Club }) {
                 <Field label="Sport principal">
                   <select value={sport} onChange={e => setSport(e.target.value)} className={INPUT}>
                     {SPORTS.map(item => <option key={item} value={item}>{item}</option>)}
+                  </select>
+                </Field>
+                <Field label="Personnalité des posts">
+                  <select value={contentTone} onChange={e => setContentTone(e.target.value)} className={INPUT}>
+                    <option value="STANDARD">Standard</option>
+                    <option value="FUN">Fun et décontractée</option>
+                    <option value="SOBER">Sobre et factuelle</option>
                   </select>
                 </Field>
                 <Field label="Ville">
@@ -304,10 +384,98 @@ export default function ClubSettings({ club }: { club: Club }) {
               </div>
             </div>
 
+            <div className="bg-white rounded-card border border-line shadow-card p-6 space-y-5">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand">Automatisation</p>
+                <h3 className="text-xl font-extrabold text-[#111827] mt-2">Mode de publication</h3>
+                <p className="text-sm text-gray-500 mt-1">
+                  Choisis comment les posts générés sont traités après leur création.
+                  {!club.automationEnabled && ' Les modes automatiques nécessitent le plan Pro.'}
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                {[
+                  { value: 'MANUAL', label: 'Manuel', desc: 'Tu relis et publies chaque post toi-même depuis le dashboard.' },
+                  { value: 'AUTO_REVIEW', label: 'Auto + validation', desc: 'Chaque post t\'est envoyé sur Telegram pour validation en un tap avant publication.' },
+                  { value: 'FULL_AUTO', label: 'Automatique', desc: 'Les posts sont publiés immédiatement, sans validation.' },
+                ].map(opt => {
+                  const locked = opt.value !== 'MANUAL' && !club.automationEnabled
+                  return (
+                    <label
+                      key={opt.value}
+                      className={`flex items-start gap-3 rounded-xl border p-3 transition ${
+                        locked ? 'opacity-50 cursor-not-allowed border-gray-200' :
+                        automationMode === opt.value ? 'border-[#2563eb] bg-[#2563eb]/5' : 'border-gray-200 cursor-pointer hover:border-gray-300'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="automationMode"
+                        checked={automationMode === opt.value}
+                        disabled={locked || savingAutomation}
+                        onChange={() => handleChangeAutomationMode(opt.value)}
+                        className="mt-1 h-4 w-4 accent-[#2563eb]"
+                      />
+                      <div>
+                        <p className="text-sm font-semibold text-[#111827]">{opt.label}</p>
+                        <p className="text-xs text-gray-500">{opt.desc}</p>
+                      </div>
+                    </label>
+                  )
+                })}
+              </div>
+              {automationError && <p className="text-xs text-red-500">{automationError}</p>}
+            </div>
+
+            <div className="bg-white rounded-card border border-line shadow-card p-6 space-y-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand">Telegram</p>
+                <h3 className="text-xl font-extrabold text-[#111827] mt-2">Validation depuis le téléphone</h3>
+                <p className="text-sm text-gray-500 mt-1">
+                  En mode Auto + validation, chaque post t&apos;est envoyé sur ce chat avec des boutons Publier/Rejeter.
+                </p>
+              </div>
+
+              {telegramConnected ? (
+                <div className="flex items-center justify-between rounded-xl bg-[#111827]/5 p-3">
+                  <p className="text-sm font-semibold text-[#111827]">✅ Chat Telegram connecté</p>
+                  <button
+                    onClick={handleDisconnectTelegram}
+                    disabled={telegramLoading}
+                    className="text-xs font-semibold text-red-500 hover:text-red-600 transition disabled:opacity-60"
+                  >
+                    {telegramLoading ? 'Déconnexion...' : 'Déconnecter'}
+                  </button>
+                </div>
+              ) : telegramLinkUrl ? (
+                <div className="space-y-2">
+                  <a
+                    href={telegramLinkUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex w-full items-center justify-center py-3 rounded-xl bg-[#2563eb] text-white text-sm font-semibold hover:bg-[#1d4fd8] transition"
+                  >
+                    Ouvrir Telegram pour lier le chat
+                  </a>
+                  <p className="text-xs text-gray-400">Le lien ouvre une discussion avec le bot Tribunes ; envoie /start si ce n&apos;est pas automatique.</p>
+                </div>
+              ) : (
+                <button
+                  onClick={handleConnectTelegram}
+                  disabled={telegramLoading}
+                  className="w-full py-3 rounded-xl border-2 border-dashed border-gray-200 text-sm font-semibold text-gray-500 hover:border-[#2563eb] hover:text-[#2563eb] transition disabled:opacity-60"
+                >
+                  {telegramLoading ? 'Génération du lien...' : 'Connecter Telegram'}
+                </button>
+              )}
+              {telegramError && <p className="text-xs text-red-500">{telegramError}</p>}
+            </div>
+
             {isTennisPadel && (
               <div className="bg-white rounded-card border border-line shadow-card p-6 space-y-5">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand">Automatisation</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand">Ten&apos;Up</p>
                   <h3 className="text-xl font-extrabold text-[#111827] mt-2">Lien Ten'Up du club</h3>
                   <p className="text-sm text-gray-500 mt-1">Colle l'adresse de la page Ten'Up de ton club (tenup.fft.fr). Elle permettra de recuperer automatiquement le programme de la semaine ou du jour dans l'onglet Programme.</p>
                 </div>

@@ -3,7 +3,9 @@
 import { useRef, useState } from 'react'
 import { PageHeader, FIELD, FieldLabel } from '../ui'
 import { Icon } from '../icons'
+import { ErrorNotice, toUiError, type UiError } from '../apiError'
 import TennisActions from './TennisActions'
+import ToneSelector from '../ToneSelector'
 import { TennisResultVisual, type TennisVisualConfig, DEFAULT_TENNIS_CONFIG } from './TennisVisualGenerator'
 
 type Club = {
@@ -27,9 +29,11 @@ export default function TennisResultSection({ club }: { club: Club }) {
   const [clubScore, setClubScore] = useState('')
   const [oppScore, setOppScore] = useState('')
   const [details, setDetails] = useState<Detail[]>([])
+  const [mvpName, setMvpName] = useState('')
+  const [tone, setTone] = useState('')
 
   const [reading, setReading] = useState(false)
-  const [error, setError] = useState('')
+  const [error, setError] = useState<UiError>(null)
   const [matchResultId, setMatchResultId] = useState<string | null>(null)
   const [aiPosts, setAiPosts] = useState<Posts | null>(null)
   const [generatingCaption, setGeneratingCaption] = useState(false)
@@ -37,14 +41,14 @@ export default function TennisResultSection({ club }: { club: Club }) {
   const hasScore = clubScore !== '' && oppScore !== '' && opponent.trim() !== ''
 
   async function handleVision(file: File) {
-    setReading(true); setError('')
+    setReading(true); setError(null)
     const fd = new FormData()
     fd.append('image', file)
     fd.append('hint', 'resultat')
     try {
       const res = await fetch('/api/tennis/ingest', { method: 'POST', body: fd })
       const json = await res.json()
-      if (!res.ok) { setError(json.error ?? 'Lecture impossible'); return }
+      if (!res.ok) { setError(toUiError(json, 'Lecture impossible')); return }
       const d = json.data ?? {}
       if (d.teamName) setTeamName(d.teamName)
       if (d.opponent) setOpponent(d.opponent)
@@ -58,7 +62,7 @@ export default function TennisResultSection({ club }: { club: Club }) {
       if (Array.isArray(d.details)) setDetails(d.details)
       setMatchResultId(null); setAiPosts(null)
     } catch {
-      setError('Erreur lors de la lecture de la capture.')
+      setError({ message: 'Erreur lors de la lecture de la capture.', quota: false })
     } finally {
       setReading(false)
     }
@@ -73,22 +77,22 @@ export default function TennisResultSection({ club }: { club: Club }) {
       }),
     })
     const json = await res.json()
-    if (!res.ok) { setError(json.error ?? 'Enregistrement impossible'); return null }
+    if (!res.ok) { setError(toUiError(json, 'Enregistrement impossible')); return null }
     setMatchResultId(json.matchResultId)
     return json.matchResultId
   }
 
   async function generateCaption() {
-    setGeneratingCaption(true); setError('')
+    setGeneratingCaption(true); setError(null)
     const id = matchResultId ?? (await saveResult())
     if (!id) { setGeneratingCaption(false); return }
     const res = await fetch('/api/posts/tennis/interclub/result', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ matchResultId: id, regenerate: !!aiPosts }),
+      body: JSON.stringify({ matchResultId: id, regenerate: !!aiPosts, tone: tone || undefined, mvpName: mvpName || undefined }),
     })
     const json = await res.json()
     setGeneratingCaption(false)
-    if (!res.ok) { setError(json.error ?? 'Génération impossible'); return }
+    if (!res.ok) { setError(toUiError(json, 'Génération impossible')); return }
     setAiPosts(json.posts)
   }
 
@@ -156,9 +160,14 @@ export default function TennisResultSection({ club }: { club: Club }) {
             <p className="mt-2 text-xs text-muted">{details.length} match(s) détaillé(s) importé(s) — utilisés dans la légende.</p>
           )}
         </div>
+
+        <div>
+          <FieldLabel>Joueur·se du match (optionnel)</FieldLabel>
+          <input className={FIELD} value={mvpName} onChange={e => setMvpName(e.target.value)} placeholder="Ex: Camille Martin" />
+        </div>
       </div>
 
-      {error && <p className="rounded-btn bg-red-50 p-3 text-sm text-red-600">{error}</p>}
+      <ErrorNotice error={error} />
 
       {/* Aperçu + actions */}
       {hasScore && (
@@ -169,6 +178,7 @@ export default function TennisResultSection({ club }: { club: Club }) {
             config={cfg}
             onCanvasReady={c => { canvasRef.current = c }}
           />
+          <ToneSelector value={tone} onChange={setTone} />
           <TennisActions
             getImageBlob={getImageBlob}
             defaultCaption={defaultCaption}

@@ -9,8 +9,11 @@ import TennisProgrammeSection from './TennisProgrammeSection'
 import TennisResultSection from './TennisResultSection'
 import TennisActions from './TennisActions'
 import TennisVisualGenerator, { type TennisVisualConfig, DEFAULT_TENNIS_CONFIG } from './TennisVisualGenerator'
+import ToneSelector from '../ToneSelector'
+import SeasonRecapTab from '../SeasonRecapTab'
 import { PageHeader, Segmented, GhostButton } from '../ui'
 import { Icon } from '../icons'
+import { ErrorNotice, toUiError, type UiError } from '../apiError'
 
 type Club = {
   name: string
@@ -140,6 +143,7 @@ function TournamentSection({ club }: { club: Club }) {
   const [clubNameFilter, setClubNameFilter] = useState(club.name)
   const [grade, setGrade] = useState('P100')
   const [platforms, setPlatforms] = useState<Platform[]>(['instagram', 'facebook', 'whatsapp'])
+  const [tone, setTone] = useState('')
   const [parsing, setParsing] = useState(false)
   const [generating, setGenerating] = useState(false)
   const [parseResult, setParseResult] = useState<{
@@ -151,7 +155,7 @@ function TournamentSection({ club }: { club: Club }) {
   } | null>(null)
   const [posts, setPosts] = useState<Record<string, string> | null>(null)
   const [showVisualOnly, setShowVisualOnly] = useState(false)
-  const [error, setError] = useState('')
+  const [error, setError] = useState<UiError>(null)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   async function getImageBlob(): Promise<Blob | null> {
     const canvas = canvasRef.current
@@ -161,28 +165,28 @@ function TournamentSection({ club }: { club: Club }) {
 
   async function handleParse() {
     if (!file) return
-    setParsing(true); setError(''); setPosts(null); setShowVisualOnly(false)
+    setParsing(true); setError(null); setPosts(null); setShowVisualOnly(false)
     const fd = new FormData()
     fd.append('pdfFile', file)
     fd.append('clubName', clubNameFilter)
     const res = await fetch('/api/posts/tennis/tournament/parse', { method: 'POST', body: fd })
     const data = await res.json()
     setParsing(false)
-    if (!res.ok) { setError(data.error); return }
+    if (!res.ok) { setError(toUiError(data, 'Analyse du PDF impossible')); return }
     setParseResult({ ...data, venue: data.venue ?? '' })
   }
 
   async function handleGenerate(regenerate = false) {
     if (!parseResult) return
-    setGenerating(true); setError('')
+    setGenerating(true); setError(null)
     const res = await fetch('/api/posts/tennis/tournament/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ scheduleId: parseResult.scheduleId, platforms, grade, regenerate }),
+      body: JSON.stringify({ scheduleId: parseResult.scheduleId, platforms, grade, regenerate, tone: tone || undefined }),
     })
     const data = await res.json()
     setGenerating(false)
-    if (!res.ok) { setError(data.error); return }
+    if (!res.ok) { setError(toUiError(data, 'Génération impossible')); return }
     setPosts(data.posts)
   }
 
@@ -308,6 +312,7 @@ function TournamentSection({ club }: { club: Club }) {
                   ))}
                 </div>
               </div>
+              <ToneSelector value={tone} onChange={setTone} />
               <div className="flex gap-3">
                 <button onClick={() => handleGenerate(false)} disabled={generating || platforms.length === 0}
                   className="flex-1 py-3 bg-[#2563eb] text-white font-bold rounded-xl hover:bg-[#1d4ed8] transition disabled:opacity-60 flex items-center justify-center gap-2">
@@ -350,7 +355,7 @@ function TournamentSection({ club }: { club: Club }) {
           />
         </>
       )}
-      {error && <p className="text-sm text-red-500 bg-red-50 rounded-xl p-4">{error}</p>}
+      <ErrorNotice error={error} />
     </div>
   )
 }
@@ -359,7 +364,7 @@ function TournamentSection({ club }: { club: Club }) {
 // ── Main component ─────────────────────────────────────────────────────────
 
 export default function TennisPadelTab({ club }: { club: Club }) {
-  const [section, setSection] = useState<'match' | 'programme' | 'tournament' | 'results'>('match')
+  const [section, setSection] = useState<'match' | 'programme' | 'tournament' | 'results' | 'recap'>('match')
   const sport = club.sport === 'Padel' ? 'Padel' : 'Tennis'
 
   return (
@@ -378,6 +383,7 @@ export default function TennisPadelTab({ club }: { club: Club }) {
           { key: 'programme', label: 'Programme', icon: 'calendar' },
           { key: 'tournament', label: 'Tournoi FFT', icon: 'fileText' },
           { key: 'results', label: 'Résultats', icon: 'trophy' },
+          { key: 'recap', label: 'Bilan', icon: 'trending' },
         ]}
       />
 
@@ -385,6 +391,7 @@ export default function TennisPadelTab({ club }: { club: Club }) {
       {section === 'programme'  && <TennisProgrammeSection  club={club} />}
       {section === 'tournament' && <TournamentSection       club={club} />}
       {section === 'results'    && <TennisResultSection     club={club} />}
+      {section === 'recap'      && <SeasonRecapTab />}
     </div>
   )
 }

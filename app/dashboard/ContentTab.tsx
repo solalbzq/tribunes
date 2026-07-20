@@ -4,6 +4,8 @@ import { useState } from 'react'
 import GenerateForm from './GenerateForm'
 import PostsResult from './PostsResult'
 import ProgrammeTab from './ProgrammeTab'
+import TournamentTab from './TournamentTab'
+import SeasonRecapTab from './SeasonRecapTab'
 import VisualGenerator from './VisualGenerator'
 import TennisPadelTab from './posts/TennisPadelTab'
 import type { TennisVisualConfig } from './posts/TennisVisualGenerator'
@@ -34,7 +36,7 @@ type PostIds = Partial<Record<'instagram' | 'facebook' | 'whatsapp', string>>
 
 export default function ContentTab({ club }: { club: Club }) {
   const isTennisPadel = club.sport === 'Tennis' || club.sport === 'Padel'
-  const [section, setSection] = useState<'match' | 'programme'>('match')
+  const [section, setSection] = useState<'match' | 'programme' | 'tournament' | 'recap'>('match')
   const [generatedPosts, setGeneratedPosts] = useState<{ instagram: string; facebook: string; whatsapp: string } | null>(null)
   const [generatedPostIds, setGeneratedPostIds] = useState<PostIds | null>(null)
   const [generatedMatch, setGeneratedMatch] = useState<MatchData | null>(null)
@@ -70,6 +72,8 @@ export default function ContentTab({ club }: { club: Club }) {
         items={[
           { key: 'match', label: 'Post de match', icon: 'target' },
           { key: 'programme', label: 'Programme', icon: 'calendar' },
+          { key: 'tournament', label: 'Tournoi', icon: 'trophy' },
+          { key: 'recap', label: 'Bilan', icon: 'trending' },
         ]}
       />
 
@@ -118,6 +122,8 @@ export default function ContentTab({ club }: { club: Club }) {
       )}
 
       {section === 'programme' && <ProgrammeTab club={club} />}
+      {section === 'tournament' && <TournamentTab />}
+      {section === 'recap' && <SeasonRecapTab />}
     </div>
   )
 }

@@ -9,7 +9,6 @@ const AVG_INPUT_TOKENS = 1100
 const AVG_OUTPUT_TOKENS = 350
 
 const SPORTS = ['Football', 'Basketball', 'Handball', 'Volleyball', 'Tennis']
-const PLANS = ['FREE', 'PRO', 'STRUCTURE']
 
 function startOfToday() {
   const now = new Date()
@@ -58,8 +57,8 @@ export async function GET(request: NextRequest) {
     recentClubs,
     // Plans
     countFree,
+    countClub,
     countPro,
-    countStructure,
     // Sports
     countFootball,
     countBasketball,
@@ -89,8 +88,8 @@ export async function GET(request: NextRequest) {
       select: { name: true, sport: true, createdAt: true },
     }),
     prisma.organization.count({ where: { plan: 'FREE' } }),
+    prisma.organization.count({ where: { plan: 'CLUB' } }),
     prisma.organization.count({ where: { plan: 'PRO' } }),
-    prisma.organization.count({ where: { plan: 'STRUCTURE' } }),
     prisma.club.count({ where: { sport: 'Football' } }),
     prisma.club.count({ where: { sport: 'Basketball' } }),
     prisma.club.count({ where: { sport: 'Handball' } }),
@@ -118,8 +117,8 @@ export async function GET(request: NextRequest) {
 
   const planCounts: Record<string, number> = {
     FREE: countFree,
+    CLUB: countClub,
     PRO: countPro,
-    STRUCTURE: countStructure,
   }
 
   const rawSportCounts = [countFootball, countBasketball, countHandball, countVolleyball, countTennis]
@@ -127,8 +126,6 @@ export async function GET(request: NextRequest) {
     .map((sport, i) => ({ sport, count: rawSportCounts[i] }))
     .filter((s) => s.count > 0)
     .sort((a, b) => b.count - a.count)
-
-  void PLANS // used for planCounts
 
   return NextResponse.json({
     totalEntries,

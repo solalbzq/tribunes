@@ -1,5 +1,6 @@
 import type { TournamentMatch } from '../services/fft-pdf-parser'
 import { MULTI_PLATFORM_FORMAT } from './splitPlatforms'
+import { getVoiceInstruction } from '../voice'
 
 function formatMatchList(matches: TournamentMatch[]): string {
   return matches.map(m => {
@@ -17,11 +18,13 @@ export function tournamentSchedulePromptAll(
   tournamentName: string,
   matchDate: Date,
   venue: string,
-  clubMatches: TournamentMatch[]
+  clubMatches: TournamentMatch[],
+  voice: string = 'STANDARD'
 ): string {
   const dateStr = matchDate.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
   const matchList = formatMatchList(clubMatches)
   const tag = clubName.toLowerCase().replace(/\s/g, '')
+  const voiceInstruction = getVoiceInstruction(voice)
 
   return `Tu es le community manager du club de tennis "${clubName}".
 Rédige les posts réseaux sociaux pour annoncer la programmation de nos joueurs au tournoi "${tournamentName}".
@@ -37,6 +40,7 @@ Consignes générales (valables pour les 3 posts) :
 - Cite chaque joueur/joueuse nominalement et son horaire précis
 - Mentionne la catégorie du match (ex: Hommes 15/1, Dames 4/6)
 - Ton enthousiaste et fédérateur, appelle les supporters à venir
+${voiceInstruction ? `- ${voiceInstruction}` : ''}
 
 Contraintes par plateforme :
 - Instagram : max 2200 caractères, commence par 🎾, une ligne par joueur, 5 à 8 hashtags en fin (#tennis #tournoi #${tag} #fft)
@@ -62,13 +66,15 @@ export function weeklySchedulePromptAll(
   clubName: string,
   weekStart: Date,
   weekEnd: Date,
-  matches: WeeklyMatch[]
+  matches: WeeklyMatch[],
+  voice: string = 'STANDARD'
 ): string {
   const weekStr = `du ${weekStart.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })} au ${weekEnd.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}`
   const tag = clubName.toLowerCase().replace(/\s/g, '')
   const matchList = matches.map(m =>
     `${m.homeAway === 'DOMICILE' ? '🏠' : '✈️'} ${m.teamName} vs ${m.opponent} · ${m.day} ${m.time} · ${m.division}${m.venue ? ` · ${m.venue}` : ''}`
   ).join('\n')
+  const voiceInstruction = getVoiceInstruction(voice)
 
   return `Tu es le community manager du club de tennis "${clubName}".
 Rédige les posts réseaux sociaux pour annoncer le programme des matchs interclubs de la semaine ${weekStr}.
@@ -81,6 +87,7 @@ Consignes générales (valables pour les 3 posts) :
 - Un match par ligne avec l'emoji 🏠 domicile ou ✈️ extérieur
 - Mentionne la division pour chaque équipe
 - Ton mobilisateur : appelle à venir soutenir
+${voiceInstruction ? `- ${voiceInstruction}` : ''}
 
 Contraintes par plateforme :
 - Instagram : dynamique, 4 à 6 hashtags (#tennis #interclubs #${tag} #fft)
@@ -108,11 +115,15 @@ export function interclubResultPromptAll(
   division: string,
   round: string,
   homeAway: 'DOMICILE' | 'EXTERIEUR',
-  scoreDetail: ScoreDetail[]
+  scoreDetail: ScoreDetail[],
+  voice: string = 'STANDARD',
+  mvpName?: string
 ): string {
   const [us, them] = globalScore.split('-').map(Number)
   const outcome = us > them ? 'victoire' : us < them ? 'défaite' : 'match nul'
   const tag = clubName.toLowerCase().replace(/\s/g, '')
+  const voiceInstruction = getVoiceInstruction(voice)
+  const mvpInstruction = mvpName ? `Joueur/joueuse du match à mettre en avant : ${mvpName}. Cite-le/la nommément et valorise sa performance dans au moins un des posts.` : ''
 
   const detailList = scoreDetail.map(s =>
     `${s.type === 'DOUBLE' ? '(Double) ' : ''}${s.player} vs ${s.opponent} : ${s.score} → ${s.won ? 'Victoire' : 'Défaite'}`
@@ -139,6 +150,8 @@ Consignes générales (valables pour les 3 posts) :
 - Cite le score global en évidence (${globalScore})
 - Vocabulaire tennis précis : "simple", "double", "set", "jeu"
 - Mention de l'adversaire respectueusement
+${voiceInstruction ? `- ${voiceInstruction}` : ''}
+${mvpInstruction ? `- ${mvpInstruction}` : ''}
 
 Contraintes par plateforme :
 - Instagram : dynamique, 4-6 hashtags (#tennis #interclubs #${outcome} #fft #${tag})

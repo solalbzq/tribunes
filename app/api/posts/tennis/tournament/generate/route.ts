@@ -6,6 +6,8 @@ import { tournamentSchedulePromptAll } from '@/lib/prompts/tennis-posts'
 import { padelTournamentSchedulePromptAll } from '@/lib/prompts/padel-posts'
 import { splitPlatformPosts } from '@/lib/prompts/splitPlatforms'
 import { logAiUsage } from '@/lib/usage'
+import { checkAiQuota, quotaExceededResponse } from '@/lib/quota'
+import { resolveInitialStatus, runAutomationSideEffects } from '@/lib/automation'
 import type { TournamentMatch } from '@/lib/services/fft-pdf-parser'
 import type { ChatCompletion } from 'openai/resources/chat/completions'
 
@@ -36,7 +38,7 @@ export async function POST(req: Request) {
   const club = await prisma.club.findUnique({ where: { userId: user.id } })
   if (!club) return NextResponse.json({ error: 'Club not found' }, { status: 404 })
 
-  const { scheduleId, platforms = PLATFORMS, grade = '', regenerate = false } = await req.json()
+  const { scheduleId, platforms = PLATFORMS, grade = '', regenerate = false, tone } = await req.json()
   if (!scheduleId) return NextResponse.json({ error: 'scheduleId manquant' }, { status: 400 })
 
   const schedule = await prisma.tournamentSchedule.findUnique({
@@ -55,6 +57,10 @@ export async function POST(req: Request) {
     }
   }
 
+  // Quota vérifié après le cache : relire des posts existants reste gratuit.
+  const quota = await checkAiQuota(club)
+  if (!quota.allowed) return quotaExceededResponse(quota)
+
   const parsed = schedule.parsedData as { clubMatches: TournamentMatch[] }
   const clubMatches = parsed.clubMatches ?? []
 
@@ -63,11 +69,12 @@ export async function POST(req: Request) {
   }
 
   const isPadel = schedule.sport === 'PADEL'
+  const voice = tone || club.contentTone
 
   // Un seul appel IA pour les 3 plateformes.
   const prompt = isPadel
-    ? padelTournamentSchedulePromptAll(club.name, schedule.tournamentName, grade, schedule.matchDate, schedule.venue, clubMatches)
-    : tournamentSchedulePromptAll(club.name, schedule.tournamentName, schedule.matchDate, schedule.venue, clubMatches)
+    ? padelTournamentSchedulePromptAll(club.name, schedule.tournamentName, grade, schedule.matchDate, schedule.venue, clubMatches, voice)
+    : tournamentSchedulePromptAll(club.name, schedule.tournamentName, schedule.matchDate, schedule.venue, clubMatches, voice)
 
   const completion = await completeWithRetry(prompt)
   await logAiUsage(club.id, completion, 'gpt-4o', { route: 'tournament/generate' })
@@ -77,17 +84,24 @@ export async function POST(req: Request) {
   const posts: Record<string, string> = {}
   for (const platform of requested) posts[platform] = all[platform]
 
+  const initialStatus = await resolveInitialStatus(club)
+
   // Remplace les anciens posts de cette programmation.
   await prisma.generatedPost.deleteMany({ where: { tournamentScheduleId: scheduleId, postType: 'TOURNAMENT_SCHEDULE' } })
-  await prisma.generatedPost.createMany({
-    data: Object.entries(posts).map(([platform, content]) => ({
-      tournamentScheduleId: scheduleId,
-      platform,
-      content,
-      postType: 'TOURNAMENT_SCHEDULE',
-      status: 'DRAFT',
-    })),
-  })
+  const created = await prisma.$transaction(
+    Object.entries(posts).map(([platform, content]) =>
+      prisma.generatedPost.create({
+        data: {
+          tournamentScheduleId: scheduleId,
+          platform,
+          content,
+          postType: 'TOURNAMENT_SCHEDULE',
+          status: initialStatus,
+        },
+      })
+    )
+  )
+  await runAutomationSideEffects(club, created)
 
   return NextResponse.json({ posts, scheduleId })
 }

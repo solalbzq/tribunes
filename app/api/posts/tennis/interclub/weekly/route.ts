@@ -6,6 +6,8 @@ import { weeklySchedulePromptAll } from '@/lib/prompts/tennis-posts'
 import { padelWeeklySchedulePromptAll } from '@/lib/prompts/padel-posts'
 import { splitPlatformPosts } from '@/lib/prompts/splitPlatforms'
 import { logAiUsage } from '@/lib/usage'
+import { checkAiQuota, quotaExceededResponse } from '@/lib/quota'
+import { resolveInitialStatus, runAutomationSideEffects } from '@/lib/automation'
 
 export async function POST(req: Request) {
   const supabase = createClient()
@@ -15,8 +17,12 @@ export async function POST(req: Request) {
   const club = await prisma.club.findUnique({ where: { userId: user.id } })
   if (!club) return NextResponse.json({ error: 'Club not found' }, { status: 404 })
 
-  const { weekStart: weekStartRaw, platforms = ['instagram', 'facebook', 'whatsapp'] } = await req.json()
+  const quota = await checkAiQuota(club)
+  if (!quota.allowed) return quotaExceededResponse(quota)
+
+  const { weekStart: weekStartRaw, platforms = ['instagram', 'facebook', 'whatsapp'], tone } = await req.json()
   if (!weekStartRaw) return NextResponse.json({ error: 'weekStart manquant' }, { status: 400 })
+  const voice = tone || club.contentTone
 
   const weekStart = new Date(weekStartRaw)
   const weekEnd = new Date(weekStart)
@@ -51,8 +57,8 @@ export async function POST(req: Request) {
 
   // Un seul appel IA pour les 3 plateformes (puis découpage).
   const prompt = isPadel
-    ? padelWeeklySchedulePromptAll(club.name, weekStart, weekEnd, weeklyMatches)
-    : weeklySchedulePromptAll(club.name, weekStart, weekEnd, weeklyMatches)
+    ? padelWeeklySchedulePromptAll(club.name, weekStart, weekEnd, weeklyMatches, voice)
+    : weeklySchedulePromptAll(club.name, weekStart, weekEnd, weeklyMatches, voice)
 
   const completion = await openai.chat.completions.create({
     model: 'gpt-4o',
@@ -65,6 +71,8 @@ export async function POST(req: Request) {
   const requested = platforms as Array<'instagram' | 'facebook' | 'whatsapp'>
   const posts: Record<string, string> = {}
   for (const platform of requested) posts[platform] = all[platform]
+
+  const initialStatus = await resolveInitialStatus(club)
 
   // Save WeeklySchedule + posts
   const weekly = await prisma.weeklySchedule.create({
@@ -79,11 +87,14 @@ export async function POST(req: Request) {
           platform,
           content,
           postType: 'WEEKLY_SCHEDULE',
-          status: 'DRAFT',
+          status: initialStatus,
         })),
       },
     },
+    include: { posts: true },
   })
+
+  await runAutomationSideEffects(club, weekly.posts)
 
   return NextResponse.json({ weeklyScheduleId: weekly.id, posts, matches: weeklyMatches })
 }

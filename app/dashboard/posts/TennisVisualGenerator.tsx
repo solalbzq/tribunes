@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { loadImage, roundRect } from '@/lib/visualLayout'
+import { loadImage, roundRect, drawWatermark } from '@/lib/visualLayout'
 import type { TournamentMatch } from '@/lib/services/fft-pdf-parser'
 
 const SIZE = 1080
@@ -130,6 +130,7 @@ type Club = {
   primaryColor: string
   secondaryColor: string
   logoUrl?: string | null
+  watermark?: boolean
 }
 
 // ── Palette & fond partagés (schedule + résultat) ──────────────────────────
@@ -574,6 +575,8 @@ export async function drawTournamentSchedule(
     ctx.fillStyle = cfg.preset === 'neon' ? withAlpha(neon, 0.55) : colors.footerText
     ctx.fillText(tag, SIZE - 56, SIZE - 40)
   }
+
+  if (club.watermark) drawWatermark(ctx, SIZE, footerH)
 }
 
 // ── Visuel RÉSULTAT (score global) ──────────────────────────────────────────
@@ -708,6 +711,8 @@ export async function drawTennisResult(
     ctx.font = `700 ${Math.round(24 * fs)}px Inter, sans-serif`
     ctx.fillText(cfg.footerTag || 'tribunes.app', 56, SIZE - 80 + 28)
   }
+
+  if (club.watermark) drawWatermark(ctx, SIZE, cfg.showFooter ? 80 : 0)
 }
 
 // ── Aperçu du visuel RÉSULTAT (canvas exposé) ───────────────────────────────

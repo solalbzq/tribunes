@@ -128,6 +128,27 @@ export function roundRect(
   ctx.closePath()
 }
 
+/**
+ * Filigrane "Tribunes" (plan gratuit) : discret, bas droite, lisible sur tout
+ * fond. `offsetBottom` permet de remonter au-dessus d'un footer éventuel.
+ */
+export function drawWatermark(
+  ctx: CanvasRenderingContext2D,
+  size: number,
+  offsetBottom = 0
+) {
+  ctx.save()
+  ctx.globalAlpha = 0.55
+  ctx.font = `800 ${Math.round(size * 0.026)}px Inter, sans-serif`
+  ctx.textAlign = 'right'
+  ctx.textBaseline = 'bottom'
+  ctx.shadowColor = 'rgba(0,0,0,0.45)'
+  ctx.shadowBlur = 6
+  ctx.fillStyle = '#ffffff'
+  ctx.fillText('⚡ Tribunes', size - 28, size - offsetBottom - 20)
+  ctx.restore()
+}
+
 // Shared draw function used by both VisualEditor and VisualGenerator
 export type DrawMatchData = {
   clubName: string

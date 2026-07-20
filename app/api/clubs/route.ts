@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { prisma } from '@/lib/prisma'
+import { CLUB_VOICES } from '@/lib/voice'
 
 export async function POST(req: Request) {
   const supabase = createClient()
@@ -11,7 +12,7 @@ export async function POST(req: Request) {
     : await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { name, sport, primaryColor, secondaryColor, visualConfig, tennisVisualConfig, tenupUrl } = await req.json()
+  const { name, sport, primaryColor, secondaryColor, visualConfig, tennisVisualConfig, tenupUrl, contentTone } = await req.json()
   if (!name || !sport) return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
 
   const data = {
@@ -21,6 +22,7 @@ export async function POST(req: Request) {
     ...(visualConfig !== undefined ? { visualConfig } : {}),
     ...(tennisVisualConfig !== undefined ? { tennisVisualConfig } : {}),
     ...(tenupUrl !== undefined ? { tenupUrl: tenupUrl || null } : {}),
+    ...(contentTone !== undefined && CLUB_VOICES.includes(contentTone) ? { contentTone } : {}),
   }
 
   const club = await prisma.club.upsert({

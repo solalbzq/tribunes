@@ -3,8 +3,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { ensureAdmin } from '@/lib/admin-auth'
 import { prisma } from '@/lib/prisma'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { PLAN_KEYS } from '@/lib/plans'
 
-const VALID_PLANS = ['FREE', 'PRO', 'STRUCTURE']
+const VALID_PLANS: string[] = PLAN_KEYS
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   if (!(await ensureAdmin(request))) {
