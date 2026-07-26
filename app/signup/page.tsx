@@ -207,6 +207,11 @@ export default function SignupPage() {
               <button type="submit" disabled={loading} className="w-full bg-[#2563eb] text-white font-bold py-3 rounded-xl hover:bg-[#1d4ed8] transition disabled:opacity-60">
                 {loading ? 'Création en cours...' : 'Créer mon compte ✓'}
               </button>
+              <p className="text-center text-xs text-gray-400">
+                En créant un compte, tu acceptes nos{' '}
+                <Link href="/cgv" className="underline hover:text-gray-600">CGV</Link> et notre{' '}
+                <Link href="/confidentialite" className="underline hover:text-gray-600">politique de confidentialité</Link>.
+              </p>
             </form>
           )}
         </div>

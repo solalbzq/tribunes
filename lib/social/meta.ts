@@ -4,15 +4,6 @@
 
 const GRAPH = 'https://graph.facebook.com/v21.0'
 
-export const META_SCOPES = [
-  'pages_show_list',
-  'pages_manage_posts',
-  'pages_read_engagement',
-  'business_management',
-  'instagram_basic',
-  'instagram_content_publish',
-].join(',')
-
 export function metaConfigured(): boolean {
   return Boolean(process.env.META_APP_ID && process.env.META_APP_SECRET)
 }
@@ -22,14 +13,23 @@ export function redirectUri(): string {
   return `${base.replace(/\/$/, '')}/api/social/meta/callback`
 }
 
-/** URL de consentement Facebook Login. */
+/**
+ * URL de consentement Facebook Login for Business. Les permissions viennent
+ * de la Configuration (META_CONFIG_ID), pas d'un paramètre scope — scope
+ * n'est plus supporté par ce flux (business_management, pages_*, instagram_*
+ * liés à une Page exigent désormais Facebook Login for Business).
+ */
 export function getAuthUrl(state: string): string {
+  const configId = process.env.META_CONFIG_ID
+  if (!configId) {
+    throw new Error('META_CONFIG_ID manquant — requis pour Facebook Login for Business.')
+  }
   const params = new URLSearchParams({
     client_id: process.env.META_APP_ID!,
     redirect_uri: redirectUri(),
     state,
-    scope: META_SCOPES,
     response_type: 'code',
+    config_id: configId,
   })
   return `https://www.facebook.com/v21.0/dialog/oauth?${params}`
 }
@@ -120,6 +120,21 @@ export async function getPagesWithInstagram(userToken: string): Promise<MetaPage
     pages.push(page)
   }
   return pages
+}
+
+/**
+ * DEBUG TEMPORAIRE — diagnostic du cas "nopages" (Business Login retourne 0
+ * Page malgré consentement + type de jeton + portfolio corrects). À retirer
+ * une fois la cause identifiée.
+ */
+export async function debugTokenInfo(userToken: string) {
+  const [accounts, permissions] = await Promise.all([
+    graph<{ data: unknown[] }>('me/accounts', { access_token: userToken, fields: 'id,name', limit: '50' })
+      .catch(e => ({ error: (e as Error).message })),
+    graph<{ data: Array<{ permission: string; status: string }> }>('me/permissions', { access_token: userToken })
+      .catch(e => ({ error: (e as Error).message })),
+  ])
+  return { accounts, permissions }
 }
 
 /** Publie sur une Page Facebook (photo si imageUrl, sinon texte). */

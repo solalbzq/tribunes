@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { prisma } from '@/lib/prisma'
-import { exchangeCodeForLongLivedToken, getPagesWithInstagram } from '@/lib/social/meta'
+import { exchangeCodeForLongLivedToken, getPagesWithInstagram, debugTokenInfo } from '@/lib/social/meta'
 
 export async function GET(req: NextRequest) {
   const base = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
@@ -67,7 +67,18 @@ export async function GET(req: NextRequest) {
       }
     })
 
-    const res = NextResponse.redirect(`${settingsUrl}&social=${validAccountKeys.size > 0 ? 'connected' : 'nopages'}`)
+    // DEBUG TEMPORAIRE — diagnostic du cas "nopages", à retirer une fois la cause identifiée.
+    // Le détail (comptes/permissions) reste côté serveur uniquement : ne jamais le
+    // faire transiter par l'URL de redirection (historique navigateur, logs proxy, referrer).
+    if (validAccountKeys.size === 0) {
+      const debug = await debugTokenInfo(token)
+      console.error('[social/meta/callback] DEBUG nopages:', JSON.stringify(debug, null, 2))
+      const res = NextResponse.redirect(`${settingsUrl}&social=nopages`)
+      res.cookies.delete('meta_oauth_state')
+      return res
+    }
+
+    const res = NextResponse.redirect(`${settingsUrl}&social=connected`)
     res.cookies.delete('meta_oauth_state')
     return res
   } catch (err) {
