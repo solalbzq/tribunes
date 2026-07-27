@@ -22,10 +22,16 @@ type Club = {
 
 const MAX_PHOTOS = 3
 
-export default function PlayerSpotlightTab({ club }: { club: Club }) {
-  const [playerName, setPlayerName] = useState('')
-  const [achievement, setAchievement] = useState('')
-  const [periodLabel, setPeriodLabel] = useState('')
+export type PlayerSpotlightFormInitialValues = Partial<{
+  playerName: string
+  achievement: string
+  periodLabel: string
+}>
+
+export default function PlayerSpotlightTab({ club, initialValues }: { club: Club; initialValues?: PlayerSpotlightFormInitialValues }) {
+  const [playerName, setPlayerName] = useState(initialValues?.playerName ?? '')
+  const [achievement, setAchievement] = useState(initialValues?.achievement ?? '')
+  const [periodLabel, setPeriodLabel] = useState(initialValues?.periodLabel ?? '')
   const [photoFiles, setPhotoFiles] = useState<(File | null)[]>([null, null, null])
   const [photoPreviews, setPhotoPreviews] = useState<(string | null)[]>([null, null, null])
   const [tone, setTone] = useState('')

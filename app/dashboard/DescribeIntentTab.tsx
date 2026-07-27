@@ -2,10 +2,13 @@
 
 import { useState } from 'react'
 import { PageHeader, PrimaryButton, GhostButton } from './ui'
-import { Icon } from './icons'
 import { ErrorNotice, toUiError, type UiError } from './apiError'
 import type { MatchFormInitialValues } from './GenerateForm'
 import type { AnnouncementFormInitialValues } from './MatchAnnouncementTab'
+import type { ClubAnnouncementFormInitialValues } from './ClubAnnouncementTab'
+import type { PlayerSpotlightFormInitialValues } from './PlayerSpotlightTab'
+import type { SeasonRecapFormInitialValues } from './SeasonRecapTab'
+import type { EngagementPollFormInitialValues } from './EngagementPollTab'
 
 type MatchResultFields = {
   opponent: string | null
@@ -26,42 +29,103 @@ type MatchAnnouncementFields = {
   note: string | null
 }
 
+type ClubAnnouncementFields = {
+  category: 'RECRUITMENT' | 'SPONSOR' | 'CLUB_LIFE'
+  title: string | null
+  description: string | null
+}
+
+type PlayerSpotlightFields = {
+  playerName: string | null
+  achievement: string | null
+  periodLabel: string | null
+}
+
+type SeasonRecapFields = {
+  periodStart: string | null
+  periodEnd: string | null
+  periodLabel: string | null
+  rankingNote: string | null
+}
+
+type EngagementPollFields = {
+  question: string | null
+  options: string[]
+}
+
 type IntentExtractionResult =
   | { intent: 'MATCH_RESULT'; confidence: number; fields: MatchResultFields; missingFields: string[] }
   | { intent: 'MATCH_ANNOUNCEMENT'; confidence: number; fields: MatchAnnouncementFields; missingFields: string[] }
+  | { intent: 'CLUB_ANNOUNCEMENT'; confidence: number; fields: ClubAnnouncementFields; missingFields: string[] }
+  | { intent: 'PLAYER_SPOTLIGHT'; confidence: number; fields: PlayerSpotlightFields; missingFields: string[] }
+  | { intent: 'SEASON_RECAP'; confidence: number; fields: SeasonRecapFields; missingFields: string[] }
+  | { intent: 'ENGAGEMENT_POLL'; confidence: number; fields: EngagementPollFields; missingFields: string[] }
   | { intent: 'UNSUPPORTED'; confidence: number; fields: Record<string, never>; missingFields: [] }
 
-type Target = 'match' | 'announcement'
+type Target = 'match' | 'announcement' | 'clubAnnouncement' | 'playerSpotlight' | 'seasonRecap' | 'engagementPoll'
+
+type ApplyValues =
+  | MatchFormInitialValues
+  | AnnouncementFormInitialValues
+  | ClubAnnouncementFormInitialValues
+  | PlayerSpotlightFormInitialValues
+  | SeasonRecapFormInitialValues
+  | EngagementPollFormInitialValues
+
+const TARGET_LABELS: Record<Target, string> = {
+  match: 'Résultat de match',
+  announcement: 'Annonce de match',
+  clubAnnouncement: 'Annonce du club',
+  playerSpotlight: "Joueur à l'honneur",
+  seasonRecap: 'Bilan de saison',
+  engagementPoll: 'Sondage',
+}
+
+const INTENT_TO_TARGET: Partial<Record<IntentExtractionResult['intent'], Target>> = {
+  MATCH_RESULT: 'match',
+  MATCH_ANNOUNCEMENT: 'announcement',
+  CLUB_ANNOUNCEMENT: 'clubAnnouncement',
+  PLAYER_SPOTLIGHT: 'playerSpotlight',
+  SEASON_RECAP: 'seasonRecap',
+  ENGAGEMENT_POLL: 'engagementPoll',
+}
 
 const RESULT_FIELD_LABELS: Record<keyof MatchResultFields, string> = {
-  opponent: 'Adversaire',
-  isHome: 'Domicile / Extérieur',
-  clubScore: 'Notre score',
-  opponentScore: 'Score adverse',
-  competition: 'Compétition',
-  date: 'Date',
+  opponent: 'Adversaire', isHome: 'Domicile / Extérieur', clubScore: 'Notre score',
+  opponentScore: 'Score adverse', competition: 'Compétition', date: 'Date',
 }
-
 const ANNOUNCEMENT_FIELD_LABELS: Record<keyof MatchAnnouncementFields, string> = {
-  opponent: 'Adversaire',
-  isHome: 'Domicile / Extérieur',
-  matchDate: 'Date',
-  time: 'Heure',
-  venue: 'Lieu',
-  competition: 'Compétition',
-  note: 'À mentionner',
+  opponent: 'Adversaire', isHome: 'Domicile / Extérieur', matchDate: 'Date',
+  time: 'Heure', venue: 'Lieu', competition: 'Compétition', note: 'À mentionner',
+}
+const CLUB_ANNOUNCEMENT_FIELD_LABELS: Record<keyof ClubAnnouncementFields, string> = {
+  category: 'Catégorie', title: 'Titre', description: 'Description',
+}
+const PLAYER_SPOTLIGHT_FIELD_LABELS: Record<keyof PlayerSpotlightFields, string> = {
+  playerName: 'Joueur·se', achievement: 'Performance', periodLabel: 'Période',
+}
+const SEASON_RECAP_FIELD_LABELS: Record<keyof SeasonRecapFields, string> = {
+  periodStart: 'Depuis le', periodEnd: "Jusqu'au", periodLabel: 'Intitulé', rankingNote: 'Classement / fait marquant',
+}
+const ENGAGEMENT_POLL_FIELD_LABELS: Record<keyof EngagementPollFields, string> = {
+  question: 'Question', options: 'Options',
+}
+const CATEGORY_LABELS: Record<ClubAnnouncementFields['category'], string> = {
+  RECRUITMENT: 'Recrutement', SPONSOR: 'Sponsor', CLUB_LIFE: 'Vie du club',
 }
 
-function displayValue(v: string | number | boolean | null): string {
+function displayValue(v: string | number | boolean | string[] | null): string {
   if (v === null) return '—'
+  if (Array.isArray(v)) return v.length ? v.join(' · ') : '—'
   if (typeof v === 'boolean') return v ? 'Domicile' : 'Extérieur'
+  if (typeof v === 'string' && v in CATEGORY_LABELS) return CATEGORY_LABELS[v as ClubAnnouncementFields['category']]
   return String(v)
 }
 
 export default function DescribeIntentTab({
   onApply,
 }: {
-  onApply: (target: Target, values: MatchFormInitialValues | AnnouncementFormInitialValues, sourceText: string) => void
+  onApply: (target: Target, values: ApplyValues, sourceText: string) => void
 }) {
   const [text, setText] = useState('')
   const [loading, setLoading] = useState(false)
@@ -69,8 +133,7 @@ export default function DescribeIntentTab({
   const [result, setResult] = useState<IntentExtractionResult | null>(null)
   const [selectedTarget, setSelectedTarget] = useState<Target | null>(null)
 
-  const detectedTarget: Target | null =
-    result?.intent === 'MATCH_RESULT' ? 'match' : result?.intent === 'MATCH_ANNOUNCEMENT' ? 'announcement' : null
+  const detectedTarget: Target | null = result ? INTENT_TO_TARGET[result.intent] ?? null : null
   const targetChanged = selectedTarget !== null && detectedTarget !== null && selectedTarget !== detectedTarget
 
   async function analyze() {
@@ -86,8 +149,7 @@ export default function DescribeIntentTab({
       if (!res.ok) { setError(toUiError(json, 'Analyse impossible')); return }
       const r = json.result as IntentExtractionResult
       setResult(r)
-      if (r.intent === 'MATCH_RESULT') setSelectedTarget('match')
-      else if (r.intent === 'MATCH_ANNOUNCEMENT') setSelectedTarget('announcement')
+      setSelectedTarget(INTENT_TO_TARGET[r.intent] ?? null)
     } catch {
       setError({ message: "Erreur lors de l'analyse.", quota: false })
     } finally {
@@ -104,31 +166,76 @@ export default function DescribeIntentTab({
   function apply() {
     if (!selectedTarget) return
     const sourceText = text.trim()
+    const matches = !targetChanged && result && INTENT_TO_TARGET[result.intent] === selectedTarget
 
-    if (selectedTarget === 'match') {
-      const fields = !targetChanged && result?.intent === 'MATCH_RESULT' ? result.fields : null
-      if (!fields) { onApply('match', {}, sourceText); return }
-      const isHome = fields.isHome ?? true
-      onApply('match', {
-        opponent: fields.opponent ?? undefined,
-        isHome,
-        homeScore: (isHome ? fields.clubScore : fields.opponentScore) ?? undefined,
-        awayScore: (isHome ? fields.opponentScore : fields.clubScore) ?? undefined,
-        competition: fields.competition ?? undefined,
-        date: fields.date ?? undefined,
-      }, sourceText)
-    } else {
-      const fields = !targetChanged && result?.intent === 'MATCH_ANNOUNCEMENT' ? result.fields : null
-      if (!fields) { onApply('announcement', {}, sourceText); return }
-      onApply('announcement', {
-        opponent: fields.opponent ?? undefined,
-        isHome: fields.isHome ?? undefined,
-        matchDate: fields.matchDate ?? undefined,
-        time: fields.time ?? undefined,
-        venue: fields.venue ?? undefined,
-        competition: fields.competition ?? undefined,
-        note: fields.note ?? undefined,
-      }, sourceText)
+    if (!matches || !result) {
+      onApply(selectedTarget, {}, sourceText)
+      return
+    }
+
+    switch (result.intent) {
+      case 'MATCH_RESULT': {
+        const f = result.fields
+        const isHome = f.isHome ?? true
+        onApply('match', {
+          opponent: f.opponent ?? undefined,
+          isHome,
+          homeScore: (isHome ? f.clubScore : f.opponentScore) ?? undefined,
+          awayScore: (isHome ? f.opponentScore : f.clubScore) ?? undefined,
+          competition: f.competition ?? undefined,
+          date: f.date ?? undefined,
+        }, sourceText)
+        return
+      }
+      case 'MATCH_ANNOUNCEMENT': {
+        const f = result.fields
+        onApply('announcement', {
+          opponent: f.opponent ?? undefined,
+          isHome: f.isHome ?? undefined,
+          matchDate: f.matchDate ?? undefined,
+          time: f.time ?? undefined,
+          venue: f.venue ?? undefined,
+          competition: f.competition ?? undefined,
+          note: f.note ?? undefined,
+        }, sourceText)
+        return
+      }
+      case 'CLUB_ANNOUNCEMENT': {
+        const f = result.fields
+        onApply('clubAnnouncement', {
+          category: f.category,
+          title: f.title ?? undefined,
+          description: f.description ?? undefined,
+        }, sourceText)
+        return
+      }
+      case 'PLAYER_SPOTLIGHT': {
+        const f = result.fields
+        onApply('playerSpotlight', {
+          playerName: f.playerName ?? undefined,
+          achievement: f.achievement ?? undefined,
+          periodLabel: f.periodLabel ?? undefined,
+        }, sourceText)
+        return
+      }
+      case 'SEASON_RECAP': {
+        const f = result.fields
+        onApply('seasonRecap', {
+          periodStart: f.periodStart ?? undefined,
+          periodEnd: f.periodEnd ?? undefined,
+          periodLabel: f.periodLabel ?? undefined,
+          rankingNote: f.rankingNote ?? undefined,
+        }, sourceText)
+        return
+      }
+      case 'ENGAGEMENT_POLL': {
+        const f = result.fields
+        onApply('engagementPoll', {
+          question: f.question ?? undefined,
+          options: f.options.length ? f.options : undefined,
+        }, sourceText)
+        return
+      }
     }
   }
 
@@ -137,7 +244,7 @@ export default function DescribeIntentTab({
       <PageHeader
         icon="sparkles"
         title="Décrivez votre publication"
-        subtitle="Résultat de match ou annonce de match — l'IA prépare le formulaire, vous le vérifiez avant de générer."
+        subtitle="Résultat, annonce de match, annonce du club, joueur à l'honneur, bilan ou sondage — l'IA prépare le formulaire, vous le vérifiez avant de générer."
       />
 
       {!result && (
@@ -147,7 +254,7 @@ export default function DescribeIntentTab({
             onChange={e => setText(e.target.value)}
             rows={4}
             className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#2563eb]/30 resize-none"
-            placeholder="Ex : Annonce le match de l'équipe 1 dimanche à 15h contre Montpellier, ton motivant, pour Instagram et Facebook."
+            placeholder="Ex : Un post pour remercier notre sponsor Decathlon qui équipe l'équipe 1 cette saison."
           />
           <ErrorNotice error={error} />
           <PrimaryButton onClick={analyze} disabled={loading || !text.trim()} loading={loading} icon={loading ? undefined : 'sparkles'}>
@@ -165,39 +272,35 @@ export default function DescribeIntentTab({
 
           {result.intent === 'UNSUPPORTED' ? (
             <p className="text-sm text-gray-600">
-              Je n&apos;ai pas identifié de résultat ni d&apos;annonce de match dans ce texte. Choisis un type ci-dessous pour continuer avec un formulaire vierge, ou reformule ta demande.
+              Je n&apos;ai pas identifié de type de publication pris en charge dans ce texte (le tournoi et le programme de la semaine ne sont pas encore supportés ici). Choisis un type ci-dessous pour continuer avec un formulaire vierge, ou reformule ta demande.
             </p>
           ) : (
             <p className="text-sm text-gray-600">
-              Type détecté : <span className="font-semibold text-ink">{result.intent === 'MATCH_RESULT' ? 'Résultat de match' : 'Annonce de match'}</span>
+              Type détecté : <span className="font-semibold text-ink">{TARGET_LABELS[INTENT_TO_TARGET[result.intent]!]}</span>
               {result.confidence < 0.5 && <span className="ml-2 text-amber-600 font-medium">(confiance faible, vérifie bien les champs)</span>}
             </p>
           )}
 
           <div>
             <p className="text-xs font-semibold text-muted mb-2 uppercase tracking-wider">Type de publication</p>
-            <div className="flex gap-2">
-              <button type="button" onClick={() => setSelectedTarget('match')}
-                className={`flex-1 py-2.5 rounded-xl text-sm font-semibold border transition ${
-                  selectedTarget === 'match' ? 'bg-[#111827] text-white border-[#111827]' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
-                }`}>
-                Résultat de match
-              </button>
-              <button type="button" onClick={() => setSelectedTarget('announcement')}
-                className={`flex-1 py-2.5 rounded-xl text-sm font-semibold border transition ${
-                  selectedTarget === 'announcement' ? 'bg-[#111827] text-white border-[#111827]' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
-                }`}>
-                Annonce de match
-              </button>
+            <div className="grid grid-cols-2 gap-2">
+              {(Object.keys(TARGET_LABELS) as Target[]).map(t => (
+                <button key={t} type="button" onClick={() => setSelectedTarget(t)}
+                  className={`py-2.5 px-3 rounded-xl text-sm font-semibold border transition ${
+                    selectedTarget === t ? 'bg-[#111827] text-white border-[#111827]' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
+                  }`}>
+                  {TARGET_LABELS[t]}
+                </button>
+              ))}
             </div>
           </div>
 
-          {!targetChanged && result.intent === 'MATCH_RESULT' && (
-            <FieldsSummary fields={result.fields} labels={RESULT_FIELD_LABELS} missingFields={result.missingFields} />
-          )}
-          {!targetChanged && result.intent === 'MATCH_ANNOUNCEMENT' && (
-            <FieldsSummary fields={result.fields} labels={ANNOUNCEMENT_FIELD_LABELS} missingFields={result.missingFields} />
-          )}
+          {!targetChanged && result.intent === 'MATCH_RESULT' && <FieldsSummary fields={result.fields} labels={RESULT_FIELD_LABELS} missingFields={result.missingFields} />}
+          {!targetChanged && result.intent === 'MATCH_ANNOUNCEMENT' && <FieldsSummary fields={result.fields} labels={ANNOUNCEMENT_FIELD_LABELS} missingFields={result.missingFields} />}
+          {!targetChanged && result.intent === 'CLUB_ANNOUNCEMENT' && <FieldsSummary fields={result.fields} labels={CLUB_ANNOUNCEMENT_FIELD_LABELS} missingFields={result.missingFields} />}
+          {!targetChanged && result.intent === 'PLAYER_SPOTLIGHT' && <FieldsSummary fields={result.fields} labels={PLAYER_SPOTLIGHT_FIELD_LABELS} missingFields={result.missingFields} />}
+          {!targetChanged && result.intent === 'SEASON_RECAP' && <FieldsSummary fields={result.fields} labels={SEASON_RECAP_FIELD_LABELS} missingFields={result.missingFields} />}
+          {!targetChanged && result.intent === 'ENGAGEMENT_POLL' && <FieldsSummary fields={result.fields} labels={ENGAGEMENT_POLL_FIELD_LABELS} missingFields={result.missingFields} />}
 
           {targetChanged && (
             <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl p-3">
@@ -222,7 +325,7 @@ export default function DescribeIntentTab({
   )
 }
 
-function FieldsSummary<T extends Record<string, string | number | boolean | null>>({
+function FieldsSummary<T extends Record<string, string | number | boolean | string[] | null>>({
   fields,
   labels,
   missingFields,

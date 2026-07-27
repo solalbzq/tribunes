@@ -20,9 +20,19 @@ type Club = {
   logoUrl: string | null
 }
 
-export default function EngagementPollTab({ club }: { club: Club }) {
-  const [question, setQuestion] = useState('')
-  const [options, setOptions] = useState<string[]>(['', ''])
+export type EngagementPollFormInitialValues = Partial<{
+  question: string
+  options: string[]
+}>
+
+function initialOptions(values?: string[]): string[] {
+  const filled = (values ?? []).filter(o => o.trim())
+  return filled.length >= 2 ? filled.slice(0, 4) : ['', '']
+}
+
+export default function EngagementPollTab({ club, initialValues }: { club: Club; initialValues?: EngagementPollFormInitialValues }) {
+  const [question, setQuestion] = useState(initialValues?.question ?? '')
+  const [options, setOptions] = useState<string[]>(initialOptions(initialValues?.options))
   const [tone, setTone] = useState('')
   const [visualFormat, setVisualFormat] = useState<VisualFormat>('post')
   const [generating, setGenerating] = useState(false)

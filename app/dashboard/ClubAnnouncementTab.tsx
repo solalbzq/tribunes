@@ -27,10 +27,16 @@ const CATEGORIES: { key: ClubAnnouncementCategory; label: string }[] = [
   { key: 'CLUB_LIFE', label: 'Vie du club' },
 ]
 
-export default function ClubAnnouncementTab({ club }: { club: Club }) {
-  const [category, setCategory] = useState<ClubAnnouncementCategory>('CLUB_LIFE')
-  const [title, setTitle] = useState('')
-  const [description, setDescription] = useState('')
+export type ClubAnnouncementFormInitialValues = Partial<{
+  category: ClubAnnouncementCategory
+  title: string
+  description: string
+}>
+
+export default function ClubAnnouncementTab({ club, initialValues }: { club: Club; initialValues?: ClubAnnouncementFormInitialValues }) {
+  const [category, setCategory] = useState<ClubAnnouncementCategory>(initialValues?.category ?? 'CLUB_LIFE')
+  const [title, setTitle] = useState(initialValues?.title ?? '')
+  const [description, setDescription] = useState(initialValues?.description ?? '')
   const [ctaText, setCtaText] = useState('')
   const [tone, setTone] = useState('')
   const [visualFormat, setVisualFormat] = useState<VisualFormat>('post')

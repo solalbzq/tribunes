@@ -33,11 +33,18 @@ function today(): string {
  * inclus : s'appuie uniquement sur MatchResult (déjà commun à tous les flux),
  * pas de logique spécifique à un sport.
  */
-export default function SeasonRecapTab({ club }: { club: Club }) {
-  const [periodStart, setPeriodStart] = useState(startOfYear())
-  const [periodEnd, setPeriodEnd] = useState(today())
-  const [periodLabel, setPeriodLabel] = useState('de la saison')
-  const [rankingNote, setRankingNote] = useState('')
+export type SeasonRecapFormInitialValues = Partial<{
+  periodStart: string
+  periodEnd: string
+  periodLabel: string
+  rankingNote: string
+}>
+
+export default function SeasonRecapTab({ club, initialValues }: { club: Club; initialValues?: SeasonRecapFormInitialValues }) {
+  const [periodStart, setPeriodStart] = useState(initialValues?.periodStart ?? startOfYear())
+  const [periodEnd, setPeriodEnd] = useState(initialValues?.periodEnd ?? today())
+  const [periodLabel, setPeriodLabel] = useState(initialValues?.periodLabel ?? 'de la saison')
+  const [rankingNote, setRankingNote] = useState(initialValues?.rankingNote ?? '')
   const [tone, setTone] = useState('')
   const [visualFormat, setVisualFormat] = useState<VisualFormat>('post')
   const [generating, setGenerating] = useState(false)

@@ -5,11 +5,11 @@ import GenerateForm, { type MatchFormInitialValues } from './GenerateForm'
 import PostsResult from './PostsResult'
 import ProgrammeTab from './ProgrammeTab'
 import TournamentTab from './TournamentTab'
-import SeasonRecapTab from './SeasonRecapTab'
+import SeasonRecapTab, { type SeasonRecapFormInitialValues } from './SeasonRecapTab'
 import MatchAnnouncementTab, { type AnnouncementFormInitialValues } from './MatchAnnouncementTab'
-import PlayerSpotlightTab from './PlayerSpotlightTab'
-import ClubAnnouncementTab from './ClubAnnouncementTab'
-import EngagementPollTab from './EngagementPollTab'
+import PlayerSpotlightTab, { type PlayerSpotlightFormInitialValues } from './PlayerSpotlightTab'
+import ClubAnnouncementTab, { type ClubAnnouncementFormInitialValues } from './ClubAnnouncementTab'
+import EngagementPollTab, { type EngagementPollFormInitialValues } from './EngagementPollTab'
 import DescribeIntentTab from './DescribeIntentTab'
 import VisualGenerator from './VisualGenerator'
 import FormatToggle from './FormatToggle'
@@ -44,9 +44,24 @@ type PostIds = Partial<Record<'instagram' | 'facebook' | 'whatsapp', string>>
 
 type Section = 'describe' | 'match' | 'programme' | 'tournament' | 'recap' | 'announcement' | 'spotlight' | 'club' | 'poll'
 
+type DescribeTarget = 'match' | 'announcement' | 'clubAnnouncement' | 'playerSpotlight' | 'seasonRecap' | 'engagementPoll'
+
 type Prefill =
   | { target: 'match'; values: MatchFormInitialValues; sourceText: string }
   | { target: 'announcement'; values: AnnouncementFormInitialValues; sourceText: string }
+  | { target: 'clubAnnouncement'; values: ClubAnnouncementFormInitialValues; sourceText: string }
+  | { target: 'playerSpotlight'; values: PlayerSpotlightFormInitialValues; sourceText: string }
+  | { target: 'seasonRecap'; values: SeasonRecapFormInitialValues; sourceText: string }
+  | { target: 'engagementPoll'; values: EngagementPollFormInitialValues; sourceText: string }
+
+const TARGET_TO_SECTION: Record<DescribeTarget, Section> = {
+  match: 'match',
+  announcement: 'announcement',
+  clubAnnouncement: 'club',
+  playerSpotlight: 'spotlight',
+  seasonRecap: 'recap',
+  engagementPoll: 'poll',
+}
 
 export default function ContentTab({ club }: { club: Club }) {
   const isTennisPadel = club.sport === 'Tennis' || club.sport === 'Padel'
@@ -67,13 +82,13 @@ export default function ContentTab({ club }: { club: Club }) {
     setSection(next)
   }
 
-  function handleApply(target: 'match' | 'announcement', values: MatchFormInitialValues | AnnouncementFormInitialValues, sourceText: string) {
-    setPrefill(
-      target === 'match'
-        ? { target, values: values as MatchFormInitialValues, sourceText }
-        : { target, values: values as AnnouncementFormInitialValues, sourceText }
-    )
-    setSection(target)
+  function handleApply(
+    target: DescribeTarget,
+    values: MatchFormInitialValues | AnnouncementFormInitialValues | ClubAnnouncementFormInitialValues | PlayerSpotlightFormInitialValues | SeasonRecapFormInitialValues | EngagementPollFormInitialValues,
+    sourceText: string
+  ) {
+    setPrefill({ target, values, sourceText } as Prefill)
+    setSection(TARGET_TO_SECTION[target])
   }
 
   async function personalizeMatch(overrides: { tone?: string; customInstructions?: string }) {
@@ -204,7 +219,14 @@ export default function ContentTab({ club }: { club: Club }) {
 
       {section === 'programme' && <ProgrammeTab club={club} />}
       {section === 'tournament' && <TournamentTab club={club} />}
-      {section === 'recap' && <SeasonRecapTab club={club} />}
+      {section === 'recap' && (
+        <div className="max-w-5xl space-y-3">
+          {prefill?.target === 'seasonRecap' && (
+            <SourceTextBanner sourceText={prefill.sourceText} onClear={() => setPrefill(null)} />
+          )}
+          <SeasonRecapTab club={club} initialValues={prefill?.target === 'seasonRecap' ? prefill.values : undefined} />
+        </div>
+      )}
       {section === 'announcement' && (
         <div className="max-w-5xl space-y-3">
           {prefill?.target === 'announcement' && (
@@ -213,9 +235,30 @@ export default function ContentTab({ club }: { club: Club }) {
           <MatchAnnouncementTab club={club} initialValues={prefill?.target === 'announcement' ? prefill.values : undefined} />
         </div>
       )}
-      {section === 'spotlight' && <PlayerSpotlightTab club={club} />}
-      {section === 'club' && <ClubAnnouncementTab club={club} />}
-      {section === 'poll' && <EngagementPollTab club={club} />}
+      {section === 'spotlight' && (
+        <div className="max-w-5xl space-y-3">
+          {prefill?.target === 'playerSpotlight' && (
+            <SourceTextBanner sourceText={prefill.sourceText} onClear={() => setPrefill(null)} />
+          )}
+          <PlayerSpotlightTab club={club} initialValues={prefill?.target === 'playerSpotlight' ? prefill.values : undefined} />
+        </div>
+      )}
+      {section === 'club' && (
+        <div className="max-w-5xl space-y-3">
+          {prefill?.target === 'clubAnnouncement' && (
+            <SourceTextBanner sourceText={prefill.sourceText} onClear={() => setPrefill(null)} />
+          )}
+          <ClubAnnouncementTab club={club} initialValues={prefill?.target === 'clubAnnouncement' ? prefill.values : undefined} />
+        </div>
+      )}
+      {section === 'poll' && (
+        <div className="max-w-5xl space-y-3">
+          {prefill?.target === 'engagementPoll' && (
+            <SourceTextBanner sourceText={prefill.sourceText} onClear={() => setPrefill(null)} />
+          )}
+          <EngagementPollTab club={club} initialValues={prefill?.target === 'engagementPoll' ? prefill.values : undefined} />
+        </div>
+      )}
     </div>
   )
 }
