@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react'
 import {
-  loadImage, textColor, parsePostVisualConfig, drawPostVisualElements,
-  POST_VISUAL_SIZE, type PostVisualContext, type PostVisualStat,
+  loadImage, textColor, parsePostVisualConfig, drawPostVisualElements, drawPostVisualBackground,
+  postVisualCanvasSizeFor, type PostVisualContext, type PostVisualStat, type VisualFormat,
 } from '@/lib/visualLayout'
 
 type Club = {
@@ -14,8 +14,6 @@ type Club = {
   logoUrl: string | null
   postVisualConfigs?: unknown
 }
-
-const { W, H } = POST_VISUAL_SIZE
 
 /**
  * Visuel "bilan de saison" — rendu générique (lib/visualLayout.ts) piloté
@@ -28,6 +26,7 @@ export default function SeasonRecapVisualGenerator({
   draws,
   losses,
   rankingNote,
+  format = 'post',
   onCanvasReady,
 }: {
   club: Club
@@ -36,6 +35,7 @@ export default function SeasonRecapVisualGenerator({
   draws: number
   losses: number
   rankingNote?: string
+  format?: VisualFormat
   onCanvasReady?: (canvas: HTMLCanvasElement) => void
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -43,6 +43,7 @@ export default function SeasonRecapVisualGenerator({
   const [copied, setCopied] = useState(false)
   const onReadyRef = useRef(onCanvasReady)
   onReadyRef.current = onCanvasReady
+  const { w: W, h: H } = postVisualCanvasSizeFor(format)
 
   useEffect(() => {
     let cancelled = false
@@ -55,13 +56,8 @@ export default function SeasonRecapVisualGenerator({
       canvas.height = H
       setReady(false)
 
-      ctx.fillStyle = club.primaryColor
-      ctx.fillRect(0, 0, W, H)
-      const bg = ctx.createLinearGradient(0, 0, W, H)
-      bg.addColorStop(0, 'rgba(255,255,255,0.04)')
-      bg.addColorStop(1, 'rgba(0,0,0,0.2)')
-      ctx.fillStyle = bg
-      ctx.fillRect(0, 0, W, H)
+      const { elements, background } = parsePostVisualConfig(club.postVisualConfigs, 'seasonRecap', format)
+      drawPostVisualBackground(ctx, W, H, background, club.primaryColor)
 
       if (cancelled) return
 
@@ -78,7 +74,6 @@ export default function SeasonRecapVisualGenerator({
         { label: 'DÉFAITES', value: losses, color: club.secondaryColor },
       ]
 
-      const { elements } = parsePostVisualConfig(club.postVisualConfigs, 'seasonRecap')
       const context: PostVisualContext = {
         clubName: club.name, sport: club.sport,
         textColor: textColor(club.primaryColor), secondaryColor: club.secondaryColor,
@@ -97,7 +92,7 @@ export default function SeasonRecapVisualGenerator({
     }
     draw()
     return () => { cancelled = true }
-  }, [club, periodLabel, wins, draws, losses, rankingNote])
+  }, [club, periodLabel, wins, draws, losses, rankingNote, format, W, H])
 
   function download() {
     const canvas = canvasRef.current

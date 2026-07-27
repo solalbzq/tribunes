@@ -112,8 +112,8 @@ export default function ClubSettings({ club }: { club: Club }) {
   function buildVisualConfigPayload(): StoredVisualConfig {
     const stored = getStoredVisualConfig(club.visualConfig)
     return {
-      bgOpacity: stored.bgOpacity,
-      elements: stored.elements,
+      post: stored.post,
+      story: stored.story,
       clubProfile: pruneProfile(profile),
     }
   }

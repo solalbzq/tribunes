@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react'
 import {
-  loadImage, textColor, parsePostVisualConfig, drawPostVisualElements,
-  POST_VISUAL_SIZE, type PostVisualContext, type PostVisualRow,
+  loadImage, textColor, parsePostVisualConfig, drawPostVisualElements, drawPostVisualBackground,
+  postVisualCanvasSizeFor, type PostVisualContext, type PostVisualRow, type VisualFormat,
 } from '@/lib/visualLayout'
 
 type Club = {
@@ -23,8 +23,6 @@ type UpcomingMatch = {
   isHome: boolean
 }
 
-const { W, H } = POST_VISUAL_SIZE
-
 const MONTHS_FR = ['jan.', 'fév.', 'mar.', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sep.', 'oct.', 'nov.', 'déc.']
 
 /**
@@ -32,8 +30,9 @@ const MONTHS_FR = ['jan.', 'fév.', 'mar.', 'avr.', 'mai', 'juin', 'juil.', 'ao�
  * piloté par Club.postVisualConfigs, personnalisable depuis
  * Personnalisation > Visuel Programme.
  */
-export default function ScheduleGenerator({ club, matches, onCanvasReady }: {
+export default function ScheduleGenerator({ club, matches, format = 'post', onCanvasReady }: {
   club: Club; matches: UpcomingMatch[]
+  format?: VisualFormat
   onCanvasReady?: (canvas: HTMLCanvasElement) => void
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -41,6 +40,7 @@ export default function ScheduleGenerator({ club, matches, onCanvasReady }: {
   const [copied, setCopied] = useState(false)
   const onReadyRef = useRef(onCanvasReady)
   onReadyRef.current = onCanvasReady
+  const { w: W, h: H } = postVisualCanvasSizeFor(format)
 
   useEffect(() => {
     let cancelled = false
@@ -53,13 +53,8 @@ export default function ScheduleGenerator({ club, matches, onCanvasReady }: {
       canvas.height = H
       setReady(false)
 
-      ctx.fillStyle = club.primaryColor
-      ctx.fillRect(0, 0, W, H)
-      const bg = ctx.createLinearGradient(0, 0, W, H)
-      bg.addColorStop(0, 'rgba(255,255,255,0.04)')
-      bg.addColorStop(1, 'rgba(0,0,0,0.2)')
-      ctx.fillStyle = bg
-      ctx.fillRect(0, 0, W, H)
+      const { elements, background } = parsePostVisualConfig(club.postVisualConfigs, 'schedule', format)
+      drawPostVisualBackground(ctx, W, H, background, club.primaryColor)
 
       if (cancelled) return
 
@@ -80,7 +75,6 @@ export default function ScheduleGenerator({ club, matches, onCanvasReady }: {
         }
       })
 
-      const { elements } = parsePostVisualConfig(club.postVisualConfigs, 'schedule')
       const context: PostVisualContext = {
         clubName: club.name, sport: club.sport,
         textColor: textColor(club.primaryColor), secondaryColor: club.secondaryColor,
@@ -97,7 +91,7 @@ export default function ScheduleGenerator({ club, matches, onCanvasReady }: {
     }
     draw()
     return () => { cancelled = true }
-  }, [club, matches])
+  }, [club, matches, format, W, H])
 
   function download() {
     const canvas = canvasRef.current

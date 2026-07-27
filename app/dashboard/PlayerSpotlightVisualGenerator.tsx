@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react'
 import {
-  loadImage, textColor, parsePostVisualConfig, drawPostVisualElements,
-  POST_VISUAL_SIZE, type PostVisualContext,
+  loadImage, textColor, parsePostVisualConfig, drawPostVisualElements, drawPostVisualBackground,
+  postVisualCanvasSizeFor, type PostVisualContext, type VisualFormat,
 } from '@/lib/visualLayout'
 
 type Club = {
@@ -14,8 +14,6 @@ type Club = {
   logoUrl: string | null
   postVisualConfigs?: unknown
 }
-
-const { W, H } = POST_VISUAL_SIZE
 
 function initials(name: string): string {
   return name
@@ -37,12 +35,14 @@ export default function PlayerSpotlightVisualGenerator({
   playerName,
   achievement,
   photoFile,
+  format = 'post',
   onCanvasReady,
 }: {
   club: Club
   playerName: string
   achievement: string
   photoFile?: File | null
+  format?: VisualFormat
   onCanvasReady?: (canvas: HTMLCanvasElement) => void
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -50,6 +50,7 @@ export default function PlayerSpotlightVisualGenerator({
   const [copied, setCopied] = useState(false)
   const onReadyRef = useRef(onCanvasReady)
   onReadyRef.current = onCanvasReady
+  const { w: W, h: H } = postVisualCanvasSizeFor(format)
 
   useEffect(() => {
     let cancelled = false
@@ -62,13 +63,8 @@ export default function PlayerSpotlightVisualGenerator({
       canvas.height = H
       setReady(false)
 
-      ctx.fillStyle = club.primaryColor
-      ctx.fillRect(0, 0, W, H)
-      const bg = ctx.createLinearGradient(0, 0, W, H)
-      bg.addColorStop(0, 'rgba(255,255,255,0.04)')
-      bg.addColorStop(1, 'rgba(0,0,0,0.2)')
-      ctx.fillStyle = bg
-      ctx.fillRect(0, 0, W, H)
+      const { elements, background } = parsePostVisualConfig(club.postVisualConfigs, 'playerSpotlight', format)
+      drawPostVisualBackground(ctx, W, H, background, club.primaryColor)
 
       if (cancelled) return
 
@@ -83,7 +79,6 @@ export default function PlayerSpotlightVisualGenerator({
       }
       if (cancelled) return
 
-      const { elements } = parsePostVisualConfig(club.postVisualConfigs, 'playerSpotlight')
       const context: PostVisualContext = {
         clubName: club.name, sport: club.sport,
         textColor: textColor(club.primaryColor), secondaryColor: club.secondaryColor,
@@ -102,7 +97,7 @@ export default function PlayerSpotlightVisualGenerator({
     }
     draw()
     return () => { cancelled = true }
-  }, [club, playerName, achievement, photoFile])
+  }, [club, playerName, achievement, photoFile, format, W, H])
 
   function download() {
     const canvas = canvasRef.current

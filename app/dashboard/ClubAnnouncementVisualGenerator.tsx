@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react'
 import {
-  loadImage, textColor, parsePostVisualConfig, drawPostVisualElements,
-  POST_VISUAL_SIZE, type PostVisualContext,
+  loadImage, textColor, parsePostVisualConfig, drawPostVisualElements, drawPostVisualBackground,
+  postVisualCanvasSizeFor, type PostVisualContext, type VisualFormat,
 } from '@/lib/visualLayout'
 import type { ClubAnnouncementCategory } from '@/lib/prompts/club-announcement'
 
@@ -15,8 +15,6 @@ type Club = {
   logoUrl: string | null
   postVisualConfigs?: unknown
 }
-
-const { W, H } = POST_VISUAL_SIZE
 
 const CATEGORY_LABEL: Record<ClubAnnouncementCategory, string> = {
   RECRUITMENT: '📣 RECRUTEMENT',
@@ -33,12 +31,14 @@ export default function ClubAnnouncementVisualGenerator({
   category,
   title,
   description,
+  format = 'post',
   onCanvasReady,
 }: {
   club: Club
   category: ClubAnnouncementCategory
   title: string
   description: string
+  format?: VisualFormat
   onCanvasReady?: (canvas: HTMLCanvasElement) => void
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -46,6 +46,7 @@ export default function ClubAnnouncementVisualGenerator({
   const [copied, setCopied] = useState(false)
   const onReadyRef = useRef(onCanvasReady)
   onReadyRef.current = onCanvasReady
+  const { w: W, h: H } = postVisualCanvasSizeFor(format)
 
   useEffect(() => {
     let cancelled = false
@@ -58,13 +59,8 @@ export default function ClubAnnouncementVisualGenerator({
       canvas.height = H
       setReady(false)
 
-      ctx.fillStyle = club.primaryColor
-      ctx.fillRect(0, 0, W, H)
-      const bg = ctx.createLinearGradient(0, 0, W, H)
-      bg.addColorStop(0, 'rgba(255,255,255,0.04)')
-      bg.addColorStop(1, 'rgba(0,0,0,0.2)')
-      ctx.fillStyle = bg
-      ctx.fillRect(0, 0, W, H)
+      const { elements, background } = parsePostVisualConfig(club.postVisualConfigs, 'clubAnnouncement', format)
+      drawPostVisualBackground(ctx, W, H, background, club.primaryColor)
 
       if (cancelled) return
 
@@ -74,7 +70,6 @@ export default function ClubAnnouncementVisualGenerator({
       }
       if (cancelled) return
 
-      const { elements } = parsePostVisualConfig(club.postVisualConfigs, 'clubAnnouncement')
       const context: PostVisualContext = {
         clubName: club.name, sport: club.sport,
         textColor: textColor(club.primaryColor), secondaryColor: club.secondaryColor,
@@ -92,7 +87,7 @@ export default function ClubAnnouncementVisualGenerator({
     }
     draw()
     return () => { cancelled = true }
-  }, [club, category, title, description])
+  }, [club, category, title, description, format, W, H])
 
   function download() {
     const canvas = canvasRef.current

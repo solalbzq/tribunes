@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react'
 import {
-  loadImage, textColor, parsePostVisualConfig, drawPostVisualElements,
-  POST_VISUAL_SIZE, type PostVisualContext,
+  loadImage, textColor, parsePostVisualConfig, drawPostVisualElements, drawPostVisualBackground,
+  postVisualCanvasSizeFor, type PostVisualContext, type VisualFormat,
 } from '@/lib/visualLayout'
 
 type Club = {
@@ -15,8 +15,6 @@ type Club = {
   postVisualConfigs?: unknown
 }
 
-const { W, H } = POST_VISUAL_SIZE
-
 /**
  * Visuel "post d'engagement" — rendu générique (lib/visualLayout.ts) piloté
  * par Club.postVisualConfigs, personnalisable depuis Personnalisation > Visuel Sondage.
@@ -25,11 +23,13 @@ export default function EngagementPollVisualGenerator({
   club,
   question,
   options,
+  format = 'post',
   onCanvasReady,
 }: {
   club: Club
   question: string
   options: string[]
+  format?: VisualFormat
   onCanvasReady?: (canvas: HTMLCanvasElement) => void
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -37,6 +37,7 @@ export default function EngagementPollVisualGenerator({
   const [copied, setCopied] = useState(false)
   const onReadyRef = useRef(onCanvasReady)
   onReadyRef.current = onCanvasReady
+  const { w: W, h: H } = postVisualCanvasSizeFor(format)
 
   useEffect(() => {
     let cancelled = false
@@ -49,13 +50,8 @@ export default function EngagementPollVisualGenerator({
       canvas.height = H
       setReady(false)
 
-      ctx.fillStyle = club.primaryColor
-      ctx.fillRect(0, 0, W, H)
-      const bg = ctx.createLinearGradient(0, 0, W, H)
-      bg.addColorStop(0, 'rgba(255,255,255,0.04)')
-      bg.addColorStop(1, 'rgba(0,0,0,0.2)')
-      ctx.fillStyle = bg
-      ctx.fillRect(0, 0, W, H)
+      const { elements, background } = parsePostVisualConfig(club.postVisualConfigs, 'engagementPoll', format)
+      drawPostVisualBackground(ctx, W, H, background, club.primaryColor)
 
       if (cancelled) return
 
@@ -65,7 +61,6 @@ export default function EngagementPollVisualGenerator({
       }
       if (cancelled) return
 
-      const { elements } = parsePostVisualConfig(club.postVisualConfigs, 'engagementPoll')
       const context: PostVisualContext = {
         clubName: club.name, sport: club.sport,
         textColor: textColor(club.primaryColor), secondaryColor: club.secondaryColor,
@@ -83,7 +78,7 @@ export default function EngagementPollVisualGenerator({
     }
     draw()
     return () => { cancelled = true }
-  }, [club, question, options])
+  }, [club, question, options, format, W, H])
 
   function download() {
     const canvas = canvasRef.current

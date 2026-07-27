@@ -1,5 +1,5 @@
-import type { VisualConfig } from '@/lib/visualLayout'
-import { parseVisualConfig } from '@/lib/visualLayout'
+import type { VisualConfigByFormat } from '@/lib/visualLayout'
+import { parseVisualConfigByFormat } from '@/lib/visualLayout'
 
 /**
  * Profil "métier" du club (effectifs, canaux, histoire...), édité dans
@@ -32,7 +32,7 @@ export type ClubProfile = {
   story?: string
 }
 
-export type StoredVisualConfig = VisualConfig & {
+export type StoredVisualConfig = VisualConfigByFormat & {
   clubProfile?: ClubProfile
 }
 
@@ -61,7 +61,7 @@ export const EMPTY_PROFILE: ClubProfile = {
 }
 
 export function getStoredVisualConfig(raw: unknown): StoredVisualConfig {
-  const base = parseVisualConfig(raw)
+  const base = parseVisualConfigByFormat(raw)
   if (!raw || Array.isArray(raw) || typeof raw !== 'object') return base
   const maybeProfile = (raw as { clubProfile?: ClubProfile }).clubProfile
   return {

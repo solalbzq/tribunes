@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation'
 import VisualEditor from './VisualEditor'
 import TennisVisualEditor from './TennisVisualEditor'
 import PostVisualEditor from './PostVisualEditor'
-import type { VisualConfig, PostVisualConfig, PostVisualKind } from '@/lib/visualLayout'
+import type { VisualConfig, VisualFormat, PostVisualConfig, PostVisualKind } from '@/lib/visualLayout'
+import { parsePostVisualConfig } from '@/lib/visualLayout'
 import type { TennisVisualConfig } from './posts/TennisVisualGenerator'
 import { getStoredVisualConfig, pruneProfile, type StoredVisualConfig } from '@/lib/clubProfile'
 import { PageHeader, Segmented, Field, INPUT } from './ui'
@@ -65,11 +66,11 @@ export default function PersonnalisationView({ club }: { club: Club }) {
   const [savingIdentity, setSavingIdentity] = useState(false)
   const [savedIdentity, setSavedIdentity] = useState(false)
 
-  function buildVisualConfigPayload(cfg?: VisualConfig): StoredVisualConfig {
+  function buildVisualConfigPayload(format?: VisualFormat, cfg?: VisualConfig): StoredVisualConfig {
     const stored = getStoredVisualConfig(club.visualConfig)
-    const base = cfg ?? { bgOpacity: stored.bgOpacity, elements: stored.elements }
     return {
-      ...base,
+      post: format === 'post' && cfg ? cfg : stored.post,
+      story: format === 'story' && cfg ? cfg : stored.story,
       clubProfile: pruneProfile(stored.clubProfile ?? {}),
     }
   }
@@ -77,7 +78,7 @@ export default function PersonnalisationView({ club }: { club: Club }) {
   async function saveClubBase(extra: {
     visualConfig?: StoredVisualConfig
     tennisVisualConfig?: TennisVisualConfig
-    postVisualConfigs?: Record<string, PostVisualConfig>
+    postVisualConfigs?: Record<string, unknown>
   } = {}) {
     await fetch('/api/clubs', {
       method: 'POST',
@@ -99,9 +100,16 @@ export default function PersonnalisationView({ club }: { club: Club }) {
     router.refresh()
   }
 
-  async function handleSavePostVisual(kind: PostVisualKind, cfg: PostVisualConfig) {
-    const current = (club.postVisualConfigs && typeof club.postVisualConfigs === 'object' ? club.postVisualConfigs : {}) as Record<string, PostVisualConfig>
-    await saveClubBase({ postVisualConfigs: { ...current, [kind]: cfg } })
+  async function handleSavePostVisual(kind: PostVisualKind, format: VisualFormat, cfg: PostVisualConfig) {
+    const current = (club.postVisualConfigs && typeof club.postVisualConfigs === 'object' ? club.postVisualConfigs : {}) as Record<string, unknown>
+    const otherFormat: VisualFormat = format === 'post' ? 'story' : 'post'
+    const existingOther = parsePostVisualConfig(club.postVisualConfigs, kind, otherFormat)
+    await saveClubBase({
+      postVisualConfigs: {
+        ...current,
+        [kind]: { post: format === 'post' ? cfg : existingOther, story: format === 'story' ? cfg : existingOther },
+      },
+    })
   }
 
   async function handleLogoChange(e: ChangeEvent<HTMLInputElement>) {
@@ -128,8 +136,8 @@ export default function PersonnalisationView({ club }: { club: Club }) {
     setTimeout(() => setSavedIdentity(false), 2000)
   }
 
-  async function handleSaveLayout(cfg: VisualConfig) {
-    await saveClubBase({ visualConfig: buildVisualConfigPayload(cfg) })
+  async function handleSaveLayout(format: VisualFormat, cfg: VisualConfig) {
+    await saveClubBase({ visualConfig: buildVisualConfigPayload(format, cfg) })
   }
 
   async function handleSaveTennisConfig(cfg: TennisVisualConfig) {

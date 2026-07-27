@@ -4,6 +4,8 @@ import { useRef, useState } from 'react'
 import TextPostsPanel from './TextPostsPanel'
 import ToneSelector from './ToneSelector'
 import EngagementPollVisualGenerator from './EngagementPollVisualGenerator'
+import FormatToggle from './FormatToggle'
+import type { VisualFormat } from '@/lib/visualLayout'
 import { FIELD } from './ui'
 import { Icon } from './icons'
 
@@ -22,6 +24,7 @@ export default function EngagementPollTab({ club }: { club: Club }) {
   const [question, setQuestion] = useState('')
   const [options, setOptions] = useState<string[]>(['', ''])
   const [tone, setTone] = useState('')
+  const [visualFormat, setVisualFormat] = useState<VisualFormat>('post')
   const [generating, setGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [posts, setPosts] = useState<Posts | null>(null)
@@ -168,10 +171,12 @@ export default function EngagementPollTab({ club }: { club: Club }) {
         {error && <p className="text-xs text-red-500">{error}</p>}
       </div>
 
-      <div>
+      <div className="space-y-3">
+        <FormatToggle value={visualFormat} onChange={setVisualFormat} />
         <EngagementPollVisualGenerator
           club={club}
           question={question}
+          format={visualFormat}
           options={filledOptions}
           onCanvasReady={c => { canvasRef.current = c }}
         />

@@ -3,15 +3,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   type PostVisualElement, type PostVisualElementType, type PostVisualConfig,
-  type PostVisualKind, type PostVisualContext,
-  POST_VISUAL_CORE_ELEMENTS, POST_VISUAL_LABELS, POST_VISUAL_SIZE,
-  parsePostVisualConfig, defaultPostVisualElements,
-  textColor, loadImage, roundRect, drawPostVisualElements,
+  type PostVisualKind, type PostVisualContext, type PostVisualBackground,
+  type VisualFormat, type SnapGuide,
+  POST_VISUAL_CORE_ELEMENTS, POST_VISUAL_LABELS,
+  parsePostVisualConfig, defaultPostVisualElements, postVisualCanvasSizeFor,
+  textColor, loadImage, roundRect, drawPostVisualElements, drawPostVisualBackground,
+  computeSnap, drawSnapGuides, DEFAULT_FONT_FAMILIES, DEFAULT_POST_VISUAL_BACKGROUND,
+  VISUAL_THEMES, applyThemeFontFamily,
 } from '@/lib/visualLayout'
 
 type Club = { name: string; sport: string; primaryColor: string; secondaryColor: string; logoUrl: string | null }
 
-const { W: PW, H: PH } = POST_VISUAL_SIZE
 const HANDLE = 18
 
 /** Données d'aperçu par type de post — sert uniquement à visualiser l'éditeur, jamais sauvegardé. */
@@ -83,21 +85,32 @@ export default function PostVisualEditor({
   club: Club
   /** Valeur brute de Club.postVisualConfigs (JSON), pas encore filtrée par type. */
   savedConfig: unknown
-  onSave: (kind: PostVisualKind, cfg: PostVisualConfig) => void | Promise<void>
+  onSave: (kind: PostVisualKind, format: VisualFormat, cfg: PostVisualConfig) => void | Promise<void>
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const logoRef = useRef<HTMLImageElement | null>(null)
-  const [cfg, setCfg] = useState<PostVisualConfig>(() => parsePostVisualConfig(savedConfig, kind))
+  const [format, setFormat] = useState<VisualFormat>('post')
+  const [configs, setConfigs] = useState<Record<VisualFormat, PostVisualConfig>>(() => ({
+    post: parsePostVisualConfig(savedConfig, kind, 'post'),
+    story: parsePostVisualConfig(savedConfig, kind, 'story'),
+  }))
   const [selected, setSelected] = useState<string | null>(null)
   const [drag, setDrag] = useState<Drag | null>(null)
+  const [guides, setGuides] = useState<SnapGuide[]>([])
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
 
+  const cfg = configs[format]
+  const { w: CW, h: CH } = postVisualCanvasSizeFor(format)
   const locked = new Set(POST_VISUAL_CORE_ELEMENTS[kind])
 
   useEffect(() => {
-    setCfg(parsePostVisualConfig(savedConfig, kind))
+    setConfigs({
+      post: parsePostVisualConfig(savedConfig, kind, 'post'),
+      story: parsePostVisualConfig(savedConfig, kind, 'story'),
+    })
     setSelected(null)
+    setFormat('post')
   }, [kind, savedConfig])
 
   useEffect(() => {
@@ -111,16 +124,10 @@ export default function PostVisualEditor({
     if (!canvas) return
     const ctx = canvas.getContext('2d')
     if (!ctx) return
-    canvas.width = PW
-    canvas.height = PH
+    canvas.width = CW
+    canvas.height = CH
 
-    ctx.fillStyle = club.primaryColor
-    ctx.fillRect(0, 0, PW, PH)
-    const grad = ctx.createLinearGradient(0, 0, PW, PH)
-    grad.addColorStop(0, 'rgba(255,255,255,0.04)')
-    grad.addColorStop(1, 'rgba(0,0,0,0.2)')
-    ctx.fillStyle = grad
-    ctx.fillRect(0, 0, PW, PH)
+    drawPostVisualBackground(ctx, CW, CH, cfg.background, club.primaryColor)
 
     const context: PostVisualContext = {
       clubName: club.name, sport: club.sport,
@@ -130,6 +137,8 @@ export default function PostVisualEditor({
       ...SAMPLE_CONTEXT[kind],
     }
     drawPostVisualElements(ctx, cfg.elements, context)
+
+    if (guides.length) drawSnapGuides(ctx, guides, CW, CH)
 
     if (selected) {
       const el = cfg.elements.find(e => e.id === selected)
@@ -154,13 +163,13 @@ export default function PostVisualEditor({
         ctx.restore()
       }
     }
-  }, [cfg, selected, club, kind])
+  }, [cfg, selected, club, kind, guides, CW, CH])
 
   useEffect(() => { draw() }, [draw])
 
   function scale() {
     const c = canvasRef.current!
-    return PW / c.clientWidth
+    return CW / c.clientWidth
   }
 
   function canvasPos(e: React.MouseEvent<HTMLCanvasElement>) {
@@ -205,47 +214,77 @@ export default function PostVisualEditor({
     if (!drag) return
     const { x, y } = canvasPos(e)
     const dx = x - drag.sx, dy = y - drag.sy
-    updateEl(drag.id, el => drag.mode === 'move'
-      ? { ...el, x: Math.max(0, Math.min(PW - el.w, drag.ox + dx)), y: Math.max(0, Math.min(PH - el.h, drag.oy + dy)) }
-      : { ...el, w: Math.max(40, drag.ow + dx), h: Math.max(20, drag.oh + dy) }
-    )
+    if (drag.mode === 'resize') {
+      updateEl(drag.id, el => ({ ...el, w: Math.max(40, drag.ow + dx), h: Math.max(20, drag.oh + dy) }))
+      return
+    }
+    const el = cfg.elements.find(e => e.id === drag.id)
+    if (!el) return
+    const rawX = Math.max(0, Math.min(CW - el.w, drag.ox + dx))
+    const rawY = Math.max(0, Math.min(CH - el.h, drag.oy + dy))
+    const others = cfg.elements.filter(e => e.id !== drag.id && e.visible).map(e => ({ x: e.x, y: e.y, w: e.w, h: e.h }))
+    const snapped = computeSnap({ x: rawX, y: rawY, w: el.w, h: el.h }, others, CW, CH)
+    setGuides(snapped.guides)
+    updateEl(drag.id, e => ({ ...e, x: snapped.x, y: snapped.y }))
   }
 
-  function onMouseUp() { setDrag(null) }
+  function onMouseUp() { setDrag(null); setGuides([]) }
 
   function updateEl(id: string, fn: (el: PostVisualElement) => PostVisualElement) {
-    setCfg(c => ({ ...c, elements: c.elements.map(e => e.id === id ? fn(e) : e) }))
+    setConfigs(c => ({ ...c, [format]: { ...c[format], elements: c[format].elements.map(e => e.id === id ? fn(e) : e) } }))
   }
   function deleteEl(id: string) {
     setSelected(null)
-    setCfg(c => ({ ...c, elements: c.elements.filter(e => e.id !== id) }))
+    setConfigs(c => ({ ...c, [format]: { ...c[format], elements: c[format].elements.filter(e => e.id !== id) } }))
   }
   function addElement(type: PostVisualElementType) {
     const el = newElement(type, club.secondaryColor)
-    setCfg(c => ({ ...c, elements: [...c.elements, el] }))
+    setConfigs(c => ({ ...c, [format]: { ...c[format], elements: [...c[format].elements, el] } }))
     setSelected(el.id)
   }
   function moveLayer(id: string, dir: 1 | -1) {
-    setCfg(c => {
-      const arr = [...c.elements]
+    setConfigs(c => {
+      const arr = [...c[format].elements]
       const i = arr.findIndex(e => e.id === id)
       const j = i + dir
       if (j < 0 || j >= arr.length) return c
       ;[arr[i], arr[j]] = [arr[j], arr[i]]
-      return { ...c, elements: arr }
+      return { ...c, [format]: { ...c[format], elements: arr } }
     })
   }
   function duplicateEl(id: string) {
     const el = cfg.elements.find(e => e.id === id)
     if (!el) return
     const copy = { ...el, id: `${el.type}_${Date.now()}`, x: el.x + 30, y: el.y + 30 }
-    setCfg(c => ({ ...c, elements: [...c.elements, copy] }))
+    setConfigs(c => ({ ...c, [format]: { ...c[format], elements: [...c[format].elements, copy] } }))
     setSelected(copy.id)
+  }
+  function updateBackground(fn: (bg: PostVisualBackground) => PostVisualBackground) {
+    setConfigs(c => ({ ...c, [format]: { ...c[format], background: fn(c[format].background ?? DEFAULT_POST_VISUAL_BACKGROUND) } }))
+  }
+  function resetFormat() {
+    setSelected(null)
+    setConfigs(c => ({ ...c, [format]: { elements: defaultPostVisualElements(kind, format) } }))
+  }
+  function applyTheme(theme: (typeof VISUAL_THEMES)[number]) {
+    setConfigs(c => ({
+      ...c,
+      [format]: {
+        ...c[format],
+        elements: applyThemeFontFamily(c[format].elements, theme),
+        background: { ...(c[format].background ?? DEFAULT_POST_VISUAL_BACKGROUND), type: theme.backgroundType },
+      },
+    }))
+  }
+  function switchFormat(f: VisualFormat) {
+    setSelected(null)
+    setGuides([])
+    setFormat(f)
   }
 
   async function handleSave() {
     setSaving(true)
-    await onSave(kind, cfg)
+    await onSave(kind, format, configs[format])
     setSaving(false); setSaved(true)
     setTimeout(() => setSaved(false), 2000)
   }
@@ -253,9 +292,22 @@ export default function PostVisualEditor({
   const sel = cfg.elements.find(e => e.id === selected) ?? null
   const showFontSize = sel && ['heading', 'subheading', 'paragraph', 'badge', 'matchList', 'statsBlock', 'vsBlock', 'infoBlock', 'optionsList', 'text', 'footer'].includes(sel.type)
   const showTextContent = sel && ['heading', 'subheading', 'paragraph', 'badge', 'text'].includes(sel.type)
+  const bg = cfg.background ?? DEFAULT_POST_VISUAL_BACKGROUND
 
   return (
     <div className="space-y-4">
+      {/* Format Post / Story */}
+      <div className="inline-flex gap-1 rounded-2xl border border-gray-100 bg-gray-50 p-1">
+        <button onClick={() => switchFormat('post')}
+          className={`px-4 py-1.5 rounded-xl text-xs font-bold transition ${format === 'post' ? 'bg-white shadow text-[#111827]' : 'text-gray-500'}`}>
+          Post
+        </button>
+        <button onClick={() => switchFormat('story')}
+          className={`px-4 py-1.5 rounded-xl text-xs font-bold transition ${format === 'story' ? 'bg-white shadow text-[#111827]' : 'text-gray-500'}`}>
+          Story verticale
+        </button>
+      </div>
+
       <div className="flex flex-wrap items-center gap-2 bg-white border border-gray-100 rounded-2xl p-3">
         <span className="text-xs font-semibold text-gray-400 mr-1">Ajouter :</span>
         {([['text', '✏️ Texte'], ['rect', '▭ Rectangle'], ['circle', '⬤ Cercle'], ['line', '— Ligne']] as [PostVisualElementType, string][]).map(([type, label]) => (
@@ -265,7 +317,7 @@ export default function PostVisualEditor({
           </button>
         ))}
         <div className="ml-auto flex gap-2">
-          <button onClick={() => setCfg({ elements: defaultPostVisualElements(kind) })}
+          <button onClick={resetFormat}
             className="px-3 py-1.5 rounded-xl text-xs font-semibold border border-gray-200 text-gray-500 hover:bg-gray-50 transition">
             Réinitialiser
           </button>
@@ -276,12 +328,22 @@ export default function PostVisualEditor({
         </div>
       </div>
 
+      <div className="flex flex-wrap items-center gap-2 bg-white border border-gray-100 rounded-2xl p-3">
+        <span className="text-xs font-semibold text-gray-400 mr-1">Thèmes :</span>
+        {VISUAL_THEMES.map(theme => (
+          <button key={theme.label} onClick={() => applyTheme(theme)}
+            className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200 transition">
+            {theme.label}
+          </button>
+        ))}
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_260px] gap-4">
         <div className="bg-gray-900 rounded-2xl p-4 flex items-center justify-center">
-          <div className="w-full max-w-[420px]">
+          <div className="w-full" style={{ maxWidth: format === 'story' ? 320 : 420 }}>
             <canvas ref={canvasRef}
               className="w-full rounded-xl cursor-crosshair select-none shadow-2xl"
-              style={{ touchAction: 'none', aspectRatio: `${PW}/${PH}` }}
+              style={{ touchAction: 'none', aspectRatio: `${CW}/${CH}` }}
               onMouseDown={onMouseDown} onMouseMove={onMouseMove}
               onMouseUp={onMouseUp} onMouseLeave={onMouseUp}
             />
@@ -289,6 +351,30 @@ export default function PostVisualEditor({
         </div>
 
         <div className="space-y-3 overflow-y-auto max-h-[600px] pr-1">
+          {/* Fond du visuel */}
+          <div className="bg-white border border-gray-100 rounded-2xl p-4 space-y-3">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Fond</p>
+            <Row label="Style">
+              <select value={bg.type} onChange={e => updateBackground(b => ({ ...b, type: e.target.value as 'gradient' | 'solid' }))}
+                className="flex-1 text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none">
+                <option value="gradient">Dégradé</option>
+                <option value="solid">Couleur unie</option>
+              </select>
+            </Row>
+            <Row label="Couleur">
+              <input type="color" value={bg.color || club.primaryColor} onChange={e => updateBackground(b => ({ ...b, color: e.target.value }))}
+                className="w-8 h-8 rounded-lg cursor-pointer border border-gray-200 p-0.5" />
+              <input type="text" value={bg.color ?? ''} placeholder="Auto (couleur du club)" onChange={e => updateBackground(b => ({ ...b, color: e.target.value }))}
+                className="flex-1 text-xs font-mono border border-gray-200 rounded-lg px-2 py-1 focus:outline-none" maxLength={7} />
+            </Row>
+            <Row label="Intensité">
+              <input type="range" min="0" max="1" step="0.05" value={bg.overlayOpacity ?? 1}
+                onChange={e => updateBackground(b => ({ ...b, overlayOpacity: Number(e.target.value) }))}
+                className="flex-1 accent-[#2563eb]" />
+              <span className="text-xs font-mono w-8 text-right">{Math.round((bg.overlayOpacity ?? 1) * 100)}%</span>
+            </Row>
+          </div>
+
           {sel ? (
             <div className="bg-white border border-blue-200 rounded-2xl p-4 space-y-3">
               <div className="flex items-center justify-between">
@@ -331,6 +417,29 @@ export default function PostVisualEditor({
                     className="w-7 h-7 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-sm flex items-center justify-center">+</button>
                 </Row>
               )}
+
+              {showFontSize && (
+                <Row label="Police">
+                  <select value={sel.fontFamily ?? ''} onChange={e => updateEl(sel.id, el => ({ ...el, fontFamily: e.target.value || undefined }))}
+                    className="flex-1 text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none">
+                    {DEFAULT_FONT_FAMILIES.map(f => <option key={f.label} value={f.value}>{f.label}</option>)}
+                  </select>
+                </Row>
+              )}
+
+              <Row label="Rotation">
+                <input type="range" min="-45" max="45" step="1" value={sel.rotation ?? 0}
+                  onChange={e => updateEl(sel.id, el => ({ ...el, rotation: Number(e.target.value) || undefined }))}
+                  className="flex-1 accent-[#2563eb]" />
+                <span className="text-xs font-mono w-10 text-right">{sel.rotation ?? 0}°</span>
+              </Row>
+
+              <Row label="Ombre">
+                <input type="range" min="0" max="40" step="2" value={sel.shadowBlur ?? 0}
+                  onChange={e => updateEl(sel.id, el => ({ ...el, shadowBlur: Number(e.target.value) || undefined }))}
+                  className="flex-1 accent-[#2563eb]" />
+                <span className="text-xs font-mono w-8 text-right">{sel.shadowBlur ?? 0}</span>
+              </Row>
 
               {showTextContent && (
                 <div>

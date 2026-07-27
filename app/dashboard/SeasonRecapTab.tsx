@@ -4,6 +4,8 @@ import { useRef, useState } from 'react'
 import TextPostsPanel from './TextPostsPanel'
 import ToneSelector from './ToneSelector'
 import SeasonRecapVisualGenerator from './SeasonRecapVisualGenerator'
+import FormatToggle from './FormatToggle'
+import type { VisualFormat } from '@/lib/visualLayout'
 import { FIELD, PageHeader } from './ui'
 import { Icon } from './icons'
 
@@ -37,6 +39,7 @@ export default function SeasonRecapTab({ club }: { club: Club }) {
   const [periodLabel, setPeriodLabel] = useState('de la saison')
   const [rankingNote, setRankingNote] = useState('')
   const [tone, setTone] = useState('')
+  const [visualFormat, setVisualFormat] = useState<VisualFormat>('post')
   const [generating, setGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [posts, setPosts] = useState<Posts | null>(null)
@@ -104,15 +107,19 @@ export default function SeasonRecapTab({ club }: { club: Club }) {
   if (posts && record) {
     return (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-5xl">
-        <SeasonRecapVisualGenerator
-          club={club}
-          periodLabel={periodLabel}
-          wins={record.wins}
-          draws={record.draws}
-          losses={record.losses}
-          rankingNote={rankingNote || undefined}
-          onCanvasReady={c => { canvasRef.current = c }}
-        />
+        <div className="space-y-3">
+          <FormatToggle value={visualFormat} onChange={setVisualFormat} />
+          <SeasonRecapVisualGenerator
+            club={club}
+            periodLabel={periodLabel}
+            wins={record.wins}
+            draws={record.draws}
+            losses={record.losses}
+            rankingNote={rankingNote || undefined}
+            format={visualFormat}
+            onCanvasReady={c => { canvasRef.current = c }}
+          />
+        </div>
         <TextPostsPanel
           posts={posts}
           postIds={postIds}

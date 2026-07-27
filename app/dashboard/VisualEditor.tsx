@@ -2,9 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
-  LayoutElement, VisualConfig, ElementType,
-  DEFAULT_CONFIG, parseVisualConfig,
-  textColor, loadImage, roundRect, drawElements, SIZE,
+  LayoutElement, VisualConfig, VisualConfigByFormat, ElementType, VisualFormat, SnapGuide,
+  parseVisualConfigByFormat, defaultElementsFor, canvasSizeFor,
+  textColor, loadImage, roundRect, drawElements, computeSnap, drawSnapGuides,
+  DEFAULT_FONT_FAMILIES, VISUAL_THEMES, applyThemeFontFamily,
 } from '@/lib/visualLayout'
 
 type Club = {
@@ -40,14 +41,19 @@ function newElement(type: ElementType, primary: string, secondary: string): Layo
   }
 }
 
-export default function VisualEditor({ club, onSave }: { club: Club; onSave: (cfg: VisualConfig) => void }) {
+export default function VisualEditor({ club, onSave }: { club: Club; onSave: (format: VisualFormat, cfg: VisualConfig) => void | Promise<void> }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const logoRef = useRef<HTMLImageElement | null>(null)
-  const [cfg, setCfg] = useState<VisualConfig>(() => parseVisualConfig(club.visualConfig))
+  const [format, setFormat] = useState<VisualFormat>('post')
+  const [configs, setConfigs] = useState<VisualConfigByFormat>(() => parseVisualConfigByFormat(club.visualConfig))
   const [selected, setSelected] = useState<string | null>(null)
   const [drag, setDrag] = useState<Drag | null>(null)
+  const [guides, setGuides] = useState<SnapGuide[]>([])
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+
+  const cfg = configs[format]
+  const { w: CW, h: CH } = canvasSizeFor(format)
 
   useEffect(() => {
     if (!club.logoUrl) return
@@ -59,17 +65,17 @@ export default function VisualEditor({ club, onSave }: { club: Club; onSave: (cf
     if (!canvas) return
     const ctx = canvas.getContext('2d')
     if (!ctx) return
-    canvas.width = SIZE
-    canvas.height = SIZE
+    canvas.width = CW
+    canvas.height = CH
 
     // Background
     ctx.fillStyle = club.primaryColor
-    ctx.fillRect(0, 0, SIZE, SIZE)
-    const grad = ctx.createLinearGradient(0, 0, SIZE, SIZE)
+    ctx.fillRect(0, 0, CW, CH)
+    const grad = ctx.createLinearGradient(0, 0, CW, CH)
     grad.addColorStop(0, 'rgba(255,255,255,0.03)')
     grad.addColorStop(1, 'rgba(0,0,0,0.15)')
     ctx.fillStyle = grad
-    ctx.fillRect(0, 0, SIZE, SIZE)
+    ctx.fillRect(0, 0, CW, CH)
 
     // Draw elements using shared function
     drawElements(ctx, cfg.elements, {
@@ -79,6 +85,8 @@ export default function VisualEditor({ club, onSave }: { club: Club; onSave: (cf
       opponent: 'Adversaire', clubScore: 3, oppScore: 1,
       result: 'VICTOIRE', competition: 'Championnat',
     })
+
+    if (guides.length) drawSnapGuides(ctx, guides, CW, CH)
 
     // Selection overlay
     if (selected) {
@@ -106,13 +114,13 @@ export default function VisualEditor({ club, onSave }: { club: Club; onSave: (cf
         ctx.restore()
       }
     }
-  }, [cfg, selected, club])
+  }, [cfg, selected, club, guides, CW, CH])
 
   useEffect(() => { draw() }, [draw])
 
   function scale() {
     const c = canvasRef.current!
-    return SIZE / c.clientWidth
+    return CW / c.clientWidth
   }
 
   function canvasPos(e: React.MouseEvent<HTMLCanvasElement>) {
@@ -158,56 +166,89 @@ export default function VisualEditor({ club, onSave }: { club: Club; onSave: (cf
     if (!drag) return
     const { x, y } = canvasPos(e)
     const dx = x - drag.sx, dy = y - drag.sy
-    updateEl(drag.id, el => drag.mode === 'move'
-      ? { ...el, x: Math.max(0, Math.min(SIZE - el.w, drag.ox + dx)), y: Math.max(0, Math.min(SIZE - el.h, drag.oy + dy)) }
-      : { ...el, w: Math.max(40, drag.ow + dx), h: Math.max(20, drag.oh + dy) }
-    )
+    if (drag.mode === 'resize') {
+      updateEl(drag.id, el => ({ ...el, w: Math.max(40, drag.ow + dx), h: Math.max(20, drag.oh + dy) }))
+      return
+    }
+    const el = cfg.elements.find(e => e.id === drag.id)
+    if (!el) return
+    const rawX = Math.max(0, Math.min(CW - el.w, drag.ox + dx))
+    const rawY = Math.max(0, Math.min(CH - el.h, drag.oy + dy))
+    const others = cfg.elements.filter(e => e.id !== drag.id && e.visible).map(e => ({ x: e.x, y: e.y, w: e.w, h: e.h }))
+    const snapped = computeSnap({ x: rawX, y: rawY, w: el.w, h: el.h }, others, CW, CH)
+    setGuides(snapped.guides)
+    updateEl(drag.id, e => ({ ...e, x: snapped.x, y: snapped.y }))
   }
 
-  function onMouseUp() { setDrag(null) }
+  function onMouseUp() { setDrag(null); setGuides([]) }
 
   // ── Helpers
   function updateEl(id: string, fn: (el: LayoutElement) => LayoutElement) {
-    setCfg(c => ({ ...c, elements: c.elements.map(e => e.id === id ? fn(e) : e) }))
+    setConfigs(c => ({ ...c, [format]: { ...c[format], elements: c[format].elements.map(e => e.id === id ? fn(e) : e) } }))
   }
   function deleteEl(id: string) {
     setSelected(null)
-    setCfg(c => ({ ...c, elements: c.elements.filter(e => e.id !== id) }))
+    setConfigs(c => ({ ...c, [format]: { ...c[format], elements: c[format].elements.filter(e => e.id !== id) } }))
   }
   function addElement(type: ElementType) {
     const el = newElement(type, club.primaryColor, club.secondaryColor)
-    setCfg(c => ({ ...c, elements: [...c.elements, el] }))
+    setConfigs(c => ({ ...c, [format]: { ...c[format], elements: [...c[format].elements, el] } }))
     setSelected(el.id)
   }
   function moveLayer(id: string, dir: 1 | -1) {
-    setCfg(c => {
-      const arr = [...c.elements]
+    setConfigs(c => {
+      const arr = [...c[format].elements]
       const i = arr.findIndex(e => e.id === id)
       const j = i + dir
       if (j < 0 || j >= arr.length) return c
       ;[arr[i], arr[j]] = [arr[j], arr[i]]
-      return { ...c, elements: arr }
+      return { ...c, [format]: { ...c[format], elements: arr } }
     })
   }
   function duplicateEl(id: string) {
     const el = cfg.elements.find(e => e.id === id)
     if (!el) return
     const copy = { ...el, id: `${el.type}_${Date.now()}`, x: el.x + 30, y: el.y + 30 }
-    setCfg(c => ({ ...c, elements: [...c.elements, copy] }))
+    setConfigs(c => ({ ...c, [format]: { ...c[format], elements: [...c[format].elements, copy] } }))
     setSelected(copy.id)
+  }
+  function resetFormat() {
+    setSelected(null)
+    setConfigs(c => ({ ...c, [format]: { bgOpacity: 0.75, elements: defaultElementsFor(format) } }))
+  }
+  function applyTheme(theme: (typeof VISUAL_THEMES)[number]) {
+    setConfigs(c => ({ ...c, [format]: { ...c[format], elements: applyThemeFontFamily(c[format].elements, theme) } }))
   }
 
   async function handleSave() {
     setSaving(true)
-    await onSave(cfg)
+    await onSave(format, configs[format])
     setSaving(false); setSaved(true)
     setTimeout(() => setSaved(false), 2000)
+  }
+
+  function switchFormat(f: VisualFormat) {
+    setSelected(null)
+    setGuides([])
+    setFormat(f)
   }
 
   const sel = cfg.elements.find(e => e.id === selected) ?? null
 
   return (
     <div className="space-y-4">
+      {/* Format Post / Story */}
+      <div className="inline-flex gap-1 rounded-2xl border border-gray-100 bg-gray-50 p-1">
+        <button onClick={() => switchFormat('post')}
+          className={`px-4 py-1.5 rounded-xl text-xs font-bold transition ${format === 'post' ? 'bg-white shadow text-[#111827]' : 'text-gray-500'}`}>
+          Post carré
+        </button>
+        <button onClick={() => switchFormat('story')}
+          className={`px-4 py-1.5 rounded-xl text-xs font-bold transition ${format === 'story' ? 'bg-white shadow text-[#111827]' : 'text-gray-500'}`}>
+          Story verticale
+        </button>
+      </div>
+
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-2 bg-white border border-gray-100 rounded-2xl p-3">
         <span className="text-xs font-semibold text-gray-400 mr-1">Ajouter :</span>
@@ -218,7 +259,7 @@ export default function VisualEditor({ club, onSave }: { club: Club; onSave: (cf
           </button>
         ))}
         <div className="ml-auto flex gap-2">
-          <button onClick={() => setCfg(DEFAULT_CONFIG)}
+          <button onClick={resetFormat}
             className="px-3 py-1.5 rounded-xl text-xs font-semibold border border-gray-200 text-gray-500 hover:bg-gray-50 transition">
             Réinitialiser
           </button>
@@ -229,13 +270,23 @@ export default function VisualEditor({ club, onSave }: { club: Club; onSave: (cf
         </div>
       </div>
 
+      <div className="flex flex-wrap items-center gap-2 bg-white border border-gray-100 rounded-2xl p-3">
+        <span className="text-xs font-semibold text-gray-400 mr-1">Thèmes :</span>
+        {VISUAL_THEMES.map(theme => (
+          <button key={theme.label} onClick={() => applyTheme(theme)}
+            className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200 transition">
+            {theme.label}
+          </button>
+        ))}
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_260px] gap-4">
         {/* Canvas */}
         <div className="bg-gray-900 rounded-2xl p-4 flex items-center justify-center">
-          <div className="w-full max-w-[520px]">
+          <div className="w-full" style={{ maxWidth: format === 'story' ? 320 : 520 }}>
             <canvas ref={canvasRef}
-              className="w-full aspect-square rounded-xl cursor-crosshair select-none shadow-2xl"
-              style={{ touchAction: 'none' }}
+              className="w-full rounded-xl cursor-crosshair select-none shadow-2xl"
+              style={{ touchAction: 'none', aspectRatio: `${CW}/${CH}` }}
               onMouseDown={onMouseDown} onMouseMove={onMouseMove}
               onMouseUp={onMouseUp} onMouseLeave={onMouseUp}
             />
@@ -252,7 +303,7 @@ export default function VisualEditor({ club, onSave }: { club: Club; onSave: (cf
               <span className="text-xs text-gray-400 w-16">Opacité</span>
               <input type="range" min="0" max="1" step="0.05"
                 value={cfg.bgOpacity}
-                onChange={e => setCfg(c => ({ ...c, bgOpacity: Number(e.target.value) }))}
+                onChange={e => setConfigs(c => ({ ...c, [format]: { ...c[format], bgOpacity: Number(e.target.value) } }))}
                 className="flex-1 accent-[#2563eb]"
               />
               <span className="text-xs font-mono w-8 text-right">{Math.round(cfg.bgOpacity * 100)}%</span>
@@ -307,6 +358,32 @@ export default function VisualEditor({ club, onSave }: { club: Club; onSave: (cf
                     className="w-7 h-7 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-sm flex items-center justify-center">+</button>
                 </Row>
               )}
+
+              {/* Font family for text elements */}
+              {['sport', 'clubName', 'text', 'scoreBlock', 'footer'].includes(sel.type) && (
+                <Row label="Police">
+                  <select value={sel.fontFamily ?? ''} onChange={e => updateEl(sel.id, el => ({ ...el, fontFamily: e.target.value || undefined }))}
+                    className="flex-1 text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none">
+                    {DEFAULT_FONT_FAMILIES.map(f => <option key={f.label} value={f.value}>{f.label}</option>)}
+                  </select>
+                </Row>
+              )}
+
+              {/* Rotation */}
+              <Row label="Rotation">
+                <input type="range" min="-45" max="45" step="1" value={sel.rotation ?? 0}
+                  onChange={e => updateEl(sel.id, el => ({ ...el, rotation: Number(e.target.value) || undefined }))}
+                  className="flex-1 accent-[#2563eb]" />
+                <span className="text-xs font-mono w-10 text-right">{sel.rotation ?? 0}°</span>
+              </Row>
+
+              {/* Shadow */}
+              <Row label="Ombre">
+                <input type="range" min="0" max="40" step="2" value={sel.shadowBlur ?? 0}
+                  onChange={e => updateEl(sel.id, el => ({ ...el, shadowBlur: Number(e.target.value) || undefined }))}
+                  className="flex-1 accent-[#2563eb]" />
+                <span className="text-xs font-mono w-8 text-right">{sel.shadowBlur ?? 0}</span>
+              </Row>
 
               {/* Custom text content */}
               {sel.type === 'text' && (

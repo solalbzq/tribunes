@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react'
 import {
-  loadImage, textColor, parsePostVisualConfig, drawPostVisualElements,
-  POST_VISUAL_SIZE, type PostVisualContext,
+  loadImage, textColor, parsePostVisualConfig, drawPostVisualElements, drawPostVisualBackground,
+  postVisualCanvasSizeFor, type PostVisualContext, type VisualFormat,
 } from '@/lib/visualLayout'
 
 type Club = {
@@ -14,8 +14,6 @@ type Club = {
   logoUrl: string | null
   postVisualConfigs?: unknown
 }
-
-const { W, H } = POST_VISUAL_SIZE
 
 function daysUntil(date: Date): number {
   const ms = date.setHours(0, 0, 0, 0) - new Date().setHours(0, 0, 0, 0)
@@ -34,6 +32,7 @@ export default function MatchAnnouncementVisualGenerator({
   time,
   venue,
   isHome,
+  format = 'post',
   onCanvasReady,
 }: {
   club: Club
@@ -42,6 +41,7 @@ export default function MatchAnnouncementVisualGenerator({
   time?: string
   venue?: string
   isHome: boolean
+  format?: VisualFormat
   onCanvasReady?: (canvas: HTMLCanvasElement) => void
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -49,6 +49,7 @@ export default function MatchAnnouncementVisualGenerator({
   const [copied, setCopied] = useState(false)
   const onReadyRef = useRef(onCanvasReady)
   onReadyRef.current = onCanvasReady
+  const { w: W, h: H } = postVisualCanvasSizeFor(format)
 
   useEffect(() => {
     let cancelled = false
@@ -61,13 +62,8 @@ export default function MatchAnnouncementVisualGenerator({
       canvas.height = H
       setReady(false)
 
-      ctx.fillStyle = club.primaryColor
-      ctx.fillRect(0, 0, W, H)
-      const bg = ctx.createLinearGradient(0, 0, W, H)
-      bg.addColorStop(0, 'rgba(255,255,255,0.04)')
-      bg.addColorStop(1, 'rgba(0,0,0,0.2)')
-      ctx.fillStyle = bg
-      ctx.fillRect(0, 0, W, H)
+      const { elements, background } = parsePostVisualConfig(club.postVisualConfigs, 'matchAnnouncement', format)
+      drawPostVisualBackground(ctx, W, H, background, club.primaryColor)
 
       if (cancelled) return
 
@@ -84,7 +80,6 @@ export default function MatchAnnouncementVisualGenerator({
         ? d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }).toUpperCase()
         : ''
 
-      const { elements } = parsePostVisualConfig(club.postVisualConfigs, 'matchAnnouncement')
       const context: PostVisualContext = {
         clubName: club.name, sport: club.sport,
         textColor: textColor(club.primaryColor), secondaryColor: club.secondaryColor,
@@ -102,7 +97,7 @@ export default function MatchAnnouncementVisualGenerator({
     }
     draw()
     return () => { cancelled = true }
-  }, [club, opponent, matchDate, time, venue, isHome])
+  }, [club, opponent, matchDate, time, venue, isHome, format, W, H])
 
   function download() {
     const canvas = canvasRef.current

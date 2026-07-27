@@ -4,6 +4,8 @@ import { useRef, useState } from 'react'
 import TextPostsPanel from './TextPostsPanel'
 import ToneSelector from './ToneSelector'
 import TournamentVisualGenerator from './TournamentVisualGenerator'
+import FormatToggle from './FormatToggle'
+import type { VisualFormat } from '@/lib/visualLayout'
 import { FIELD } from './ui'
 import { Icon } from './icons'
 
@@ -39,6 +41,7 @@ export default function TournamentTab({ club }: { club: Club }) {
   const [matchDate, setMatchDate] = useState('')
   const [venue, setVenue] = useState('')
   const [rows, setRows] = useState<TournamentMatchRow[]>([EMPTY_ROW()])
+  const [visualFormat, setVisualFormat] = useState<VisualFormat>('post')
   const [generating, setGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [posts, setPosts] = useState<Posts | null>(null)
@@ -220,13 +223,15 @@ export default function TournamentTab({ club }: { club: Club }) {
         {error && <p className="text-xs text-red-500">{error}</p>}
       </div>
 
-      <div>
+      <div className="space-y-3">
+        <FormatToggle value={visualFormat} onChange={setVisualFormat} />
         <TournamentVisualGenerator
           club={club}
           tournamentName={tournamentName || 'Notre tournoi'}
           venue={venue}
           matchDate={matchDate}
           matches={filled}
+          format={visualFormat}
           onCanvasReady={c => { canvasRef.current = c }}
         />
       </div>

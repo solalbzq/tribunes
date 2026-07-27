@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { parseVisualConfig, loadImage, SIZE, drawElements, drawWatermark } from '@/lib/visualLayout'
+import { parseVisualConfigByFormat, loadImage, canvasSizeFor, drawElements, drawWatermark, type VisualFormat } from '@/lib/visualLayout'
 import { getSportVocab, getDetailLines, getScoreLabel } from '@/lib/sports'
 import { Icon } from './icons'
 
@@ -16,8 +16,9 @@ type MatchData = {
   extraData?: Record<string, unknown>
 }
 
-export default function VisualGenerator({ club, match, photoFile, onCanvasReady }: {
+export default function VisualGenerator({ club, match, photoFile, format = 'post', onCanvasReady }: {
   club: Club; match: MatchData; photoFile: File | null
+  format?: VisualFormat
   onCanvasReady?: (canvas: HTMLCanvasElement) => void
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -36,6 +37,8 @@ export default function VisualGenerator({ club, match, photoFile, onCanvasReady 
   const detailLines = match.extraData ? getDetailLines(club.sport, match.extraData) : []
   const scoreLabel = getScoreLabel(club.sport)
 
+  const { w: CW, h: CH } = canvasSizeFor(format)
+
   useEffect(() => {
     let cancelled = false
     async function draw() {
@@ -43,38 +46,38 @@ export default function VisualGenerator({ club, match, photoFile, onCanvasReady 
       if (!canvas) return
       const ctx = canvas.getContext('2d')
       if (!ctx) return
-      canvas.width = SIZE; canvas.height = SIZE
+      canvas.width = CW; canvas.height = CH
       setReady(false)
 
-      const { bgOpacity, elements } = parseVisualConfig(club.visualConfig)
+      const { bgOpacity, elements } = parseVisualConfigByFormat(club.visualConfig)[format]
 
       // ── Background solid
       ctx.fillStyle = club.primaryColor
-      ctx.fillRect(0, 0, SIZE, SIZE)
-      const grad = ctx.createLinearGradient(0, 0, SIZE, SIZE)
+      ctx.fillRect(0, 0, CW, CH)
+      const grad = ctx.createLinearGradient(0, 0, CW, CH)
       grad.addColorStop(0, 'rgba(255,255,255,0.03)')
       grad.addColorStop(1, 'rgba(0,0,0,0.15)')
       ctx.fillStyle = grad
-      ctx.fillRect(0, 0, SIZE, SIZE)
+      ctx.fillRect(0, 0, CW, CH)
 
       // ── Background photo (with saved opacity)
       if (photoFile) {
         const photoUrl = URL.createObjectURL(photoFile)
         try {
           const photo = await loadImage(photoUrl)
-          const ratio = Math.max(SIZE / photo.width, SIZE / photo.height)
+          const ratio = Math.max(CW / photo.width, CH / photo.height)
           const pw = photo.width * ratio, ph = photo.height * ratio
           ctx.save()
           ctx.globalAlpha = bgOpacity
-          ctx.drawImage(photo, (SIZE - pw) / 2, (SIZE - ph) / 2, pw, ph)
+          ctx.drawImage(photo, (CW - pw) / 2, (CH - ph) / 2, pw, ph)
           ctx.globalAlpha = 1 - bgOpacity * 0.4
           ctx.fillStyle = club.primaryColor
-          ctx.fillRect(0, 0, SIZE, SIZE)
+          ctx.fillRect(0, 0, CW, CH)
           ctx.globalAlpha = 1
           ctx.restore()
         } catch {
           ctx.fillStyle = club.primaryColor
-          ctx.fillRect(0, 0, SIZE, SIZE)
+          ctx.fillRect(0, 0, CW, CH)
         } finally { URL.revokeObjectURL(photoUrl) }
       }
 
@@ -98,7 +101,7 @@ export default function VisualGenerator({ club, match, photoFile, onCanvasReady 
         scoreLabel,
       })
 
-      if (club.watermark) drawWatermark(ctx, SIZE)
+      if (club.watermark) drawWatermark(ctx, CW)
 
       if (!cancelled) {
         setReady(true)
@@ -107,7 +110,7 @@ export default function VisualGenerator({ club, match, photoFile, onCanvasReady 
     }
     draw()
     return () => { cancelled = true }
-  }, [club, match, photoFile, clubScore, oppScore, result])
+  }, [club, match, photoFile, clubScore, oppScore, result, format, CW, CH])
 
   function download() {
     const canvas = canvasRef.current
@@ -145,7 +148,7 @@ export default function VisualGenerator({ club, match, photoFile, onCanvasReady 
         </div>
       </div>
       <div className="flex justify-center rounded-btn bg-subtle p-4">
-        <canvas ref={canvasRef} className="w-full max-w-[420px] aspect-square rounded-xl shadow-lg" />
+        <canvas ref={canvasRef} className="w-full rounded-xl shadow-lg" style={{ maxWidth: format === 'story' ? 260 : 420, aspectRatio: `${CW}/${CH}` }} />
       </div>
       {!ready && <p className="mt-2 text-center text-xs text-muted">Génération…</p>}
     </div>

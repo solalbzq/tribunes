@@ -5,6 +5,8 @@ import VisualGenerator from './VisualGenerator'
 import PublishPanel from './PublishPanel'
 import PersonalizePostPanel from './PersonalizePostPanel'
 import { PageHeader, GhostButton } from './ui'
+import type { VisualFormat } from '@/lib/visualLayout'
+import FormatToggle from './FormatToggle'
 
 type Posts = { instagram: string; facebook: string; whatsapp: string }
 type PostIds = Partial<Record<keyof Posts, string>>
@@ -53,6 +55,7 @@ export default function PostsResult({
 }) {
   const [copied, setCopied] = useState<string | null>(null)
   const [active, setActive] = useState<'instagram' | 'facebook' | 'whatsapp' | 'visual'>('instagram')
+  const [visualFormat, setVisualFormat] = useState<VisualFormat>('post')
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
 
   function copyToClipboard(text: string, key: string) {
@@ -91,8 +94,9 @@ export default function PostsResult({
       </div>
 
       {/* Visual — toujours monté (canvas capturé pour la publication), affiché sur l'onglet Visuel */}
-      <div className={active === 'visual' ? '' : 'hidden'}>
-        <VisualGenerator club={club} match={match} photoFile={photoFile} onCanvasReady={c => { canvasRef.current = c }} />
+      <div className={active === 'visual' ? 'space-y-3' : 'hidden'}>
+        <FormatToggle value={visualFormat} onChange={setVisualFormat} />
+        <VisualGenerator club={club} match={match} photoFile={photoFile} format={visualFormat} onCanvasReady={c => { canvasRef.current = c }} />
       </div>
 
       {/* Post card */}

@@ -12,6 +12,8 @@ import ClubAnnouncementTab from './ClubAnnouncementTab'
 import EngagementPollTab from './EngagementPollTab'
 import DescribeIntentTab from './DescribeIntentTab'
 import VisualGenerator from './VisualGenerator'
+import FormatToggle from './FormatToggle'
+import type { VisualFormat } from '@/lib/visualLayout'
 import TennisPadelTab from './posts/TennisPadelTab'
 import type { TennisVisualConfig } from './posts/TennisVisualGenerator'
 import { PageHeader, Segmented, GhostButton } from './ui'
@@ -56,6 +58,7 @@ export default function ContentTab({ club }: { club: Club }) {
   const [generatedMatchId, setGeneratedMatchId] = useState<string | null>(null)
   const [generatedPhoto, setGeneratedPhoto] = useState<File | null>(null)
   const [personalizing, setPersonalizing] = useState(false)
+  const [visualOnlyFormat, setVisualOnlyFormat] = useState<VisualFormat>('post')
 
   function handleSectionChange(next: Section) {
     // Un ancien préremplissage ne doit jamais réapparaître silencieusement
@@ -174,7 +177,8 @@ export default function ContentTab({ club }: { club: Club }) {
               Nouveau match
             </GhostButton>
           </div>
-          <VisualGenerator club={club} match={generatedMatch} photoFile={generatedPhoto} />
+          <FormatToggle value={visualOnlyFormat} onChange={setVisualOnlyFormat} />
+          <VisualGenerator club={club} match={generatedMatch} photoFile={generatedPhoto} format={visualOnlyFormat} />
         </div>
       )}
 
