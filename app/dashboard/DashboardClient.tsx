@@ -24,6 +24,7 @@ type Club = {
   automationMode: string;
   telegramChatId: string | null;
   automationEnabled: boolean;
+  plan: 'FREE' | 'CLUB' | 'PRO';
   contentTone: string;
   matches: Array<{
     id: string;

@@ -27,6 +27,8 @@ export type LayoutElement = {
   shadowBlur?: number   // px, 0/undefined = pas d'ombre portée
   // Logo-specific
   logoShowBg?: boolean  // false = no background bubble
+  // Footer-specific (fonctionnalité Premium — cf. sanitizeFooterForPlan)
+  footerVariant?: 'brand' | 'clubName'
 }
 
 export type VisualConfig = {
@@ -73,6 +75,20 @@ export const VISUAL_THEMES: VisualTheme[] = [
 /** Applique la police d'un thème à une liste d'éléments, sans toucher au reste. */
 export function applyThemeFontFamily<T extends { fontFamily?: string }>(elements: T[], theme: VisualTheme): T[] {
   return elements.map(e => ({ ...e, fontFamily: theme.fontFamily || undefined }))
+}
+
+/**
+ * Personnalisation du bandeau de bas de visuel (masquer / remplacer par le nom
+ * du club) — fonctionnalité Premium. Appelé côté serveur (app/api/clubs/route.ts)
+ * avant toute sauvegarde pour garantir l'application du plan même si le client
+ * envoie un payload différent de ce que l'UI propose.
+ */
+export function sanitizeFooterElements<T extends { type: string; visible: boolean; footerVariant?: 'brand' | 'clubName' }>(
+  elements: T[],
+  isPremium: boolean
+): T[] {
+  if (isPremium) return elements
+  return elements.map(e => (e.type === 'footer' ? { ...e, visible: true, footerVariant: undefined } : e))
 }
 
 function fontOf(el: { fontFamily?: string }): string {
@@ -500,13 +516,15 @@ export function drawElements(
       ctx.font = `800 ${Math.round(26 * fontSize)}px ${fontOf(el)}`
       ctx.textAlign = 'left'
       ctx.textBaseline = 'middle'
-      ctx.fillText('⚡ tribunes.app', x + 60, y + h / 2)
-      ctx.font = `400 ${Math.round(20 * fontSize)}px ${fontOf(el)}`
-      ctx.textAlign = 'right'
-      ctx.fillText(
-        `#${match.clubName.toLowerCase().replace(/\s/g, '')} #${match.sport.toLowerCase()}`,
-        x + w - 60, y + h / 2
-      )
+      ctx.fillText(el.footerVariant === 'clubName' ? match.clubName : '⚡ tribunes.app', x + 60, y + h / 2)
+      if (el.footerVariant !== 'clubName') {
+        ctx.font = `400 ${Math.round(20 * fontSize)}px ${fontOf(el)}`
+        ctx.textAlign = 'right'
+        ctx.fillText(
+          `#${match.clubName.toLowerCase().replace(/\s/g, '')} #${match.sport.toLowerCase()}`,
+          x + w - 60, y + h / 2
+        )
+      }
       ctx.textAlign = 'left'
     }
 
@@ -602,14 +620,22 @@ export type PostVisualElement = {
   rotation?: number
   shadowBlur?: number
   logoShowBg?: boolean
+  /** Fonctionnalité Premium — cf. sanitizeFooterForPlan. */
+  footerVariant?: 'brand' | 'clubName'
+  /** Forme de recadrage pour un élément 'photo' (par défaut : 'circle'). */
+  photoShape?: 'circle' | 'rounded' | 'square' | 'full'
 }
 
 /** Fond du visuel : dégradé (par défaut) ou couleur unie, avec une opacité de superposition réglable. */
 export type PostVisualBackground = {
-  type: 'gradient' | 'solid'
+  type: 'gradient' | 'solid' | 'image'
   /** Couleur de base — vide = couleur primaire du club (comportement par défaut historique). */
   color?: string
   overlayOpacity?: number
+  /** Photo de fond (type 'image'), hébergée sur le stockage du club. */
+  imageUrl?: string
+  /** Flou appliqué à la photo de fond, en px (0 = net). */
+  blur?: number
 }
 
 export const DEFAULT_POST_VISUAL_BACKGROUND: PostVisualBackground = { type: 'gradient', overlayOpacity: 1 }
@@ -829,6 +855,8 @@ export type PostVisualContext = {
   vs?: { left: string; right: string; badge?: string }
   infoLines?: string[]
   photo?: { img: HTMLImageElement | null; fallbackText: string }
+  /** Photos multiples, dans l'ordre d'apparition des éléments 'photo' du calque. `photo` reste utilisé si présent et qu'aucune entrée n'existe pour l'index 0. */
+  photos?: { img: HTMLImageElement | null; fallbackText: string }[]
   options?: string[]
 }
 
@@ -842,12 +870,33 @@ export function drawPostVisualBackground(
   w: number,
   h: number,
   background: PostVisualBackground | undefined,
-  primaryColor: string
+  primaryColor: string,
+  bgImage?: HTMLImageElement | null
 ) {
   const bg = background ?? DEFAULT_POST_VISUAL_BACKGROUND
   const baseColor = bg.color && bg.color.trim() ? bg.color : primaryColor
   ctx.fillStyle = baseColor
   ctx.fillRect(0, 0, w, h)
+
+  if (bg.type === 'image' && bgImage) {
+    const ratio = Math.max(w / bgImage.width, h / bgImage.height)
+    const iw = bgImage.width * ratio
+    const ih = bgImage.height * ratio
+    ctx.save()
+    if (bg.blur) ctx.filter = `blur(${bg.blur}px)`
+    ctx.drawImage(bgImage, (w - iw) / 2, (h - ih) / 2, iw, ih)
+    ctx.restore()
+
+    const darken = bg.overlayOpacity ?? 0.35
+    if (darken > 0) {
+      ctx.save()
+      ctx.globalAlpha = darken
+      ctx.fillStyle = '#000000'
+      ctx.fillRect(0, 0, w, h)
+      ctx.restore()
+    }
+    return
+  }
 
   const overlayOpacity = bg.overlayOpacity ?? 1
   if (overlayOpacity <= 0) return
@@ -875,6 +924,7 @@ export function drawPostVisualElements(
 ) {
   const sc = context.secondaryColor
   const tc = context.textColor
+  let photoIndex = 0
 
   for (const item of elements) {
     if (!item.visible) continue
@@ -986,7 +1036,7 @@ export function drawPostVisualElements(
         ctx.fillText(row.subtitle, x + 20 + lbW + 22, ry + rowH * 0.8)
 
         if (row.rightBadge) {
-          ctx.font = '600 16px ${fontOf(item)}'
+          ctx.font = `600 16px ${fontOf(item)}`
           const bw = ctx.measureText(row.rightBadge.toUpperCase()).width + 28
           const badgeColor = row.rightAccent ? sc : 'rgba(255,255,255,0.18)'
           roundRect(ctx, x + w - 20 - bw, ry + rowH / 2 - 16, bw, 32, 16)
@@ -1020,12 +1070,12 @@ export function drawPostVisualElements(
       })
       ctx.textAlign = 'center'
       if (context.statsCaption) {
-        ctx.font = '500 22px ${fontOf(item)}'
+        ctx.font = `500 22px ${fontOf(item)}`
         ctx.fillStyle = labelColor + 'aa'
         ctx.fillText(context.statsCaption, x + w / 2, y + h + 50)
       }
       if (context.statsNote) {
-        ctx.font = '700 26px ${fontOf(item)}'
+        ctx.font = `700 26px ${fontOf(item)}`
         ctx.fillStyle = sc
         ctx.fillText(truncate(context.statsNote, 48), x + w / 2, y + h + 110)
       }
@@ -1044,7 +1094,7 @@ export function drawPostVisualElements(
       ctx.fillStyle = 'rgba(255,255,255,0.14)'
       ctx.fill()
       ctx.fillStyle = vsColor
-      ctx.font = '900 28px ${fontOf(item)}'
+      ctx.font = `900 28px ${fontOf(item)}`
       ctx.fillText('VS', midX, y + h * 0.32 + 36)
 
       ctx.fillStyle = sc
@@ -1052,7 +1102,7 @@ export function drawPostVisualElements(
       ctx.fillText(truncate(context.vs.right, 20), midX, y + h * 0.68)
 
       if (context.vs.badge) {
-        ctx.font = '600 20px ${fontOf(item)}'
+        ctx.font = `600 20px ${fontOf(item)}`
         const bw = ctx.measureText(context.vs.badge).width + 40
         roundRect(ctx, midX - bw / 2, y + h * 0.86 - 22, bw, 44, 22)
         ctx.fillStyle = 'rgba(255,255,255,0.10)'
@@ -1075,28 +1125,36 @@ export function drawPostVisualElements(
     }
 
     if (item.type === 'photo') {
+      const slot = context.photos?.[photoIndex] ?? (photoIndex === 0 ? context.photo : undefined)
+      photoIndex++
+
+      const shape = item.photoShape ?? 'circle'
       const size = Math.min(w, h)
-      const px = x + (w - size) / 2
-      const py = y
-      roundRect(ctx, px, py, size, size, size / 2)
+      const fw = shape === 'full' ? w : size
+      const fh = shape === 'full' ? h : size
+      const fx = x + (w - fw) / 2
+      const fy = y
+      const radius = shape === 'circle' ? Math.min(fw, fh) / 2 : shape === 'rounded' ? Math.min(fw, fh) * 0.16 : 0
+
+      roundRect(ctx, fx, fy, fw, fh, radius)
       ctx.fillStyle = 'rgba(255,255,255,0.12)'
       ctx.fill()
-      const img = context.photo?.img
+      const img = slot?.img
       if (img) {
         ctx.save()
-        roundRect(ctx, px, py, size, size, size / 2)
+        roundRect(ctx, fx, fy, fw, fh, radius)
         ctx.clip()
-        const ratio = Math.max(size / img.width, size / img.height)
+        const ratio = Math.max(fw / img.width, fh / img.height)
         const iw = img.width * ratio
         const ih = img.height * ratio
-        ctx.drawImage(img, px + (size - iw) / 2, py + (size - ih) / 2, iw, ih)
+        ctx.drawImage(img, fx + (fw - iw) / 2, fy + (fh - ih) / 2, iw, ih)
         ctx.restore()
       } else {
         ctx.fillStyle = resolveColor(color, sc)
-        ctx.font = `900 ${Math.round(size * 0.38)}px ${fontOf(item)}`
+        ctx.font = `900 ${Math.round(Math.min(fw, fh) * 0.38)}px ${fontOf(item)}`
         ctx.textAlign = 'center'
         ctx.textBaseline = 'middle'
-        ctx.fillText(context.photo?.fallbackText || '?', px + size / 2, py + size / 2 + 6)
+        ctx.fillText(slot?.fallbackText || '?', fx + fw / 2, fy + fh / 2 + 6)
       }
     }
 
@@ -1134,13 +1192,15 @@ export function drawPostVisualElements(
       ctx.font = `800 ${Math.round(26 * fontSize)}px ${fontOf(item)}`
       ctx.textAlign = 'left'
       ctx.textBaseline = 'middle'
-      ctx.fillText('⚡ tribunes.app', x + 60, y + h / 2)
-      ctx.font = '400 20px ${fontOf(item)}'
-      ctx.textAlign = 'right'
-      ctx.fillText(
-        `#${context.clubName.toLowerCase().replace(/\s/g, '')} #${context.sport.toLowerCase()}`,
-        x + w - 60, y + h / 2
-      )
+      ctx.fillText(item.footerVariant === 'clubName' ? context.clubName : '⚡ tribunes.app', x + 60, y + h / 2)
+      if (item.footerVariant !== 'clubName') {
+        ctx.font = `400 20px ${fontOf(item)}`
+        ctx.textAlign = 'right'
+        ctx.fillText(
+          `#${context.clubName.toLowerCase().replace(/\s/g, '')} #${context.sport.toLowerCase()}`,
+          x + w - 60, y + h / 2
+        )
+      }
     }
 
     if (item.type === 'text') {

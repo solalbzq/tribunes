@@ -34,14 +34,15 @@ export default function PlayerSpotlightVisualGenerator({
   club,
   playerName,
   achievement,
-  photoFile,
+  photoFiles,
   format = 'post',
   onCanvasReady,
 }: {
   club: Club
   playerName: string
   achievement: string
-  photoFile?: File | null
+  /** Jusqu'à plusieurs photos, dans l'ordre des éléments 'photo' du calque (le premier = photo principale). */
+  photoFiles?: (File | null)[]
   format?: VisualFormat
   onCanvasReady?: (canvas: HTMLCanvasElement) => void
 }) {
@@ -64,7 +65,12 @@ export default function PlayerSpotlightVisualGenerator({
       setReady(false)
 
       const { elements, background } = parsePostVisualConfig(club.postVisualConfigs, 'playerSpotlight', format)
-      drawPostVisualBackground(ctx, W, H, background, club.primaryColor)
+      let bgImg: HTMLImageElement | null = null
+      if (background?.type === 'image' && background.imageUrl) {
+        try { bgImg = await loadImage(background.imageUrl) } catch {}
+      }
+      if (cancelled) return
+      drawPostVisualBackground(ctx, W, H, background, club.primaryColor, bgImg)
 
       if (cancelled) return
 
@@ -72,11 +78,16 @@ export default function PlayerSpotlightVisualGenerator({
       if (club.logoUrl) {
         try { logoImg = await loadImage(club.logoUrl) } catch {}
       }
-      let photoImg: HTMLImageElement | null = null
-      if (photoFile) {
-        const url = URL.createObjectURL(photoFile)
-        try { photoImg = await loadImage(url) } catch {} finally { URL.revokeObjectURL(url) }
-      }
+      const fallbackText = initials(playerName || '?')
+      const files = photoFiles?.filter(Boolean) as File[] | undefined
+      const photos = files && files.length
+        ? await Promise.all(files.map(async file => {
+            const url = URL.createObjectURL(file)
+            try { return { img: await loadImage(url), fallbackText } }
+            catch { return { img: null, fallbackText } }
+            finally { URL.revokeObjectURL(url) }
+          }))
+        : [{ img: null, fallbackText }]
       if (cancelled) return
 
       const context: PostVisualContext = {
@@ -86,7 +97,8 @@ export default function PlayerSpotlightVisualGenerator({
         badge: "⭐ À L'HONNEUR",
         heading: playerName,
         paragraph: achievement,
-        photo: { img: photoImg, fallbackText: initials(playerName || '?') },
+        photo: photos[0],
+        photos,
       }
       drawPostVisualElements(ctx, elements, context)
 
@@ -97,7 +109,7 @@ export default function PlayerSpotlightVisualGenerator({
     }
     draw()
     return () => { cancelled = true }
-  }, [club, playerName, achievement, photoFile, format, W, H])
+  }, [club, playerName, achievement, photoFiles, format, W, H])
 
   function download() {
     const canvas = canvasRef.current

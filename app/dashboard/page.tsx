@@ -4,6 +4,7 @@ import type { Prisma } from '@prisma/client'
 import { redirect } from 'next/navigation'
 import { checkAutomationAllowed } from '@/lib/automation'
 import { clubOwnershipOr } from '@/lib/postTypes'
+import { resolvePlanForClub } from '@/lib/org'
 import DashboardClient from './DashboardClient'
 
 export default async function DashboardPage() {
@@ -67,11 +68,13 @@ export default async function DashboardPage() {
     : []
 
   const automationEnabled = club ? await checkAutomationAllowed(club) : false
+  const { plan } = club ? await resolvePlanForClub(club) : { plan: 'FREE' as const }
 
   // Sérialise les dates en string pour le passage server→client
   const serialized = club ? {
     ...club,
     automationEnabled,
+    plan,
     matches: club.matches.map(m => ({
       ...m,
       date: m.date.toISOString(),

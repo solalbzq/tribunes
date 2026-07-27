@@ -57,7 +57,12 @@ export default function SeasonRecapVisualGenerator({
       setReady(false)
 
       const { elements, background } = parsePostVisualConfig(club.postVisualConfigs, 'seasonRecap', format)
-      drawPostVisualBackground(ctx, W, H, background, club.primaryColor)
+      let bgImg: HTMLImageElement | null = null
+      if (background?.type === 'image' && background.imageUrl) {
+        try { bgImg = await loadImage(background.imageUrl) } catch {}
+      }
+      if (cancelled) return
+      drawPostVisualBackground(ctx, W, H, background, club.primaryColor, bgImg)
 
       if (cancelled) return
 

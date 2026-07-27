@@ -41,7 +41,7 @@ function newElement(type: ElementType, primary: string, secondary: string): Layo
   }
 }
 
-export default function VisualEditor({ club, onSave }: { club: Club; onSave: (format: VisualFormat, cfg: VisualConfig) => void | Promise<void> }) {
+export default function VisualEditor({ club, isPremium, onSave }: { club: Club; isPremium: boolean; onSave: (format: VisualFormat, cfg: VisualConfig) => void | Promise<void> }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const logoRef = useRef<HTMLImageElement | null>(null)
   const [format, setFormat] = useState<VisualFormat>('post')
@@ -326,9 +326,11 @@ export default function VisualEditor({ club, onSave }: { club: Club; onSave: (fo
               </div>
 
               {/* Visibility */}
-              <Row label="Visible">
-                <Toggle value={sel.visible} onChange={v => updateEl(sel.id, e => ({ ...e, visible: v }))} />
-              </Row>
+              {(sel.type !== 'footer' || isPremium) && (
+                <Row label="Visible">
+                  <Toggle value={sel.visible} onChange={v => updateEl(sel.id, e => ({ ...e, visible: v }))} />
+                </Row>
+              )}
 
               {/* Opacity */}
               <Row label="Opacité">
@@ -399,6 +401,22 @@ export default function VisualEditor({ club, onSave }: { club: Club; onSave: (fo
                 <Row label="Fond bulle">
                   <Toggle value={sel.logoShowBg !== false} onChange={v => updateEl(sel.id, e => ({ ...e, logoShowBg: v }))} />
                 </Row>
+              )}
+
+              {sel.type === 'footer' && (
+                isPremium ? (
+                  <Row label="Contenu">
+                    <select value={sel.footerVariant ?? 'brand'} onChange={e => updateEl(sel.id, el => ({ ...el, footerVariant: e.target.value === 'clubName' ? 'clubName' : undefined }))}
+                      className="flex-1 text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none">
+                      <option value="brand">Tribunes + hashtags</option>
+                      <option value="clubName">Nom du club (sans hashtags)</option>
+                    </select>
+                  </Row>
+                ) : (
+                  <p className="text-[11px] text-amber-600 bg-amber-50 border border-amber-200 rounded-lg p-2">
+                    Personnaliser ou masquer ce bandeau est réservé aux plans payants.
+                  </p>
+                )
               )}
 
               {/* Shape border radius */}

@@ -23,6 +23,7 @@ type Club = {
   visualConfig: unknown
   tennisVisualConfig?: unknown
   postVisualConfigs?: unknown
+  plan: 'FREE' | 'CLUB' | 'PRO'
   contentTone: string
   customInstructions?: string | null
   signaturePhrase?: string | null
@@ -52,6 +53,7 @@ export default function PersonnalisationView({ club }: { club: Club }) {
   const router = useRouter()
   const fileRef = useRef<HTMLInputElement>(null)
   const isTennisPadel = club.sport === 'Tennis' || club.sport === 'Padel'
+  const isPremium = club.plan !== 'FREE'
 
   const [artTab, setArtTab] = useState<'identity' | 'result' | 'tennis' | PostVisualKind>('identity')
   const [primary, setPrimary] = useState(club.primaryColor)
@@ -348,6 +350,7 @@ export default function PersonnalisationView({ club }: { club: Club }) {
             logoUrl: logoPreview,
             visualConfig: buildVisualConfigPayload(),
           }}
+          isPremium={isPremium}
           onSave={handleSaveLayout}
         />
       )}
@@ -363,8 +366,9 @@ export default function PersonnalisationView({ club }: { club: Club }) {
       {POST_VISUAL_TYPES.some(t => t.key === artTab) && (
         <PostVisualEditor
           kind={artTab as PostVisualKind}
-          club={{ name: club.name, sport: club.sport, primaryColor: primary, secondaryColor: secondary, logoUrl: logoPreview }}
+          club={{ id: club.id, name: club.name, sport: club.sport, primaryColor: primary, secondaryColor: secondary, logoUrl: logoPreview }}
           savedConfig={club.postVisualConfigs}
+          isPremium={isPremium}
           onSave={handleSavePostVisual}
         />
       )}

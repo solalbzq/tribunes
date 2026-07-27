@@ -20,12 +20,14 @@ type Club = {
   logoUrl: string | null
 }
 
+const MAX_PHOTOS = 3
+
 export default function PlayerSpotlightTab({ club }: { club: Club }) {
   const [playerName, setPlayerName] = useState('')
   const [achievement, setAchievement] = useState('')
   const [periodLabel, setPeriodLabel] = useState('')
-  const [photoFile, setPhotoFile] = useState<File | null>(null)
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null)
+  const [photoFiles, setPhotoFiles] = useState<(File | null)[]>([null, null, null])
+  const [photoPreviews, setPhotoPreviews] = useState<(string | null)[]>([null, null, null])
   const [tone, setTone] = useState('')
   const [visualFormat, setVisualFormat] = useState<VisualFormat>('post')
   const [generating, setGenerating] = useState(false)
@@ -35,7 +37,7 @@ export default function PlayerSpotlightTab({ club }: { club: Club }) {
   const [spotlightId, setSpotlightId] = useState<string | null>(null)
   const [personalizing, setPersonalizing] = useState(false)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
-  const fileRef = useRef<HTMLInputElement>(null)
+  const fileRefs = useRef<(HTMLInputElement | null)[]>([])
 
   async function getImageBlob(): Promise<Blob | null> {
     const canvas = canvasRef.current
@@ -43,11 +45,11 @@ export default function PlayerSpotlightTab({ club }: { club: Club }) {
     return new Promise(r => canvas.toBlob(r, 'image/png'))
   }
 
-  function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+  function handlePhotoChange(index: number, e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
-    setPhotoFile(file)
-    setPhotoPreview(URL.createObjectURL(file))
+    setPhotoFiles(prev => prev.map((f, i) => i === index ? file : f))
+    setPhotoPreviews(prev => prev.map((p, i) => i === index ? URL.createObjectURL(file) : p))
   }
 
   const canGenerate = Boolean(playerName && achievement)
@@ -139,25 +141,24 @@ export default function PlayerSpotlightTab({ club }: { club: Club }) {
 
         <div>
           <label className="block text-sm font-semibold text-[#111827] mb-2">
-            Photo <span className="font-normal text-gray-400">(optionnel — pour le visuel)</span>
+            Photos <span className="font-normal text-gray-400">(optionnel — jusqu'à {MAX_PHOTOS}, pour un visuel façon collage)</span>
           </label>
           <div className="flex items-center gap-4">
-            <div onClick={() => fileRef.current?.click()}
-              className="w-20 h-20 rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center overflow-hidden cursor-pointer hover:border-[#2563eb] transition shrink-0">
-              {photoPreview
-                // eslint-disable-next-line @next/next/no-img-element
-                ? <img src={photoPreview} alt="aperçu" className="w-full h-full object-cover" />
-                : <Icon name="image" className="h-6 w-6 text-muted" />}
-            </div>
-            <div>
-              <button type="button" onClick={() => fileRef.current?.click()}
-                className="text-sm font-semibold text-[#2563eb] hover:underline">
-                {photoPreview ? 'Changer la photo' : 'Ajouter une photo'}
-              </button>
-              <p className="text-xs text-gray-400 mt-1">Sinon, un avatar aux initiales sera utilisé</p>
-            </div>
+            {photoPreviews.map((preview, i) => (
+              <div key={i}>
+                <div onClick={() => fileRefs.current[i]?.click()}
+                  className="w-20 h-20 rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center overflow-hidden cursor-pointer hover:border-[#2563eb] transition shrink-0">
+                  {preview
+                    // eslint-disable-next-line @next/next/no-img-element
+                    ? <img src={preview} alt="aperçu" className="w-full h-full object-cover" />
+                    : <Icon name="image" className="h-6 w-6 text-muted" />}
+                </div>
+                <input ref={el => { fileRefs.current[i] = el }} type="file" accept="image/*" className="hidden"
+                  onChange={e => handlePhotoChange(i, e)} />
+              </div>
+            ))}
           </div>
-          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
+          <p className="text-xs text-gray-400 mt-2">Sans photo, un avatar aux initiales sera utilisé. Pour afficher plusieurs photos sur le visuel, ajoute d&apos;abord des cadres "Photo" dans Personnalisation.</p>
         </div>
 
         <ToneSelector value={tone} onChange={setTone} />
@@ -180,7 +181,7 @@ export default function PlayerSpotlightTab({ club }: { club: Club }) {
           club={club}
           playerName={playerName}
           achievement={achievement}
-          photoFile={photoFile}
+          photoFiles={photoFiles}
           format={visualFormat}
           onCanvasReady={c => { canvasRef.current = c }}
         />

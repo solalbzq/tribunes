@@ -12,7 +12,7 @@ import {
   VISUAL_THEMES, applyThemeFontFamily,
 } from '@/lib/visualLayout'
 
-type Club = { name: string; sport: string; primaryColor: string; secondaryColor: string; logoUrl: string | null }
+type Club = { id: string; name: string; sport: string; primaryColor: string; secondaryColor: string; logoUrl: string | null }
 
 const HANDLE = 18
 
@@ -68,6 +68,7 @@ function newElement(type: PostVisualElementType, secondary: string): PostVisualE
     rect: { x: 200, y: 500, w: 400, h: 150, color: secondary, opacity: 0.8, borderRadius: 16, strokeWidth: 0 },
     circle: { x: 400, y: 500, w: 200, h: 200, color: secondary, opacity: 0.8, strokeWidth: 0 },
     line: { x: 64, y: 600, w: 952, h: 20, color: secondary, strokeWidth: 4 },
+    photo: { x: 400, y: 500, w: 280, h: 280, photoShape: 'circle' },
   }
   return {
     id: `${type}_${Date.now()}`, type, x: 200, y: 500, w: 300, h: 80,
@@ -79,16 +80,20 @@ function newElement(type: PostVisualElementType, secondary: string): PostVisualE
 type Drag = { id: string; mode: 'move' | 'resize'; sx: number; sy: number; ox: number; oy: number; ow: number; oh: number }
 
 export default function PostVisualEditor({
-  kind, club, savedConfig, onSave,
+  kind, club, savedConfig, isPremium, onSave,
 }: {
   kind: PostVisualKind
   club: Club
   /** Valeur brute de Club.postVisualConfigs (JSON), pas encore filtrée par type. */
   savedConfig: unknown
+  /** Plan payant du club — conditionne les fonctionnalités du bandeau bas (cf. sanitizeFooterElements côté serveur). */
+  isPremium: boolean
   onSave: (kind: PostVisualKind, format: VisualFormat, cfg: PostVisualConfig) => void | Promise<void>
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const logoRef = useRef<HTMLImageElement | null>(null)
+  const bgImageRef = useRef<HTMLImageElement | null>(null)
+  const bgFileRef = useRef<HTMLInputElement>(null)
   const [format, setFormat] = useState<VisualFormat>('post')
   const [configs, setConfigs] = useState<Record<VisualFormat, PostVisualConfig>>(() => ({
     post: parsePostVisualConfig(savedConfig, kind, 'post'),
@@ -99,6 +104,8 @@ export default function PostVisualEditor({
   const [guides, setGuides] = useState<SnapGuide[]>([])
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [uploadingBg, setUploadingBg] = useState(false)
+  const [bgImageTick, setBgImageTick] = useState(0)
 
   const cfg = configs[format]
   const { w: CW, h: CH } = postVisualCanvasSizeFor(format)
@@ -119,6 +126,19 @@ export default function PostVisualEditor({
     loadImage(club.logoUrl).then(img => { logoRef.current = img }).catch(() => {})
   }, [club.logoUrl])
 
+  const bgImageUrl = configs[format].background?.imageUrl
+  useEffect(() => {
+    bgImageRef.current = null
+    if (!bgImageUrl) { setBgImageTick(t => t + 1); return }
+    let cancelled = false
+    loadImage(bgImageUrl).then(img => {
+      if (cancelled) return
+      bgImageRef.current = img
+      setBgImageTick(t => t + 1)
+    }).catch(() => {})
+    return () => { cancelled = true }
+  }, [bgImageUrl])
+
   const draw = useCallback(() => {
     const canvas = canvasRef.current
     if (!canvas) return
@@ -127,7 +147,7 @@ export default function PostVisualEditor({
     canvas.width = CW
     canvas.height = CH
 
-    drawPostVisualBackground(ctx, CW, CH, cfg.background, club.primaryColor)
+    drawPostVisualBackground(ctx, CW, CH, cfg.background, club.primaryColor, bgImageRef.current)
 
     const context: PostVisualContext = {
       clubName: club.name, sport: club.sport,
@@ -163,7 +183,7 @@ export default function PostVisualEditor({
         ctx.restore()
       }
     }
-  }, [cfg, selected, club, kind, guides, CW, CH])
+  }, [cfg, selected, club, kind, guides, CW, CH, bgImageTick])
 
   useEffect(() => { draw() }, [draw])
 
@@ -262,6 +282,19 @@ export default function PostVisualEditor({
   function updateBackground(fn: (bg: PostVisualBackground) => PostVisualBackground) {
     setConfigs(c => ({ ...c, [format]: { ...c[format], background: fn(c[format].background ?? DEFAULT_POST_VISUAL_BACKGROUND) } }))
   }
+  async function uploadBackgroundImage(file: File) {
+    setUploadingBg(true)
+    try {
+      const fd = new FormData()
+      fd.append('image', file)
+      const res = await fetch('/api/clubs/background', { method: 'POST', body: fd })
+      const data = await res.json()
+      if (!res.ok) { setUploadingBg(false); return }
+      updateBackground(b => ({ ...b, type: 'image', imageUrl: data.imageUrl }))
+    } finally {
+      setUploadingBg(false)
+    }
+  }
   function resetFormat() {
     setSelected(null)
     setConfigs(c => ({ ...c, [format]: { elements: defaultPostVisualElements(kind, format) } }))
@@ -310,7 +343,7 @@ export default function PostVisualEditor({
 
       <div className="flex flex-wrap items-center gap-2 bg-white border border-gray-100 rounded-2xl p-3">
         <span className="text-xs font-semibold text-gray-400 mr-1">Ajouter :</span>
-        {([['text', '✏️ Texte'], ['rect', '▭ Rectangle'], ['circle', '⬤ Cercle'], ['line', '— Ligne']] as [PostVisualElementType, string][]).map(([type, label]) => (
+        {([['text', '✏️ Texte'], ['rect', '▭ Rectangle'], ['circle', '⬤ Cercle'], ['line', '— Ligne'], ['photo', '🖼️ Photo']] as [PostVisualElementType, string][]).map(([type, label]) => (
           <button key={type} onClick={() => addElement(type)}
             className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200 transition">
             {label}
@@ -355,24 +388,54 @@ export default function PostVisualEditor({
           <div className="bg-white border border-gray-100 rounded-2xl p-4 space-y-3">
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Fond</p>
             <Row label="Style">
-              <select value={bg.type} onChange={e => updateBackground(b => ({ ...b, type: e.target.value as 'gradient' | 'solid' }))}
+              <select value={bg.type} onChange={e => updateBackground(b => ({ ...b, type: e.target.value as PostVisualBackground['type'] }))}
                 className="flex-1 text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none">
                 <option value="gradient">Dégradé</option>
                 <option value="solid">Couleur unie</option>
+                <option value="image">Photo</option>
               </select>
             </Row>
-            <Row label="Couleur">
-              <input type="color" value={bg.color || club.primaryColor} onChange={e => updateBackground(b => ({ ...b, color: e.target.value }))}
-                className="w-8 h-8 rounded-lg cursor-pointer border border-gray-200 p-0.5" />
-              <input type="text" value={bg.color ?? ''} placeholder="Auto (couleur du club)" onChange={e => updateBackground(b => ({ ...b, color: e.target.value }))}
-                className="flex-1 text-xs font-mono border border-gray-200 rounded-lg px-2 py-1 focus:outline-none" maxLength={7} />
-            </Row>
-            <Row label="Intensité">
-              <input type="range" min="0" max="1" step="0.05" value={bg.overlayOpacity ?? 1}
-                onChange={e => updateBackground(b => ({ ...b, overlayOpacity: Number(e.target.value) }))}
-                className="flex-1 accent-[#2563eb]" />
-              <span className="text-xs font-mono w-8 text-right">{Math.round((bg.overlayOpacity ?? 1) * 100)}%</span>
-            </Row>
+
+            {bg.type === 'image' ? (
+              <>
+                <Row label="Photo">
+                  <button type="button" onClick={() => bgFileRef.current?.click()} disabled={uploadingBg}
+                    className="flex-1 text-xs font-semibold border border-gray-200 rounded-lg px-3 py-2 hover:bg-gray-50 transition disabled:opacity-60">
+                    {uploadingBg ? 'Envoi…' : bg.imageUrl ? 'Changer la photo' : 'Choisir une photo'}
+                  </button>
+                  <input ref={bgFileRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden"
+                    onChange={e => { const f = e.target.files?.[0]; if (f) uploadBackgroundImage(f) }} />
+                </Row>
+                <Row label="Flou">
+                  <input type="range" min="0" max="20" step="1" value={bg.blur ?? 0}
+                    onChange={e => updateBackground(b => ({ ...b, blur: Number(e.target.value) }))}
+                    className="flex-1 accent-[#2563eb]" />
+                  <span className="text-xs font-mono w-8 text-right">{bg.blur ?? 0}px</span>
+                </Row>
+                <Row label="Assombrir">
+                  <input type="range" min="0" max="1" step="0.05" value={bg.overlayOpacity ?? 0.35}
+                    onChange={e => updateBackground(b => ({ ...b, overlayOpacity: Number(e.target.value) }))}
+                    className="flex-1 accent-[#2563eb]" />
+                  <span className="text-xs font-mono w-8 text-right">{Math.round((bg.overlayOpacity ?? 0.35) * 100)}%</span>
+                </Row>
+                <p className="text-[11px] text-gray-400">PNG, JPG ou WEBP — 5 Mo max. Assombrir aide à garder le texte lisible sur la photo.</p>
+              </>
+            ) : (
+              <>
+                <Row label="Couleur">
+                  <input type="color" value={bg.color || club.primaryColor} onChange={e => updateBackground(b => ({ ...b, color: e.target.value }))}
+                    className="w-8 h-8 rounded-lg cursor-pointer border border-gray-200 p-0.5" />
+                  <input type="text" value={bg.color ?? ''} placeholder="Auto (couleur du club)" onChange={e => updateBackground(b => ({ ...b, color: e.target.value }))}
+                    className="flex-1 text-xs font-mono border border-gray-200 rounded-lg px-2 py-1 focus:outline-none" maxLength={7} />
+                </Row>
+                <Row label="Intensité">
+                  <input type="range" min="0" max="1" step="0.05" value={bg.overlayOpacity ?? 1}
+                    onChange={e => updateBackground(b => ({ ...b, overlayOpacity: Number(e.target.value) }))}
+                    className="flex-1 accent-[#2563eb]" />
+                  <span className="text-xs font-mono w-8 text-right">{Math.round((bg.overlayOpacity ?? 1) * 100)}%</span>
+                </Row>
+              </>
+            )}
           </div>
 
           {sel ? (
@@ -389,9 +452,11 @@ export default function PostVisualEditor({
                 </div>
               </div>
 
-              <Row label="Visible">
-                <Toggle value={sel.visible} onChange={v => updateEl(sel.id, e => ({ ...e, visible: v }))} />
-              </Row>
+              {(sel.type !== 'footer' || isPremium) && (
+                <Row label="Visible">
+                  <Toggle value={sel.visible} onChange={v => updateEl(sel.id, e => ({ ...e, visible: v }))} />
+                </Row>
+              )}
 
               <Row label="Opacité">
                 <input type="range" min="0" max="1" step="0.05" value={sel.opacity}
@@ -453,6 +518,34 @@ export default function PostVisualEditor({
                 <Row label="Fond bulle">
                   <Toggle value={sel.logoShowBg !== false} onChange={v => updateEl(sel.id, e => ({ ...e, logoShowBg: v }))} />
                 </Row>
+              )}
+
+              {sel.type === 'photo' && (
+                <Row label="Forme">
+                  <select value={sel.photoShape ?? 'circle'} onChange={e => updateEl(sel.id, el => ({ ...el, photoShape: e.target.value as NonNullable<PostVisualElement['photoShape']> }))}
+                    className="flex-1 text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none">
+                    <option value="circle">Rond</option>
+                    <option value="rounded">Carré arrondi</option>
+                    <option value="square">Carré</option>
+                    <option value="full">Plein cadre</option>
+                  </select>
+                </Row>
+              )}
+
+              {sel.type === 'footer' && (
+                isPremium ? (
+                  <Row label="Contenu">
+                    <select value={sel.footerVariant ?? 'brand'} onChange={e => updateEl(sel.id, el => ({ ...el, footerVariant: e.target.value === 'clubName' ? 'clubName' : undefined }))}
+                      className="flex-1 text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none">
+                      <option value="brand">Tribunes + hashtags</option>
+                      <option value="clubName">Nom du club (sans hashtags)</option>
+                    </select>
+                  </Row>
+                ) : (
+                  <p className="text-[11px] text-amber-600 bg-amber-50 border border-amber-200 rounded-lg p-2">
+                    Personnaliser ou masquer ce bandeau est réservé aux plans payants.
+                  </p>
+                )
               )}
 
               {sel.type === 'rect' && (
