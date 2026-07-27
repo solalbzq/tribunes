@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import ScheduleGenerator from './ScheduleGenerator'
 import TextPostsPanel from './TextPostsPanel'
 import ToneSelector from './ToneSelector'
@@ -40,6 +40,15 @@ export default function ProgrammeTab({ club }: { club: Club }) {
   const [posts, setPosts] = useState<Posts | null>(null)
   const [postIds, setPostIds] = useState<PostIds | null>(null)
   const [tone, setTone] = useState('')
+  const [weeklyScheduleId, setWeeklyScheduleId] = useState<string | null>(null)
+  const [personalizing, setPersonalizing] = useState(false)
+  const canvasRef = useRef<HTMLCanvasElement | null>(null)
+
+  async function getImageBlob(): Promise<Blob | null> {
+    const canvas = canvasRef.current
+    if (!canvas) return null
+    return new Promise(r => canvas.toBlob(r, 'image/png'))
+  }
 
   function addMatch() {
     if (matches.length >= 6) return
@@ -80,10 +89,42 @@ export default function ProgrammeTab({ club }: { club: Club }) {
       if (!res.ok) throw new Error(data.error ?? 'Échec de la génération')
       setPosts(data.posts)
       setPostIds(data.postIds ?? null)
+      setWeeklyScheduleId(data.weeklyScheduleId ?? null)
     } catch (err) {
       setError((err as Error).message)
     } finally {
       setGenerating(false)
+    }
+  }
+
+  async function personalize(overrides: { tone?: string; customInstructions?: string }) {
+    if (!weeklyScheduleId) return
+    setPersonalizing(true)
+    try {
+      const sorted = [...filled].sort((a, b) => a.date.localeCompare(b.date))
+      const res = await fetch('/api/posts/generic/weekly', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          weekStart: sorted[0].date,
+          weekEnd: sorted[sorted.length - 1].date,
+          matches: sorted.map(m => ({
+            opponent: m.opponent,
+            day: new Date(m.date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }),
+            time: '',
+            homeAway: m.isHome ? 'DOMICILE' : 'EXTERIEUR',
+            competition: m.competition || undefined,
+          })),
+          weeklyScheduleId, regenerate: true,
+          tone: overrides.tone, customInstructions: overrides.customInstructions,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) return
+      setPosts(data.posts)
+      setPostIds(data.postIds ?? null)
+    } finally {
+      setPersonalizing(false)
     }
   }
 
@@ -93,7 +134,10 @@ export default function ProgrammeTab({ club }: { club: Club }) {
         posts={posts}
         postIds={postIds}
         title="Vos légendes de programme sont prêtes"
-        onReset={() => { setPosts(null); setPostIds(null) }}
+        onReset={() => { setPosts(null); setPostIds(null); setWeeklyScheduleId(null) }}
+        getImageBlob={getImageBlob}
+        onPersonalize={personalize}
+        personalizing={personalizing}
       />
     )
   }
@@ -212,7 +256,7 @@ export default function ProgrammeTab({ club }: { club: Club }) {
 
       {/* Visuel en temps réel */}
       <div>
-        <ScheduleGenerator club={club} matches={filled} />
+        <ScheduleGenerator club={club} matches={filled} onCanvasReady={c => { canvasRef.current = c }} />
       </div>
     </div>
   )

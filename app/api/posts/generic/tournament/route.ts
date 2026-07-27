@@ -7,6 +7,8 @@ import { splitPlatformPosts } from '@/lib/prompts/splitPlatforms'
 import { logAiUsage } from '@/lib/usage'
 import { checkAiQuota, quotaExceededResponse } from '@/lib/quota'
 import { resolveInitialStatus, runAutomationSideEffects } from '@/lib/automation'
+import { buildPersonalizationPrefix } from '@/lib/personalization'
+import { deletePostsForRegenerate } from '@/lib/services/postGeneration'
 import type { Sport } from '@prisma/client'
 
 const SPORT_ENUM: Record<string, Sport> = {
@@ -47,6 +49,9 @@ export async function POST(req: Request) {
     matches: matchesRaw,
     platforms = PLATFORMS,
     tone,
+    customInstructions,
+    scheduleId: existingScheduleId,
+    regenerate = false,
   } = await req.json()
 
   if (!tournamentName || !matchDateRaw || !Array.isArray(matchesRaw) || matchesRaw.length === 0) {
@@ -62,19 +67,27 @@ export async function POST(req: Request) {
     round: m.round,
   }))
 
-  const schedule = await prisma.tournamentSchedule.create({
-    data: {
-      clubId: club.id,
-      sport: sportEnum,
-      rawText: '',
-      matchDate,
-      tournamentName,
-      venue,
-      parsedData: { clubMatches } as unknown as never,
-    },
-  })
+  let schedule
+  if (existingScheduleId && regenerate) {
+    schedule = await prisma.tournamentSchedule.findUnique({ where: { id: existingScheduleId, clubId: club.id } })
+    if (!schedule) return NextResponse.json({ error: 'Programmation introuvable' }, { status: 404 })
+    await deletePostsForRegenerate('TOURNAMENT_SCHEDULE', existingScheduleId)
+  } else {
+    schedule = await prisma.tournamentSchedule.create({
+      data: {
+        clubId: club.id,
+        sport: sportEnum,
+        rawText: '',
+        matchDate,
+        tournamentName,
+        venue,
+        parsedData: { clubMatches } as unknown as never,
+      },
+    })
+  }
 
-  const prompt = tournamentSchedulePromptAll(club.sport, club.name, tournamentName, matchDate, venue, clubMatches, voice)
+  const prompt = buildPersonalizationPrefix(club, customInstructions)
+    + tournamentSchedulePromptAll(club.sport, club.name, tournamentName, matchDate, venue, clubMatches, voice)
 
   const completion = await openai.chat.completions.create({
     model: 'gpt-4o',

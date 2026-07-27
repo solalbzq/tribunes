@@ -222,21 +222,32 @@ function resultLabel(sport: string, myScore: number, oppScore: number): string {
 
 // ── Main component ────────────────────────────────────────────────────────
 
+export type MatchFormInitialValues = Partial<{
+  opponent: string
+  isHome: boolean
+  homeScore: number
+  awayScore: number
+  competition: string
+  date: string
+}>
+
 export default function GenerateForm({
   club,
   onSuccess,
   onVisualOnly,
+  initialValues,
 }: {
   club: Club
-  onSuccess: (posts: Posts, match: MatchData, photoFile: File | null, postIds: PostIds) => void
+  onSuccess: (posts: Posts, match: MatchData, photoFile: File | null, postIds: PostIds, matchId: string) => void
   onVisualOnly: (match: MatchData, photoFile: File | null) => void
+  initialValues?: MatchFormInitialValues
 }) {
-  const [opponent, setOpponent] = useState('')
-  const [isHome, setIsHome] = useState(true)
-  const [homeScore, setHomeScore] = useState('')
-  const [awayScore, setAwayScore] = useState('')
-  const [competition, setCompetition] = useState('')
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0])
+  const [opponent, setOpponent] = useState(initialValues?.opponent ?? '')
+  const [isHome, setIsHome] = useState(initialValues?.isHome ?? true)
+  const [homeScore, setHomeScore] = useState(initialValues?.homeScore != null ? String(initialValues.homeScore) : '')
+  const [awayScore, setAwayScore] = useState(initialValues?.awayScore != null ? String(initialValues.awayScore) : '')
+  const [competition, setCompetition] = useState(initialValues?.competition ?? '')
+  const [date, setDate] = useState(initialValues?.date ?? new Date().toISOString().split('T')[0])
   const [notes, setNotes] = useState('')
   const [mvpName, setMvpName] = useState('')
   const [photoFile, setPhotoFile] = useState<File | null>(null)
@@ -246,7 +257,9 @@ export default function GenerateForm({
   const [error, setError] = useState<UiError>(null)
   const [extra, setExtraState] = useState<Record<string, unknown>>({})
   const [tone, setTone] = useState('')
+  const [reading, setReading] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
+  const visionFileRef = useRef<HTMLInputElement>(null)
 
   const sport = club.sport
   const { unit, hint } = scorePlaceholder(sport)
@@ -280,6 +293,28 @@ export default function GenerateForm({
     setPhotoPreview(URL.createObjectURL(file))
   }
 
+  async function handleVision(file: File) {
+    setReading(true); setError(null)
+    const fd = new FormData()
+    fd.append('image', file)
+    try {
+      const res = await fetch('/api/vision/extract-match', { method: 'POST', body: fd })
+      const json = await res.json()
+      if (!res.ok) { setError(toUiError(json, 'Lecture impossible')); return }
+      const d = json.data ?? {}
+      if (d.opponent) setOpponent(d.opponent)
+      if (typeof d.isHome === 'boolean') setIsHome(d.isHome)
+      if (d.homeScore !== null && d.homeScore !== undefined) setHomeScore(String(d.homeScore))
+      if (d.awayScore !== null && d.awayScore !== undefined) setAwayScore(String(d.awayScore))
+      if (d.competition) setCompetition(d.competition)
+      if (d.date) setDate(d.date)
+    } catch {
+      setError({ message: 'Erreur lors de la lecture de la capture.', quota: false })
+    } finally {
+      setReading(false)
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
@@ -311,7 +346,7 @@ export default function GenerateForm({
         ((data.match?.posts as Array<{ id: string; platform: keyof Posts }> | undefined) ?? [])
           .map(post => [post.platform, post.id])
       ) as PostIds
-      onSuccess(data.posts, getMatchData(), photoFile, postIds)
+      onSuccess(data.posts, getMatchData(), photoFile, postIds, data.match.id)
     } catch {
       setError({ message: 'Une erreur est survenue. Réessaie.', quota: false })
     } finally {
@@ -328,6 +363,21 @@ export default function GenerateForm({
       <div className="mb-6">
         <PageHeader icon="target" title="Nouveau match" subtitle={club.name} />
       </div>
+
+      <button
+        type="button"
+        onClick={() => visionFileRef.current?.click()}
+        disabled={reading}
+        className="mb-5 flex w-full items-center gap-3 rounded-xl border-2 border-dashed border-gray-200 p-4 text-left transition hover:border-[#2563eb] disabled:opacity-60"
+      >
+        <Icon name={reading ? 'refresh' : 'image'} className={`h-5 w-5 text-[#2563eb] ${reading ? 'animate-spin' : ''}`} />
+        <span>
+          <span className="block text-sm font-bold text-[#111827]">{reading ? 'Lecture de la capture…' : 'Importer une capture d\'écran'}</span>
+          <span className="block text-xs text-gray-400">Site de ligue, message, feuille de match... l&apos;IA préremplit le formulaire.</span>
+        </span>
+      </button>
+      <input ref={visionFileRef} type="file" accept="image/*" className="hidden"
+        onChange={e => { const f = e.target.files?.[0]; if (f) handleVision(f) }} />
 
       <form onSubmit={handleSubmit} className="space-y-5">
         {/* Domicile / Extérieur */}

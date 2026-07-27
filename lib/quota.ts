@@ -48,3 +48,36 @@ export function quotaExceededResponse(q: QuotaStatus) {
     { status: 403 }
   )
 }
+
+// Garde-fou technique anti-abus pour l'extraction d'intention (kind
+// 'intent_extraction'), distinct du quota commercial ci-dessus : ce n'est
+// pas une "génération" facturable/plafonnée par plan, juste une limite de
+// fréquence pour éviter un coût OpenAI illimité. Scopé par org comme
+// checkAiQuota pour éviter qu'une org multi-clubs contourne la limite en
+// répartissant les appels entre ses clubs.
+const INTENT_EXTRACTION_RATE_LIMIT = 20
+const INTENT_EXTRACTION_WINDOW_MS = 60 * 60 * 1000
+
+export async function checkIntentExtractionRateLimit(club: {
+  id: string
+  orgId: string | null
+  userId: string
+}): Promise<{ allowed: boolean; used: number; limit: number }> {
+  const { orgId } = await resolvePlanForClub(club)
+  const since = new Date(Date.now() - INTENT_EXTRACTION_WINDOW_MS)
+  const used = await prisma.usageEvent.count({
+    where: {
+      kind: 'intent_extraction',
+      createdAt: { gte: since },
+      ...(orgId ? { club: { orgId } } : { clubId: club.id }),
+    },
+  })
+  return { allowed: used < INTENT_EXTRACTION_RATE_LIMIT, used, limit: INTENT_EXTRACTION_RATE_LIMIT }
+}
+
+export function intentExtractionRateLimitedResponse() {
+  return NextResponse.json(
+    { error: "Trop de demandes d'analyse en peu de temps. Réessaie dans quelques minutes.", code: 'RATE_LIMITED' },
+    { status: 429 }
+  )
+}

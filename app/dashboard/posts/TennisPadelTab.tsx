@@ -11,6 +11,10 @@ import TennisActions from './TennisActions'
 import TennisVisualGenerator, { type TennisVisualConfig, DEFAULT_TENNIS_CONFIG } from './TennisVisualGenerator'
 import ToneSelector from '../ToneSelector'
 import SeasonRecapTab from '../SeasonRecapTab'
+import MatchAnnouncementTab from '../MatchAnnouncementTab'
+import PlayerSpotlightTab from '../PlayerSpotlightTab'
+import ClubAnnouncementTab from '../ClubAnnouncementTab'
+import EngagementPollTab from '../EngagementPollTab'
 import { PageHeader, Segmented, GhostButton } from '../ui'
 import { Icon } from '../icons'
 import { ErrorNotice, toUiError, type UiError } from '../apiError'
@@ -77,7 +81,37 @@ function MatchSection({ club }: { club: Club }) {
   const [generatedPosts, setGeneratedPosts] = useState<{ instagram: string; facebook: string; whatsapp: string } | null>(null)
   const [generatedPostIds, setGeneratedPostIds] = useState<PostIds | null>(null)
   const [generatedMatch, setGeneratedMatch] = useState<MatchData | null>(null)
+  const [generatedMatchId, setGeneratedMatchId] = useState<string | null>(null)
   const [generatedPhoto, setGeneratedPhoto] = useState<File | null>(null)
+  const [personalizing, setPersonalizing] = useState(false)
+
+  async function personalizeMatch(overrides: { tone?: string; customInstructions?: string }) {
+    if (!generatedMatch || !generatedMatchId) return
+    setPersonalizing(true)
+    try {
+      const res = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...generatedMatch,
+          matchId: generatedMatchId,
+          regenerate: true,
+          tone: overrides.tone,
+          customInstructions: overrides.customInstructions,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) return
+      setGeneratedPosts(data.posts)
+      const postIds = Object.fromEntries(
+        ((data.match?.posts as Array<{ id: string; platform: keyof PostIds }> | undefined) ?? [])
+          .map(post => [post.platform, post.id])
+      ) as PostIds
+      setGeneratedPostIds(postIds)
+    } finally {
+      setPersonalizing(false)
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -90,10 +124,11 @@ function MatchSection({ club }: { club: Club }) {
       {!generatedPosts && !generatedMatch && (
         <GenerateForm
           club={club}
-          onSuccess={(posts, match, photo, postIds) => {
+          onSuccess={(posts, match, photo, postIds, matchId) => {
             setGeneratedPosts(posts)
             setGeneratedPostIds(postIds)
             setGeneratedMatch(match)
+            setGeneratedMatchId(matchId)
             setGeneratedPhoto(photo)
           }}
           onVisualOnly={(match, photo) => {
@@ -122,10 +157,13 @@ function MatchSection({ club }: { club: Club }) {
           club={club}
           match={generatedMatch}
           photoFile={generatedPhoto}
+          onPersonalize={personalizeMatch}
+          personalizing={personalizing}
           onReset={() => {
             setGeneratedPosts(null)
             setGeneratedPostIds(null)
             setGeneratedMatch(null)
+            setGeneratedMatchId(null)
             setGeneratedPhoto(null)
           }}
         />
@@ -364,7 +402,7 @@ function TournamentSection({ club }: { club: Club }) {
 // ── Main component ─────────────────────────────────────────────────────────
 
 export default function TennisPadelTab({ club }: { club: Club }) {
-  const [section, setSection] = useState<'match' | 'programme' | 'tournament' | 'results' | 'recap'>('match')
+  const [section, setSection] = useState<'match' | 'programme' | 'tournament' | 'results' | 'recap' | 'announcement' | 'spotlight' | 'club' | 'poll'>('match')
   const sport = club.sport === 'Padel' ? 'Padel' : 'Tennis'
 
   return (
@@ -384,14 +422,22 @@ export default function TennisPadelTab({ club }: { club: Club }) {
           { key: 'tournament', label: 'Tournoi FFT', icon: 'fileText' },
           { key: 'results', label: 'Résultats', icon: 'trophy' },
           { key: 'recap', label: 'Bilan', icon: 'trending' },
+          { key: 'announcement', label: 'Avant-match', icon: 'clock' },
+          { key: 'spotlight', label: 'Joueur à l\'honneur', icon: 'user' },
+          { key: 'club', label: 'Annonce du club', icon: 'users' },
+          { key: 'poll', label: 'Engagement', icon: 'heart' },
         ]}
       />
 
-      {section === 'match'      && <MatchSection            club={club} />}
-      {section === 'programme'  && <TennisProgrammeSection  club={club} />}
-      {section === 'tournament' && <TournamentSection       club={club} />}
-      {section === 'results'    && <TennisResultSection     club={club} />}
-      {section === 'recap'      && <SeasonRecapTab />}
+      {section === 'match'        && <MatchSection            club={club} />}
+      {section === 'programme'    && <TennisProgrammeSection  club={club} />}
+      {section === 'tournament'   && <TournamentSection       club={club} />}
+      {section === 'results'      && <TennisResultSection     club={club} />}
+      {section === 'recap'        && <SeasonRecapTab club={club} />}
+      {section === 'announcement' && <MatchAnnouncementTab club={club} />}
+      {section === 'spotlight'    && <PlayerSpotlightTab club={club} />}
+      {section === 'club'         && <ClubAnnouncementTab club={club} />}
+      {section === 'poll'         && <EngagementPollTab club={club} />}
     </div>
   )
 }

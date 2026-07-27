@@ -12,17 +12,24 @@ export async function POST(req: Request) {
     : await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { name, sport, primaryColor, secondaryColor, visualConfig, tennisVisualConfig, tenupUrl, contentTone } = await req.json()
+  const {
+    name, sport, primaryColor, secondaryColor, visualConfig, tennisVisualConfig, postVisualConfigs,
+    tenupUrl, contentTone, customInstructions, signaturePhrase, bannedWords,
+  } = await req.json()
   if (!name || !sport) return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
 
   const data = {
     name, sport,
-    primaryColor: primaryColor ?? '#1a1a2e',
-    secondaryColor: secondaryColor ?? '#e94560',
+    ...(primaryColor !== undefined ? { primaryColor } : {}),
+    ...(secondaryColor !== undefined ? { secondaryColor } : {}),
     ...(visualConfig !== undefined ? { visualConfig } : {}),
     ...(tennisVisualConfig !== undefined ? { tennisVisualConfig } : {}),
+    ...(postVisualConfigs !== undefined ? { postVisualConfigs } : {}),
     ...(tenupUrl !== undefined ? { tenupUrl: tenupUrl || null } : {}),
     ...(contentTone !== undefined && CLUB_VOICES.includes(contentTone) ? { contentTone } : {}),
+    ...(customInstructions !== undefined ? { customInstructions: customInstructions || null } : {}),
+    ...(signaturePhrase !== undefined ? { signaturePhrase: signaturePhrase || null } : {}),
+    ...(bannedWords !== undefined ? { bannedWords: bannedWords || null } : {}),
   }
 
   const club = await prisma.club.upsert({

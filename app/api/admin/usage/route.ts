@@ -28,15 +28,17 @@ export async function GET(request: NextRequest) {
   })
 
   let aiCalls = 0
+  let intentExtractionCalls = 0
   let scrapes = 0
   let tokensIn = 0
   let tokensOut = 0
   let aiCost = 0
+  let intentExtractionCost = 0
   let scrapeCost = 0
-  const perClub = new Map<string, { aiCalls: number; scrapes: number; costUsd: number }>()
+  const perClub = new Map<string, { aiCalls: number; intentExtractionCalls: number; scrapes: number; costUsd: number }>()
 
   for (const e of events) {
-    const bucket = perClub.get(e.clubId) ?? { aiCalls: 0, scrapes: 0, costUsd: 0 }
+    const bucket = perClub.get(e.clubId) ?? { aiCalls: 0, intentExtractionCalls: 0, scrapes: 0, costUsd: 0 }
     if (e.kind === 'ai_generation') {
       aiCalls++
       tokensIn += e.tokensIn ?? 0
@@ -44,6 +46,14 @@ export async function GET(request: NextRequest) {
       const c = aiCostUsd(e.model ?? 'gpt-4o', e.tokensIn ?? 0, e.tokensOut ?? 0)
       aiCost += c
       bucket.aiCalls++
+      bucket.costUsd += c
+    } else if (e.kind === 'intent_extraction') {
+      intentExtractionCalls++
+      tokensIn += e.tokensIn ?? 0
+      tokensOut += e.tokensOut ?? 0
+      const c = aiCostUsd(e.model ?? 'gpt-4o-mini', e.tokensIn ?? 0, e.tokensOut ?? 0)
+      intentExtractionCost += c
+      bucket.intentExtractionCalls++
       bucket.costUsd += c
     } else if (e.kind === 'tenup_scrape') {
       scrapes++
@@ -56,7 +66,7 @@ export async function GET(request: NextRequest) {
   }
 
   const activeClubs = perClub.size
-  const totalCost = aiCost + scrapeCost
+  const totalCost = aiCost + intentExtractionCost + scrapeCost
 
   // Détail par club (avec nom), trié par coût décroissant.
   const clubIds = [...perClub.keys()]
@@ -71,10 +81,12 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     windowDays: 30,
     aiCalls,
+    intentExtractionCalls,
     scrapes,
     tokensIn,
     tokensOut,
     aiCostUsd: aiCost,
+    intentExtractionCostUsd: intentExtractionCost,
     scrapeCostUsd: scrapeCost,
     totalCostUsd: totalCost,
     activeClubs,

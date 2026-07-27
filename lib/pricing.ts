@@ -34,7 +34,7 @@ export type UsageEventLike = {
 export function estimateCostUsd(events: UsageEventLike[]): number {
   let total = 0
   for (const e of events) {
-    if (e.kind === 'ai_generation') {
+    if (e.kind === 'ai_generation' || e.kind === 'intent_extraction') {
       total += aiCostUsd(e.model ?? 'gpt-4o', e.tokensIn ?? 0, e.tokensOut ?? 0)
     } else if (e.kind === 'tenup_scrape') {
       total += scrapeCostUsd(e.credits ?? TENUP_SCRAPE_CREDITS)

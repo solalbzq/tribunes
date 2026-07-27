@@ -330,3 +330,499 @@ export function drawElements(
     ctx.restore()
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// Système générique de visuels "post" — même principe que LayoutElement/
+// drawElements ci-dessus (éléments positionnables en drag & drop), mais avec
+// un vocabulaire d'éléments partagé entre les 7 types de post autres que
+// Résultat (qui garde le système ci-dessus) et Tennis (système à part,
+// posts/TennisVisualGenerator.tsx). Une même carte "12 formats génériques"
+// (heading/subheading/paragraph/badge/matchList/statsBlock/vsBlock/infoBlock/
+// photo/optionsList + logo/footer réutilisés) suffit à recomposer les 7 types.
+// ─────────────────────────────────────────────────────────────────────────
+
+export const POST_VISUAL_SIZE = { W: 1080, H: 1350 }
+const PW = POST_VISUAL_SIZE.W
+const PH = POST_VISUAL_SIZE.H
+
+export type PostVisualKind =
+  | 'tournament' | 'schedule' | 'seasonRecap'
+  | 'matchAnnouncement' | 'playerSpotlight' | 'clubAnnouncement' | 'engagementPoll'
+
+export type PostVisualElementType =
+  | 'logo' | 'footer' | 'heading' | 'subheading' | 'paragraph' | 'badge'
+  | 'matchList' | 'statsBlock' | 'vsBlock' | 'infoBlock' | 'photo' | 'optionsList'
+  | 'text' | 'rect' | 'circle' | 'line'
+
+export type PostVisualElement = {
+  id: string
+  type: PostVisualElementType
+  x: number; y: number; w: number; h: number
+  visible: boolean
+  fontSize: number
+  text?: string
+  /** Chaîne vide = hérite dynamiquement de la couleur de marque du club (comportement par défaut). Une valeur = surcharge manuelle. */
+  color: string
+  opacity: number
+  borderRadius?: number
+  strokeColor?: string
+  strokeWidth?: number
+  logoShowBg?: boolean
+}
+
+export type PostVisualConfig = { elements: PostVisualElement[] }
+
+/** Éléments "cœur" (verrouillés, non supprimables) par type de post, dans l'ordre de dessin. */
+export const POST_VISUAL_CORE_ELEMENTS: Record<PostVisualKind, PostVisualElementType[]> = {
+  tournament: ['logo', 'heading', 'subheading', 'badge', 'matchList', 'footer'],
+  schedule: ['logo', 'heading', 'subheading', 'badge', 'matchList', 'footer'],
+  seasonRecap: ['logo', 'heading', 'subheading', 'badge', 'statsBlock', 'footer'],
+  matchAnnouncement: ['badge', 'logo', 'vsBlock', 'infoBlock', 'footer'],
+  playerSpotlight: ['badge', 'photo', 'heading', 'paragraph', 'footer'],
+  clubAnnouncement: ['badge', 'logo', 'heading', 'paragraph', 'footer'],
+  engagementPoll: ['badge', 'logo', 'heading', 'optionsList', 'footer'],
+}
+
+export const POST_VISUAL_LABELS: Record<PostVisualElementType, string> = {
+  logo: 'Logo', footer: 'Pied de page', heading: 'Titre', subheading: 'Sous-titre',
+  paragraph: 'Texte', badge: 'Badge', matchList: 'Liste de matchs', statsBlock: 'Bloc statistiques',
+  vsBlock: 'Face-à-face', infoBlock: 'Informations', photo: 'Photo', optionsList: 'Liste d\'options',
+  text: 'Texte libre', rect: 'Rectangle', circle: 'Cercle', line: 'Ligne',
+}
+
+function el(type: PostVisualElementType, geo: Pick<PostVisualElement, 'x' | 'y' | 'w' | 'h'>, over: Partial<PostVisualElement> = {}): PostVisualElement {
+  return { id: type, type, visible: true, fontSize: 1, opacity: 1, color: '', logoShowBg: type === 'logo' ? true : undefined, ...geo, ...over }
+}
+
+function listKindDefaults(): PostVisualElement[] {
+  return [
+    el('logo', { x: 480, y: 50, w: 120, h: 120 }),
+    el('heading', { x: 0, y: 178, w: PW, h: 46 }),
+    el('subheading', { x: 0, y: 230, w: PW, h: 30 }),
+    el('badge', { x: 340, y: 264, w: 400, h: 56 }),
+    el('matchList', { x: 54, y: 380, w: PW - 108, h: 756 }),
+    el('footer', { x: 0, y: PH - 80, w: PW, h: 80 }),
+  ]
+}
+
+const POST_VISUAL_DEFAULTS: Record<PostVisualKind, PostVisualElement[]> = {
+  tournament: listKindDefaults(),
+  schedule: listKindDefaults(),
+  seasonRecap: [
+    el('logo', { x: 480, y: 50, w: 120, h: 120 }),
+    el('heading', { x: 0, y: 178, w: PW, h: 46 }),
+    el('subheading', { x: 0, y: 230, w: PW, h: 30 }),
+    el('badge', { x: 320, y: 264, w: 440, h: 56 }),
+    el('statsBlock', { x: 54, y: 380, w: PW - 108, h: 420 }),
+    el('footer', { x: 0, y: PH - 80, w: PW, h: 80 }),
+  ],
+  matchAnnouncement: [
+    el('badge', { x: 280, y: 68, w: 520, h: 64 }),
+    el('logo', { x: 475, y: 210, w: 130, h: 130 }),
+    el('vsBlock', { x: 0, y: 380, w: PW, h: 300 }),
+    el('infoBlock', { x: 0, y: 690, w: PW, h: 130 }),
+    el('footer', { x: 0, y: PH - 80, w: PW, h: 80 }),
+  ],
+  playerSpotlight: [
+    el('badge', { x: 340, y: 68, w: 400, h: 60 }),
+    el('photo', { x: 360, y: 200, w: 360, h: 360 }),
+    el('heading', { x: 0, y: 610, w: PW, h: 56 }),
+    el('paragraph', { x: 0, y: 690, w: PW, h: 150 }),
+    el('footer', { x: 0, y: PH - 80, w: PW, h: 80 }),
+  ],
+  clubAnnouncement: [
+    el('badge', { x: 320, y: 88, w: 440, h: 60 }),
+    el('logo', { x: 475, y: 200, w: 130, h: 130 }),
+    el('heading', { x: 0, y: 370, w: PW, h: 110 }),
+    el('paragraph', { x: 0, y: 500, w: PW, h: 190 }),
+    el('footer', { x: 0, y: PH - 80, w: PW, h: 80 }),
+  ],
+  engagementPoll: [
+    el('badge', { x: 340, y: 70, w: 340, h: 58 }),
+    el('logo', { x: 485, y: 160, w: 110, h: 110 }),
+    el('heading', { x: 0, y: 300, w: PW, h: 170 }),
+    el('optionsList', { x: 90, y: 560, w: PW - 180, h: 460 }),
+    el('footer', { x: 0, y: PH - 80, w: PW, h: 80 }),
+  ],
+}
+
+export function defaultPostVisualElements(kind: PostVisualKind): PostVisualElement[] {
+  return POST_VISUAL_DEFAULTS[kind]
+}
+
+/** Équivalent de parseVisualConfig() pour le système générique — fusionne la config sauvegardée d'un type de post avec ses éléments par défaut. */
+export function parsePostVisualConfig(raw: unknown, kind: PostVisualKind): PostVisualConfig {
+  const defaults = defaultPostVisualElements(kind)
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return { elements: defaults }
+  const saved = (raw as Record<string, { elements?: PostVisualElement[] }>)[kind]?.elements
+  if (!saved || !Array.isArray(saved)) return { elements: defaults }
+  const savedMap = new Map(saved.map(e => [e.id, e]))
+  const merged = defaults.map(def => {
+    const s = savedMap.get(def.id)
+    return s ? { ...def, ...s } : def
+  })
+  const defaultIds = new Set(defaults.map(e => e.id))
+  saved.filter(e => !defaultIds.has(e.id)).forEach(e => merged.push(e))
+  return { elements: merged }
+}
+
+/** Découpe un texte en lignes tenant dans `maxWidth`, jusqu'à `maxLines`. */
+export function wrapText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number, maxLines: number): string[] {
+  const words = text.split(/\s+/)
+  const lines: string[] = []
+  let current = ''
+  for (const word of words) {
+    const test = current ? `${current} ${word}` : word
+    if (ctx.measureText(test).width > maxWidth && current) {
+      lines.push(current)
+      current = word
+      if (lines.length === maxLines - 1) break
+    } else {
+      current = test
+    }
+  }
+  if (current) lines.push(current)
+  if (lines.length > maxLines) lines.length = maxLines
+  return lines
+}
+
+function truncate(text: string, n: number): string {
+  return text.length > n ? text.slice(0, n - 1) + '…' : text
+}
+
+/** `el.color` vide = hérite de `fallback` (couleur dynamique du club) ; une valeur = surcharge manuelle depuis l'éditeur. */
+function resolveColor(elColor: string, fallback: string): string {
+  return elColor && elColor.trim() ? elColor : fallback
+}
+
+export type PostVisualRow = { leftBadge: string; title: string; subtitle: string; rightBadge?: string; rightAccent?: boolean }
+export type PostVisualStat = { label: string; value: string | number; color: string }
+
+export type PostVisualContext = {
+  clubName: string
+  sport: string
+  /** Couleur de contraste par rapport au fond (équivalent textColor(primaryColor)). */
+  textColor: string
+  secondaryColor: string
+  logoImg: HTMLImageElement | null
+  heading?: string
+  subheading?: string
+  paragraph?: string
+  badge?: string
+  rows?: PostVisualRow[]
+  stats?: PostVisualStat[]
+  statsCaption?: string
+  statsNote?: string
+  vs?: { left: string; right: string; badge?: string }
+  infoLines?: string[]
+  photo?: { img: HTMLImageElement | null; fallbackText: string }
+  options?: string[]
+}
+
+/** Dessine les éléments d'un visuel générique (tournoi/programme/bilan/avant-match/joueur/annonce/sondage). */
+export function drawPostVisualElements(
+  ctx: CanvasRenderingContext2D,
+  elements: PostVisualElement[],
+  context: PostVisualContext
+) {
+  const sc = context.secondaryColor
+  const tc = context.textColor
+
+  for (const item of elements) {
+    if (!item.visible) continue
+    const { x, y, w, h, fontSize, opacity, color } = item
+    ctx.save()
+    ctx.globalAlpha = opacity
+
+    if (item.type === 'logo') {
+      const bubble = item.logoShowBg !== false
+      if (bubble) {
+        roundRect(ctx, x, y, w, h, Math.min(w, h) / 2)
+        ctx.fillStyle = 'rgba(255,255,255,0.12)'
+        ctx.fill()
+      }
+      if (context.logoImg) {
+        ctx.save()
+        roundRect(ctx, x, y, w, h, bubble ? Math.min(w, h) / 2 : 0)
+        ctx.clip()
+        const pad = bubble ? 16 : 0
+        const ratio = Math.min((w - pad * 2) / context.logoImg.width, (h - pad * 2) / context.logoImg.height)
+        const lw = context.logoImg.width * ratio
+        const lh = context.logoImg.height * ratio
+        ctx.drawImage(context.logoImg, x + (w - lw) / 2, y + (h - lh) / 2, lw, lh)
+        ctx.restore()
+      } else {
+        ctx.fillStyle = resolveColor(color, tc)
+        ctx.font = `${Math.round(Math.min(w, h) * 0.5)}px sans-serif`
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+        ctx.fillText('⚡', x + w / 2, y + h / 2)
+      }
+    }
+
+    if (item.type === 'heading') {
+      ctx.fillStyle = resolveColor(color, tc)
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'alphabetic'
+      const text = item.text || context.heading || ''
+      ctx.font = `900 ${Math.round(52 * fontSize)}px Inter, sans-serif`
+      ctx.fillText(truncate(text, 30), x + w / 2, y + h)
+    }
+
+    if (item.type === 'subheading') {
+      ctx.fillStyle = resolveColor(color, sc)
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'alphabetic'
+      const text = item.text || context.subheading || ''
+      ctx.font = `600 ${Math.round(24 * fontSize)}px Inter, sans-serif`
+      ctx.fillText(text.toUpperCase(), x + w / 2, y + h)
+    }
+
+    if (item.type === 'paragraph') {
+      ctx.fillStyle = resolveColor(color, sc)
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'alphabetic'
+      const text = item.text || context.paragraph || ''
+      const size = Math.round(28 * fontSize)
+      ctx.font = `600 ${size}px Inter, sans-serif`
+      const lineH = size * 1.4
+      const maxLines = Math.max(1, Math.floor(h / lineH))
+      const lines = wrapText(ctx, text, w - 40, maxLines)
+      const startY = y + lineH
+      lines.forEach((line, i) => ctx.fillText(line, x + w / 2, startY + i * lineH))
+    }
+
+    if (item.type === 'badge') {
+      const text = item.text || context.badge || ''
+      const fill = resolveColor(color, sc)
+      ctx.font = `800 ${Math.round(26 * fontSize)}px Inter, sans-serif`
+      roundRect(ctx, x, y, w, h, h / 2)
+      ctx.fillStyle = fill
+      ctx.fill()
+      ctx.fillStyle = textColor(fill)
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      ctx.fillText(text, x + w / 2, y + h / 2 + 2)
+    }
+
+    if (item.type === 'matchList') {
+      const rows = context.rows ?? []
+      const rowH = 110
+      const gap = 18
+      const maxRows = Math.max(1, Math.min(6, Math.floor((h + gap) / (rowH + gap))))
+      const textColorResolved = resolveColor(color, tc)
+      rows.slice(0, maxRows).forEach((row, i) => {
+        const ry = y + i * (rowH + gap)
+        roundRect(ctx, x, ry, w, rowH, 20)
+        ctx.fillStyle = i % 2 === 0 ? 'rgba(255,255,255,0.09)' : 'rgba(255,255,255,0.05)'
+        ctx.fill()
+
+        const lbW = 100
+        roundRect(ctx, x + 20, ry + 15, lbW, rowH - 30, 14)
+        ctx.fillStyle = sc + '33'
+        ctx.fill()
+        ctx.fillStyle = textColorResolved
+        ctx.font = `900 ${Math.round(28 * fontSize)}px Inter, sans-serif`
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+        ctx.fillText(row.leftBadge || '—', x + 20 + lbW / 2, ry + rowH / 2)
+
+        ctx.textAlign = 'left'
+        ctx.textBaseline = 'alphabetic'
+        ctx.fillStyle = textColorResolved
+        ctx.font = `700 ${Math.round(28 * fontSize)}px Inter, sans-serif`
+        ctx.fillText(truncate(row.title, 22), x + 20 + lbW + 22, ry + rowH * 0.52)
+        ctx.font = `400 ${Math.round(19 * fontSize)}px Inter, sans-serif`
+        ctx.fillStyle = textColorResolved + 'aa'
+        ctx.fillText(row.subtitle, x + 20 + lbW + 22, ry + rowH * 0.8)
+
+        if (row.rightBadge) {
+          ctx.font = '600 16px Inter, sans-serif'
+          const bw = ctx.measureText(row.rightBadge.toUpperCase()).width + 28
+          const badgeColor = row.rightAccent ? sc : 'rgba(255,255,255,0.18)'
+          roundRect(ctx, x + w - 20 - bw, ry + rowH / 2 - 16, bw, 32, 16)
+          ctx.fillStyle = badgeColor
+          ctx.fill()
+          ctx.fillStyle = row.rightAccent ? textColor(sc) : textColorResolved
+          ctx.textAlign = 'center'
+          ctx.fillText(row.rightBadge.toUpperCase(), x + w - 20 - bw / 2, ry + rowH / 2 + 6)
+        }
+      })
+    }
+
+    if (item.type === 'statsBlock') {
+      const stats = context.stats ?? []
+      const colW = w / Math.max(stats.length, 1)
+      const labelColor = resolveColor(color, tc)
+      stats.forEach((s, i) => {
+        const cx0 = x + i * colW
+        roundRect(ctx, cx0 + 10, y, colW - 20, h, 24)
+        ctx.fillStyle = 'rgba(255,255,255,0.08)'
+        ctx.fill()
+        const midX = cx0 + colW / 2
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'alphabetic'
+        ctx.font = `900 ${Math.round(100 * fontSize)}px Inter, sans-serif`
+        ctx.fillStyle = s.color
+        ctx.fillText(String(s.value), midX, y + h * 0.52)
+        ctx.font = `700 ${Math.round(22 * fontSize)}px Inter, sans-serif`
+        ctx.fillStyle = labelColor
+        ctx.fillText(s.label, midX, y + h * 0.66)
+      })
+      ctx.textAlign = 'center'
+      if (context.statsCaption) {
+        ctx.font = '500 22px Inter, sans-serif'
+        ctx.fillStyle = labelColor + 'aa'
+        ctx.fillText(context.statsCaption, x + w / 2, y + h + 50)
+      }
+      if (context.statsNote) {
+        ctx.font = '700 26px Inter, sans-serif'
+        ctx.fillStyle = sc
+        ctx.fillText(truncate(context.statsNote, 48), x + w / 2, y + h + 110)
+      }
+    }
+
+    if (item.type === 'vsBlock' && context.vs) {
+      const midX = x + w / 2
+      const vsColor = resolveColor(color, tc)
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'alphabetic'
+      ctx.fillStyle = tc
+      ctx.font = `800 ${Math.round(50 * fontSize)}px Inter, sans-serif`
+      ctx.fillText(truncate(context.vs.left, 20), midX, y + h * 0.2)
+
+      roundRect(ctx, midX - 46, y + h * 0.32, 92, 56, 28)
+      ctx.fillStyle = 'rgba(255,255,255,0.14)'
+      ctx.fill()
+      ctx.fillStyle = vsColor
+      ctx.font = '900 28px Inter, sans-serif'
+      ctx.fillText('VS', midX, y + h * 0.32 + 36)
+
+      ctx.fillStyle = sc
+      ctx.font = `800 ${Math.round(50 * fontSize)}px Inter, sans-serif`
+      ctx.fillText(truncate(context.vs.right, 20), midX, y + h * 0.68)
+
+      if (context.vs.badge) {
+        ctx.font = '600 20px Inter, sans-serif'
+        const bw = ctx.measureText(context.vs.badge).width + 40
+        roundRect(ctx, midX - bw / 2, y + h * 0.86 - 22, bw, 44, 22)
+        ctx.fillStyle = 'rgba(255,255,255,0.10)'
+        ctx.fill()
+        ctx.fillStyle = tc
+        ctx.fillText(context.vs.badge, midX, y + h * 0.86 + 6)
+      }
+    }
+
+    if (item.type === 'infoBlock') {
+      const lines = context.infoLines ?? []
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'alphabetic'
+      const lineH = h / Math.max(lines.length, 1)
+      lines.forEach((line, i) => {
+        ctx.font = i === 0 ? `700 ${Math.round(34 * fontSize)}px Inter, sans-serif` : `500 ${Math.round(24 * fontSize)}px Inter, sans-serif`
+        ctx.fillStyle = i === 0 ? resolveColor(color, tc) : sc
+        ctx.fillText(line, x + w / 2, y + lineH * (i + 0.7))
+      })
+    }
+
+    if (item.type === 'photo') {
+      const size = Math.min(w, h)
+      const px = x + (w - size) / 2
+      const py = y
+      roundRect(ctx, px, py, size, size, size / 2)
+      ctx.fillStyle = 'rgba(255,255,255,0.12)'
+      ctx.fill()
+      const img = context.photo?.img
+      if (img) {
+        ctx.save()
+        roundRect(ctx, px, py, size, size, size / 2)
+        ctx.clip()
+        const ratio = Math.max(size / img.width, size / img.height)
+        const iw = img.width * ratio
+        const ih = img.height * ratio
+        ctx.drawImage(img, px + (size - iw) / 2, py + (size - ih) / 2, iw, ih)
+        ctx.restore()
+      } else {
+        ctx.fillStyle = resolveColor(color, sc)
+        ctx.font = `900 ${Math.round(size * 0.38)}px Inter, sans-serif`
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+        ctx.fillText(context.photo?.fallbackText || '?', px + size / 2, py + size / 2 + 6)
+      }
+    }
+
+    if (item.type === 'optionsList') {
+      const options = context.options ?? []
+      const gap = 22
+      const rowH = Math.max(60, Math.min(90, (h - (options.length - 1) * gap) / Math.max(options.length, 1)))
+      const labelColor = resolveColor(color, tc)
+      options.slice(0, 4).forEach((opt, i) => {
+        const ry = y + i * (rowH + gap)
+        roundRect(ctx, x, ry, w, rowH, rowH / 2)
+        ctx.fillStyle = 'rgba(255,255,255,0.10)'
+        ctx.fill()
+        const letterSize = Math.min(56, rowH - 34)
+        roundRect(ctx, x + 14, ry + (rowH - letterSize) / 2, letterSize, letterSize, letterSize / 2)
+        ctx.fillStyle = sc
+        ctx.fill()
+        ctx.fillStyle = textColor(sc)
+        ctx.font = `800 ${Math.round(letterSize * 0.46)}px Inter, sans-serif`
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+        ctx.fillText(String.fromCharCode(65 + i), x + 14 + letterSize / 2, ry + rowH / 2 + 1)
+        ctx.textAlign = 'left'
+        ctx.fillStyle = labelColor
+        ctx.font = `700 ${Math.round(28 * fontSize)}px Inter, sans-serif`
+        ctx.fillText(truncate(opt, 26), x + 14 + letterSize + 24, ry + rowH / 2 + 9)
+      })
+    }
+
+    if (item.type === 'footer') {
+      const fill = resolveColor(color, sc)
+      ctx.fillStyle = fill
+      ctx.fillRect(x, y, w, h)
+      ctx.fillStyle = textColor(fill)
+      ctx.font = `800 ${Math.round(26 * fontSize)}px Inter, sans-serif`
+      ctx.textAlign = 'left'
+      ctx.textBaseline = 'middle'
+      ctx.fillText('⚡ tribunes.app', x + 60, y + h / 2)
+      ctx.font = '400 20px Inter, sans-serif'
+      ctx.textAlign = 'right'
+      ctx.fillText(
+        `#${context.clubName.toLowerCase().replace(/\s/g, '')} #${context.sport.toLowerCase()}`,
+        x + w - 60, y + h / 2
+      )
+    }
+
+    if (item.type === 'text') {
+      ctx.fillStyle = resolveColor(color, tc)
+      ctx.font = `${Math.round(36 * fontSize)}px Inter, sans-serif`
+      ctx.textBaseline = 'top'
+      ctx.textAlign = 'left'
+      ctx.fillText(item.text || 'Texte personnalisé', x, y)
+    }
+    if (item.type === 'rect') {
+      roundRect(ctx, x, y, w, h, item.borderRadius ?? 0)
+      ctx.fillStyle = resolveColor(color, sc)
+      ctx.fill()
+      if (item.strokeColor && item.strokeWidth) { ctx.strokeStyle = item.strokeColor; ctx.lineWidth = item.strokeWidth; ctx.stroke() }
+    }
+    if (item.type === 'circle') {
+      ctx.beginPath()
+      ctx.ellipse(x + w / 2, y + h / 2, w / 2, h / 2, 0, 0, Math.PI * 2)
+      ctx.fillStyle = resolveColor(color, sc)
+      ctx.fill()
+      if (item.strokeColor && item.strokeWidth) { ctx.strokeStyle = item.strokeColor; ctx.lineWidth = item.strokeWidth; ctx.stroke() }
+    }
+    if (item.type === 'line') {
+      ctx.beginPath()
+      ctx.moveTo(x, y + h / 2)
+      ctx.lineTo(x + w, y + h / 2)
+      ctx.strokeStyle = resolveColor(color, tc)
+      ctx.lineWidth = item.strokeWidth ?? 4
+      ctx.stroke()
+    }
+
+    ctx.restore()
+  }
+}

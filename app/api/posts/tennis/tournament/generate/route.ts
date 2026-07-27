@@ -8,6 +8,7 @@ import { splitPlatformPosts } from '@/lib/prompts/splitPlatforms'
 import { logAiUsage } from '@/lib/usage'
 import { checkAiQuota, quotaExceededResponse } from '@/lib/quota'
 import { resolveInitialStatus, runAutomationSideEffects } from '@/lib/automation'
+import { buildPersonalizationPrefix } from '@/lib/personalization'
 import type { TournamentMatch } from '@/lib/services/fft-pdf-parser'
 import type { ChatCompletion } from 'openai/resources/chat/completions'
 
@@ -38,7 +39,7 @@ export async function POST(req: Request) {
   const club = await prisma.club.findUnique({ where: { userId: user.id } })
   if (!club) return NextResponse.json({ error: 'Club not found' }, { status: 404 })
 
-  const { scheduleId, platforms = PLATFORMS, grade = '', regenerate = false, tone } = await req.json()
+  const { scheduleId, platforms = PLATFORMS, grade = '', regenerate = false, tone, customInstructions } = await req.json()
   if (!scheduleId) return NextResponse.json({ error: 'scheduleId manquant' }, { status: 400 })
 
   const schedule = await prisma.tournamentSchedule.findUnique({
@@ -72,9 +73,9 @@ export async function POST(req: Request) {
   const voice = tone || club.contentTone
 
   // Un seul appel IA pour les 3 plateformes.
-  const prompt = isPadel
+  const prompt = buildPersonalizationPrefix(club, customInstructions) + (isPadel
     ? padelTournamentSchedulePromptAll(club.name, schedule.tournamentName, grade, schedule.matchDate, schedule.venue, clubMatches, voice)
-    : tournamentSchedulePromptAll(club.name, schedule.tournamentName, schedule.matchDate, schedule.venue, clubMatches, voice)
+    : tournamentSchedulePromptAll(club.name, schedule.tournamentName, schedule.matchDate, schedule.venue, clubMatches, voice))
 
   const completion = await completeWithRetry(prompt)
   await logAiUsage(club.id, completion, 'gpt-4o', { route: 'tournament/generate' })

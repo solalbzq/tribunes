@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react'
 import VisualGenerator from './VisualGenerator'
 import PublishPanel from './PublishPanel'
+import PersonalizePostPanel from './PersonalizePostPanel'
 import { PageHeader, GhostButton } from './ui'
 
 type Posts = { instagram: string; facebook: string; whatsapp: string }
@@ -38,6 +39,8 @@ export default function PostsResult({
   match,
   photoFile,
   onReset,
+  onPersonalize,
+  personalizing,
 }: {
   posts: Posts
   postIds?: PostIds | null
@@ -45,6 +48,8 @@ export default function PostsResult({
   match: MatchData
   photoFile: File | null
   onReset: () => void
+  onPersonalize?: (overrides: { tone?: string; customInstructions?: string }) => Promise<void>
+  personalizing?: boolean
 }) {
   const [copied, setCopied] = useState<string | null>(null)
   const [active, setActive] = useState<'instagram' | 'facebook' | 'whatsapp' | 'visual'>('instagram')
@@ -111,6 +116,10 @@ export default function PostsResult({
           </p>
         </div>
       ))}
+
+      {active !== 'visual' && onPersonalize && (
+        <PersonalizePostPanel onRegenerate={onPersonalize} regenerating={personalizing} />
+      )}
 
       {/* Publication directe */}
       <PublishPanel posts={posts} postIds={postIds} getImageBlob={getImageBlob} />

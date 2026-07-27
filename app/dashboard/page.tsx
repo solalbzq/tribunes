@@ -1,7 +1,9 @@
 import { createClient } from '@/lib/supabase/server'
 import { prisma } from '@/lib/prisma'
+import type { Prisma } from '@prisma/client'
 import { redirect } from 'next/navigation'
 import { checkAutomationAllowed } from '@/lib/automation'
+import { clubOwnershipOr } from '@/lib/postTypes'
 import DashboardClient from './DashboardClient'
 
 export default async function DashboardPage() {
@@ -24,12 +26,7 @@ export default async function DashboardPage() {
     ? await prisma.generatedPost.findMany({
         where: {
           status: { in: ['DRAFT', 'PENDING_REVIEW'] },
-          OR: [
-            { match: { clubId: club.id } },
-            { tournamentSchedule: { clubId: club.id } },
-            { weeklySchedule: { clubId: club.id } },
-            { seasonRecap: { clubId: club.id } },
-          ],
+          OR: clubOwnershipOr(club.id) as Prisma.GeneratedPostWhereInput[],
         },
         orderBy: { createdAt: 'desc' },
         include: {

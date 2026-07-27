@@ -7,6 +7,8 @@ import { splitPlatformPosts } from '@/lib/prompts/splitPlatforms'
 import { logAiUsage } from '@/lib/usage'
 import { checkAiQuota, quotaExceededResponse } from '@/lib/quota'
 import { resolveInitialStatus, runAutomationSideEffects } from '@/lib/automation'
+import { buildPersonalizationPrefix } from '@/lib/personalization'
+import { deletePostsForRegenerate } from '@/lib/services/postGeneration'
 
 const PLATFORMS = ['instagram', 'facebook', 'whatsapp'] as const
 type Platform = typeof PLATFORMS[number]
@@ -33,6 +35,9 @@ export async function POST(req: Request) {
     rankingNote,
     platforms = PLATFORMS,
     tone,
+    customInstructions,
+    id: existingRecapId,
+    regenerate = false,
   } = await req.json()
 
   const now = new Date()
@@ -61,7 +66,8 @@ export async function POST(req: Request) {
   if (!quota.allowed) return quotaExceededResponse(quota)
 
   const voice = tone || club.contentTone
-  const prompt = seasonRecapPromptAll(club.sport, club.name, periodLabel, wins, draws, losses, rankingNote || undefined, voice)
+  const prompt = buildPersonalizationPrefix(club, customInstructions)
+    + seasonRecapPromptAll(club.sport, club.name, periodLabel, wins, draws, losses, rankingNote || undefined, voice)
 
   const completion = await openai.chat.completions.create({
     model: 'gpt-4o',
@@ -77,26 +83,47 @@ export async function POST(req: Request) {
 
   const initialStatus = await resolveInitialStatus(club)
 
-  const recap = await prisma.seasonRecap.create({
-    data: {
-      clubId: club.id,
-      periodStart,
-      periodEnd,
-      wins,
-      draws,
-      losses,
-      rankingNote: rankingNote || null,
-      posts: {
-        create: Object.entries(posts).map(([platform, content]) => ({
-          platform,
-          content,
-          postType: 'SEASON_RECAP',
-          status: initialStatus,
-        })),
+  let recap
+  if (existingRecapId && regenerate) {
+    const existing = await prisma.seasonRecap.findUnique({ where: { id: existingRecapId, clubId: club.id } })
+    if (!existing) return NextResponse.json({ error: 'Bilan introuvable' }, { status: 404 })
+    await deletePostsForRegenerate('SEASON_RECAP', existingRecapId)
+    recap = await prisma.seasonRecap.update({
+      where: { id: existingRecapId },
+      data: {
+        posts: {
+          create: Object.entries(posts).map(([platform, content]) => ({
+            platform,
+            content,
+            postType: 'SEASON_RECAP',
+            status: initialStatus,
+          })),
+        },
       },
-    },
-    include: { posts: true },
-  })
+      include: { posts: true },
+    })
+  } else {
+    recap = await prisma.seasonRecap.create({
+      data: {
+        clubId: club.id,
+        periodStart,
+        periodEnd,
+        wins,
+        draws,
+        losses,
+        rankingNote: rankingNote || null,
+        posts: {
+          create: Object.entries(posts).map(([platform, content]) => ({
+            platform,
+            content,
+            postType: 'SEASON_RECAP',
+            status: initialStatus,
+          })),
+        },
+      },
+      include: { posts: true },
+    })
+  }
 
   await runAutomationSideEffects(club, recap.posts)
   const postIds = Object.fromEntries(recap.posts.map(p => [p.platform, p.id]))

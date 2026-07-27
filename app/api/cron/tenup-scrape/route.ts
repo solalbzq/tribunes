@@ -8,6 +8,7 @@ import { resolveEffectiveMode, resolveInitialStatus, runAutomationSideEffects } 
 import { tournamentSchedulePromptAll } from '@/lib/prompts/tennis-posts'
 import { padelTournamentSchedulePromptAll } from '@/lib/prompts/padel-posts'
 import { splitPlatformPosts } from '@/lib/prompts/splitPlatforms'
+import { buildPersonalizationPrefix } from '@/lib/personalization'
 import type { Sport } from '@prisma/client'
 
 /**
@@ -79,9 +80,9 @@ export async function GET(req: Request) {
       }
 
       const isPadel = club.sport === 'Padel'
-      const prompt = isPadel
+      const prompt = buildPersonalizationPrefix(club) + (isPadel
         ? padelTournamentSchedulePromptAll(club.name, 'Programme de la semaine', '', weekStart, '', result.matches, club.contentTone)
-        : tournamentSchedulePromptAll(club.name, 'Programme de la semaine', weekStart, '', result.matches, club.contentTone)
+        : tournamentSchedulePromptAll(club.name, 'Programme de la semaine', weekStart, '', result.matches, club.contentTone))
 
       const completion = await openai.chat.completions.create({
         model: 'gpt-4o',

@@ -8,6 +8,7 @@ import { splitPlatformPosts } from '@/lib/prompts/splitPlatforms'
 import { logAiUsage } from '@/lib/usage'
 import { checkAiQuota, quotaExceededResponse } from '@/lib/quota'
 import { resolveInitialStatus, runAutomationSideEffects } from '@/lib/automation'
+import { buildPersonalizationPrefix } from '@/lib/personalization'
 
 export async function POST(req: Request) {
   const supabase = createClient()
@@ -17,7 +18,7 @@ export async function POST(req: Request) {
   const club = await prisma.club.findUnique({ where: { userId: user.id } })
   if (!club) return NextResponse.json({ error: 'Club not found' }, { status: 404 })
 
-  const { matchResultId, platforms = ['instagram', 'facebook', 'whatsapp'], regenerate = false, tone, mvpName } = await req.json()
+  const { matchResultId, platforms = ['instagram', 'facebook', 'whatsapp'], regenerate = false, tone, mvpName, customInstructions } = await req.json()
   if (!matchResultId) return NextResponse.json({ error: 'matchResultId manquant' }, { status: 400 })
 
   const match = await prisma.matchResult.findUnique({
@@ -49,7 +50,7 @@ export async function POST(req: Request) {
   const voice = tone || club.contentTone
 
   // Un seul appel IA pour les 3 plateformes.
-  const prompt = isPadel
+  const prompt = buildPersonalizationPrefix(club, customInstructions) + (isPadel
     ? padelInterclubResultPromptAll(
         club.name, match.teamName ?? club.name, match.opponent, globalScore,
         match.division ?? '', match.round ?? '', homeAway, scoreDetail as PadelScoreDetail[], voice, mvpName || undefined
@@ -57,7 +58,7 @@ export async function POST(req: Request) {
     : interclubResultPromptAll(
         club.name, match.teamName ?? club.name, match.opponent, globalScore,
         match.division ?? '', match.round ?? '', homeAway, scoreDetail as ScoreDetail[], voice, mvpName || undefined
-      )
+      ))
 
   const completion = await openai.chat.completions.create({
     model: 'gpt-4o',

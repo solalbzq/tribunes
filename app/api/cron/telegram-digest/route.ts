@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
+import type { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { sendMessage, telegramConfigured } from '@/lib/telegram'
+import { clubTelegramOr, relationClubInclude, findRelationValue } from '@/lib/postTypes'
 
 /**
  * Résumé quotidien groupé des posts en attente de validation, par club
@@ -18,27 +20,19 @@ export async function GET(req: Request) {
     return NextResponse.json({ ok: true, skipped: 'Telegram non configuré' })
   }
 
+  const clubSelect = { id: true, name: true, telegramChatId: true }
   const pending = await prisma.generatedPost.findMany({
     where: {
       status: 'PENDING_REVIEW',
-      OR: [
-        { match: { club: { telegramChatId: { not: null } } } },
-        { tournamentSchedule: { club: { telegramChatId: { not: null } } } },
-        { weeklySchedule: { club: { telegramChatId: { not: null } } } },
-        { seasonRecap: { club: { telegramChatId: { not: null } } } },
-      ],
+      OR: clubTelegramOr() as Prisma.GeneratedPostWhereInput[],
     },
-    include: {
-      match: { select: { club: { select: { id: true, name: true, telegramChatId: true } } } },
-      tournamentSchedule: { select: { club: { select: { id: true, name: true, telegramChatId: true } } } },
-      weeklySchedule: { select: { club: { select: { id: true, name: true, telegramChatId: true } } } },
-      seasonRecap: { select: { club: { select: { id: true, name: true, telegramChatId: true } } } },
-    },
+    include: relationClubInclude(clubSelect) as Prisma.GeneratedPostInclude,
   })
 
+  type DigestClub = { id: string; name: string; telegramChatId: string | null }
   const byClub = new Map<string, { name: string; chatId: string; count: number }>()
   for (const post of pending) {
-    const club = post.match?.club ?? post.tournamentSchedule?.club ?? post.weeklySchedule?.club ?? post.seasonRecap?.club
+    const club = findRelationValue<DigestClub>(post as unknown as Record<string, { club?: DigestClub } | null>, 'club')
     if (!club?.telegramChatId) continue
     const entry = byClub.get(club.id) ?? { name: club.name, chatId: club.telegramChatId, count: 0 }
     entry.count += 1

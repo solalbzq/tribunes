@@ -72,12 +72,16 @@ model Club {
   logoUrl             String?
   visualConfig        Json?
   tennisVisualConfig  Json?
+  postVisualConfigs   Json? // { [PostVisualKind]: VisualConfig } — visuels des 7 types hors Résultat/Tennis
   tenupUrl            String?
   suspended           Boolean              @default(false)
   automationMode      String               @default("MANUAL") // MANUAL | AUTO_REVIEW | FULL_AUTO
   telegramChatId      String?
   telegramLinkCode    String?              @unique
   contentTone         String               @default("STANDARD") // STANDARD | FUN | SOBER
+  customInstructions  String?              @db.Text // consignes libres injectées dans tous les prompts IA
+  signaturePhrase     String? // phrase de signature optionnelle ajoutée en fin de post
+  bannedWords         String?              @db.Text // mots/expressions à éviter dans les légendes générées
   createdAt           DateTime             @default(now())
   matches             MatchResult[]
   tournamentSchedules TournamentSchedule[]
@@ -86,6 +90,10 @@ model Club {
   usageEvents         UsageEvent[]
   socialConnections   SocialConnection[]
   seasonRecaps        SeasonRecap[]
+  matchAnnouncements  MatchAnnouncement[]
+  playerSpotlights    PlayerSpotlight[]
+  clubAnnouncements   ClubAnnouncement[]
+  engagementPolls     EngagementPoll[]
 }
 
 model SocialConnection {
@@ -122,7 +130,7 @@ model UsageEvent {
   id        String   @id @default(cuid())
   clubId    String
   club      Club     @relation(fields: [clubId], references: [id], onDelete: Cascade)
-  kind      String // 'ai_generation' | 'tenup_scrape'
+  kind      String // 'ai_generation' | 'tenup_scrape' | 'intent_extraction'
   model     String?
   tokensIn  Int?
   tokensOut Int?
@@ -200,6 +208,54 @@ model SeasonRecap {
   posts       GeneratedPost[]
 }
 
+model MatchAnnouncement {
+  id          String          @id @default(cuid())
+  clubId      String
+  club        Club            @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  opponent    String
+  matchDate   DateTime
+  time        String?
+  venue       String?
+  competition String?
+  isHome      Boolean         @default(true)
+  note        String?
+  createdAt   DateTime        @default(now())
+  posts       GeneratedPost[]
+}
+
+model PlayerSpotlight {
+  id           String          @id @default(cuid())
+  clubId       String
+  club         Club            @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  playerName   String
+  achievement  String
+  periodLabel  String?
+  createdAt    DateTime        @default(now())
+  posts        GeneratedPost[]
+}
+
+model ClubAnnouncement {
+  id          String          @id @default(cuid())
+  clubId      String
+  club        Club            @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  category    String // RECRUITMENT | SPONSOR | CLUB_LIFE
+  title       String
+  description String          @db.Text
+  ctaText     String?
+  createdAt   DateTime        @default(now())
+  posts       GeneratedPost[]
+}
+
+model EngagementPoll {
+  id        String          @id @default(cuid())
+  clubId    String
+  club      Club            @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  question  String
+  options   Json // string[], 2 à 4 options
+  createdAt DateTime        @default(now())
+  posts     GeneratedPost[]
+}
+
 model GeneratedPost {
   id                   String              @id @default(cuid())
   matchId              String?
@@ -210,6 +266,14 @@ model GeneratedPost {
   weeklySchedule       WeeklySchedule?     @relation(fields: [weeklyScheduleId], references: [id], onDelete: Cascade)
   seasonRecapId        String?
   seasonRecap          SeasonRecap?        @relation(fields: [seasonRecapId], references: [id], onDelete: Cascade)
+  matchAnnouncementId  String?
+  matchAnnouncement    MatchAnnouncement?  @relation(fields: [matchAnnouncementId], references: [id], onDelete: Cascade)
+  playerSpotlightId    String?
+  playerSpotlight      PlayerSpotlight?    @relation(fields: [playerSpotlightId], references: [id], onDelete: Cascade)
+  clubAnnouncementId   String?
+  clubAnnouncement     ClubAnnouncement?   @relation(fields: [clubAnnouncementId], references: [id], onDelete: Cascade)
+  engagementPollId     String?
+  engagementPoll       EngagementPoll?     @relation(fields: [engagementPollId], references: [id], onDelete: Cascade)
   platform             String
   content              String              @db.Text
   postType             String              @default("MATCH_RESULT")

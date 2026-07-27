@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import PublishPanel from './PublishPanel'
+import PersonalizePostPanel from './PersonalizePostPanel'
 import { PageHeader, GhostButton } from './ui'
 
 type Posts = { instagram: string; facebook: string; whatsapp: string }
@@ -14,19 +15,26 @@ const PLATFORMS = [
 ]
 
 /**
- * Résultats texte seul (sans visuel canvas), pour les posts programme/tournoi
- * des sports collectifs — pas de gabarit d'image dédié pour l'instant.
+ * Résultats texte + publication. getImageBlob est optionnel : quand un
+ * visuel canvas existe pour ce flux (programme, tournoi), on le branche
+ * pour que "Publier" envoie l'image, pas juste le texte.
  */
 export default function TextPostsPanel({
   posts,
   postIds,
   title,
   onReset,
+  getImageBlob,
+  onPersonalize,
+  personalizing,
 }: {
   posts: Posts
   postIds?: PostIds | null
   title: string
   onReset: () => void
+  getImageBlob?: () => Promise<Blob | null>
+  onPersonalize?: (overrides: { tone?: string; customInstructions?: string }) => Promise<void>
+  personalizing?: boolean
 }) {
   const [copied, setCopied] = useState<string | null>(null)
   const [active, setActive] = useState<'instagram' | 'facebook' | 'whatsapp'>('instagram')
@@ -78,7 +86,15 @@ export default function TextPostsPanel({
         </div>
       ))}
 
-      <PublishPanel posts={posts} postIds={postIds} getImageBlob={async () => null} />
+      {getImageBlob && (
+        <p className="text-xs font-medium text-muted">Le visuel généré sera joint automatiquement à la publication.</p>
+      )}
+
+      {onPersonalize && (
+        <PersonalizePostPanel onRegenerate={onPersonalize} regenerating={personalizing} />
+      )}
+
+      <PublishPanel posts={posts} postIds={postIds} getImageBlob={getImageBlob ?? (async () => null)} />
     </div>
   )
 }

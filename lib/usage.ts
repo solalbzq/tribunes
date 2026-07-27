@@ -13,13 +13,14 @@ export async function logAiUsage(
   clubId: string,
   completion: OpenAiCompletionLike,
   model: string,
-  meta?: Record<string, unknown>
+  meta?: Record<string, unknown>,
+  kind: string = 'ai_generation'
 ): Promise<void> {
   try {
     await prisma.usageEvent.create({
       data: {
         clubId,
-        kind: 'ai_generation',
+        kind,
         model,
         tokensIn: completion.usage?.prompt_tokens ?? null,
         tokensOut: completion.usage?.completion_tokens ?? null,

@@ -47,16 +47,18 @@ type StatsResponse = {
 type RealUsage = {
   windowDays: number
   aiCalls: number
+  intentExtractionCalls: number
   scrapes: number
   tokensIn: number
   tokensOut: number
   aiCostUsd: number
+  intentExtractionCostUsd: number
   scrapeCostUsd: number
   totalCostUsd: number
   activeClubs: number
   avgCostPerClubUsd: number
   avgCostPerAiCallUsd: number
-  byClub: Array<{ clubId: string; name: string; aiCalls: number; scrapes: number; costUsd: number }>
+  byClub: Array<{ clubId: string; name: string; aiCalls: number; intentExtractionCalls: number; scrapes: number; costUsd: number }>
 }
 
 type Entry = {
@@ -702,8 +704,9 @@ export default function AdminDashboardPage() {
                 <>
                   <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                     <StatCard icon="🤖" label="Appels IA" value={fmt(realUsage.aiCalls)} sub={`${fmt(realUsage.tokensIn + realUsage.tokensOut)} tokens`} />
+                    <StatCard icon="✍️" label="Extractions d'intention" value={fmt(realUsage.intentExtractionCalls)} sub={`$${realUsage.intentExtractionCostUsd.toFixed(3)}`} />
                     <StatCard icon="🔎" label="Scrapes Ten'Up" value={fmt(realUsage.scrapes)} sub={`$${realUsage.scrapeCostUsd.toFixed(3)}`} />
-                    <StatCard icon="💰" label="Coût total réel" value={`$${realUsage.totalCostUsd.toFixed(4)}`} accent sub={`IA $${realUsage.aiCostUsd.toFixed(3)} + scrape $${realUsage.scrapeCostUsd.toFixed(3)}`} />
+                    <StatCard icon="💰" label="Coût total réel" value={`$${realUsage.totalCostUsd.toFixed(4)}`} accent sub={`IA $${realUsage.aiCostUsd.toFixed(3)} + extraction $${realUsage.intentExtractionCostUsd.toFixed(3)} + scrape $${realUsage.scrapeCostUsd.toFixed(3)}`} />
                     <StatCard icon="🏟️" label="Coût moyen / club" value={`$${realUsage.avgCostPerClubUsd.toFixed(4)}`} sub={`${realUsage.activeClubs} club(s) actif(s)`} />
                   </div>
                   {realUsage.byClub.length > 0 && (
@@ -713,6 +716,7 @@ export default function AdminDashboardPage() {
                           <tr className="text-[#6b7280]">
                             <th className="border-b border-[#e5e7eb] px-4 py-2 text-left font-semibold">Club</th>
                             <th className="border-b border-[#e5e7eb] px-4 py-2 text-right font-semibold">Appels IA</th>
+                            <th className="border-b border-[#e5e7eb] px-4 py-2 text-right font-semibold">Extractions</th>
                             <th className="border-b border-[#e5e7eb] px-4 py-2 text-right font-semibold">Scrapes</th>
                             <th className="border-b border-[#e5e7eb] px-4 py-2 text-right font-semibold">Coût ($)</th>
                           </tr>
@@ -722,6 +726,7 @@ export default function AdminDashboardPage() {
                             <tr key={c.clubId}>
                               <td className="border-b border-[#f3f4f6] px-4 py-2 font-medium">{c.name}</td>
                               <td className="border-b border-[#f3f4f6] px-4 py-2 text-right">{fmt(c.aiCalls)}</td>
+                              <td className="border-b border-[#f3f4f6] px-4 py-2 text-right">{fmt(c.intentExtractionCalls)}</td>
                               <td className="border-b border-[#f3f4f6] px-4 py-2 text-right">{fmt(c.scrapes)}</td>
                               <td className="border-b border-[#f3f4f6] px-4 py-2 text-right font-semibold text-[#2563eb]">${c.costUsd.toFixed(4)}</td>
                             </tr>

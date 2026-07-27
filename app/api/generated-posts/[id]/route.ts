@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
+import type { Prisma } from '@prisma/client'
 import { createClient } from '@/lib/supabase/server'
 import { prisma } from '@/lib/prisma'
+import { clubOwnershipOr } from '@/lib/postTypes'
 
 export async function PATCH(
   request: Request,
@@ -34,12 +36,7 @@ export async function PATCH(
     where: {
       id: params.id,
       status: { in: ['DRAFT', 'PENDING_REVIEW'] },
-      OR: [
-        { match: { clubId: club.id } },
-        { tournamentSchedule: { clubId: club.id } },
-        { weeklySchedule: { clubId: club.id } },
-        { seasonRecap: { clubId: club.id } },
-      ],
+      OR: clubOwnershipOr(club.id) as Prisma.GeneratedPostWhereInput[],
     },
     select: { id: true },
   })

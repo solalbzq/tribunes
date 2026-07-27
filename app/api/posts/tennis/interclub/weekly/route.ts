@@ -8,6 +8,7 @@ import { splitPlatformPosts } from '@/lib/prompts/splitPlatforms'
 import { logAiUsage } from '@/lib/usage'
 import { checkAiQuota, quotaExceededResponse } from '@/lib/quota'
 import { resolveInitialStatus, runAutomationSideEffects } from '@/lib/automation'
+import { buildPersonalizationPrefix } from '@/lib/personalization'
 
 export async function POST(req: Request) {
   const supabase = createClient()
@@ -20,7 +21,7 @@ export async function POST(req: Request) {
   const quota = await checkAiQuota(club)
   if (!quota.allowed) return quotaExceededResponse(quota)
 
-  const { weekStart: weekStartRaw, platforms = ['instagram', 'facebook', 'whatsapp'], tone } = await req.json()
+  const { weekStart: weekStartRaw, platforms = ['instagram', 'facebook', 'whatsapp'], tone, customInstructions } = await req.json()
   if (!weekStartRaw) return NextResponse.json({ error: 'weekStart manquant' }, { status: 400 })
   const voice = tone || club.contentTone
 
@@ -56,9 +57,9 @@ export async function POST(req: Request) {
   }))
 
   // Un seul appel IA pour les 3 plateformes (puis découpage).
-  const prompt = isPadel
+  const prompt = buildPersonalizationPrefix(club, customInstructions) + (isPadel
     ? padelWeeklySchedulePromptAll(club.name, weekStart, weekEnd, weeklyMatches, voice)
-    : weeklySchedulePromptAll(club.name, weekStart, weekEnd, weeklyMatches, voice)
+    : weeklySchedulePromptAll(club.name, weekStart, weekEnd, weeklyMatches, voice))
 
   const completion = await openai.chat.completions.create({
     model: 'gpt-4o',

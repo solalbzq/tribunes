@@ -5,9 +5,11 @@ import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import Logo from "@/components/Logo";
 import ClubSettings from "./ClubSettings";
+import PersonnalisationView from "./PersonnalisationView";
 import ContentTab from "./ContentTab";
 import SocialTab from "./SocialTab";
 import { Icon } from "./icons";
+import { formatPostType } from "@/lib/postTypes";
 
 type Club = {
   id: string;
@@ -73,7 +75,7 @@ type Draft = {
   } | null;
 };
 
-type View = "home" | "content" | "history" | "reseaux" | "settings";
+type View = "home" | "content" | "history" | "reseaux" | "personnalisation" | "settings";
 
 const NAV: {
   key: View;
@@ -84,7 +86,8 @@ const NAV: {
   { key: "content", label: "Générer du contenu", icon: "sparkles" },
   { key: "history", label: "Historique", icon: "clock" },
   { key: "reseaux", label: "Réseaux", icon: "link" },
-  { key: "settings", label: "Mon club", icon: "palette" },
+  { key: "personnalisation", label: "Personnalisation", icon: "palette" },
+  { key: "settings", label: "Mon club", icon: "sliders" },
 ];
 
 export default function DashboardClient({
@@ -249,6 +252,7 @@ export default function DashboardClient({
           {view === "history" && (
             <HistoryView club={club} drafts={drafts} onNavigate={setView} />
           )}
+          {view === "personnalisation" && <PersonnalisationView club={club} />}
           {view === "settings" && <ClubSettings club={club} />}
         </main>
       </div>
@@ -1154,18 +1158,6 @@ function formatPlatform(platform: string) {
   };
 
   return labels[platform] ?? platform;
-}
-
-function formatPostType(postType: string) {
-  const labels: Record<string, string> = {
-    MATCH_RESULT: "Resultat",
-    INTERCLUB_RESULT: "Resultat interclubs",
-    WEEKLY_SCHEDULE: "Programme",
-    TOURNAMENT_SCHEDULE: "Tournoi",
-    SEASON_RECAP: "Bilan",
-  };
-
-  return labels[postType] ?? postType;
 }
 
 function formatPostStatus(status: string) {

@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server'
+import type { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { sendMessage, answerCallbackQuery, clearReplyMarkup } from '@/lib/telegram'
 import { publishGeneratedPost } from '@/lib/services/publish-service'
+import { relationClubIdInclude, findRelationValue } from '@/lib/postTypes'
 
 type TelegramUpdate = {
   message?: {
@@ -18,14 +20,10 @@ type TelegramUpdate = {
 async function findClubForPost(postId: string) {
   const post = await prisma.generatedPost.findUnique({
     where: { id: postId },
-    include: {
-      match: { select: { clubId: true } },
-      tournamentSchedule: { select: { clubId: true } },
-      weeklySchedule: { select: { clubId: true } },
-    },
+    include: relationClubIdInclude() as Prisma.GeneratedPostInclude,
   })
   if (!post) return null
-  const clubId = post.match?.clubId ?? post.tournamentSchedule?.clubId ?? post.weeklySchedule?.clubId
+  const clubId = findRelationValue<string>(post as unknown as Record<string, { clubId?: string } | null>, 'clubId')
   if (!clubId) return null
   const club = await prisma.club.findUnique({ where: { id: clubId } })
   return club ? { club, post } : null

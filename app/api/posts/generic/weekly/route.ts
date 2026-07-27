@@ -7,6 +7,8 @@ import { splitPlatformPosts } from '@/lib/prompts/splitPlatforms'
 import { logAiUsage } from '@/lib/usage'
 import { checkAiQuota, quotaExceededResponse } from '@/lib/quota'
 import { resolveInitialStatus, runAutomationSideEffects } from '@/lib/automation'
+import { buildPersonalizationPrefix } from '@/lib/personalization'
+import { deletePostsForRegenerate } from '@/lib/services/postGeneration'
 import type { Sport } from '@prisma/client'
 
 const SPORT_ENUM: Record<string, Sport> = {
@@ -38,6 +40,9 @@ export async function POST(req: Request) {
     matches: matchesRaw,
     platforms = ['instagram', 'facebook', 'whatsapp'],
     tone,
+    customInstructions,
+    weeklyScheduleId: existingWeeklyId,
+    regenerate = false,
   } = await req.json()
 
   if (!weekStartRaw || !Array.isArray(matchesRaw) || matchesRaw.length === 0) {
@@ -61,7 +66,8 @@ export async function POST(req: Request) {
   }))
 
   // Un seul appel IA pour les 3 plateformes (puis découpage).
-  const prompt = weeklySchedulePromptAll(club.sport, club.name, weekStart, weekEnd, weeklyMatches, voice)
+  const prompt = buildPersonalizationPrefix(club, customInstructions)
+    + weeklySchedulePromptAll(club.sport, club.name, weekStart, weekEnd, weeklyMatches, voice)
 
   const completion = await openai.chat.completions.create({
     model: 'gpt-4o',
@@ -77,24 +83,45 @@ export async function POST(req: Request) {
 
   const initialStatus = await resolveInitialStatus(club)
 
-  const weekly = await prisma.weeklySchedule.create({
-    data: {
-      clubId: club.id,
-      sport: sportEnum,
-      weekStart,
-      weekEnd,
-      matches: weeklyMatches as unknown as never,
-      posts: {
-        create: Object.entries(posts).map(([platform, content]) => ({
-          platform,
-          content,
-          postType: 'WEEKLY_SCHEDULE',
-          status: initialStatus,
-        })),
+  let weekly
+  if (existingWeeklyId && regenerate) {
+    const existing = await prisma.weeklySchedule.findUnique({ where: { id: existingWeeklyId, clubId: club.id } })
+    if (!existing) return NextResponse.json({ error: 'Programme introuvable' }, { status: 404 })
+    await deletePostsForRegenerate('WEEKLY_SCHEDULE', existingWeeklyId)
+    weekly = await prisma.weeklySchedule.update({
+      where: { id: existingWeeklyId },
+      data: {
+        posts: {
+          create: Object.entries(posts).map(([platform, content]) => ({
+            platform,
+            content,
+            postType: 'WEEKLY_SCHEDULE',
+            status: initialStatus,
+          })),
+        },
       },
-    },
-    include: { posts: true },
-  })
+      include: { posts: true },
+    })
+  } else {
+    weekly = await prisma.weeklySchedule.create({
+      data: {
+        clubId: club.id,
+        sport: sportEnum,
+        weekStart,
+        weekEnd,
+        matches: weeklyMatches as unknown as never,
+        posts: {
+          create: Object.entries(posts).map(([platform, content]) => ({
+            platform,
+            content,
+            postType: 'WEEKLY_SCHEDULE',
+            status: initialStatus,
+          })),
+        },
+      },
+      include: { posts: true },
+    })
+  }
 
   await runAutomationSideEffects(club, weekly.posts)
 

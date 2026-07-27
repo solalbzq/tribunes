@@ -1,13 +1,22 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import TextPostsPanel from './TextPostsPanel'
 import ToneSelector from './ToneSelector'
+import SeasonRecapVisualGenerator from './SeasonRecapVisualGenerator'
 import { FIELD, PageHeader } from './ui'
 import { Icon } from './icons'
 
 type Posts = { instagram: string; facebook: string; whatsapp: string }
 type PostIds = Partial<Record<keyof Posts, string>>
+
+type Club = {
+  name: string
+  sport: string
+  primaryColor: string
+  secondaryColor: string
+  logoUrl: string | null
+}
 
 function startOfYear(): string {
   return `${new Date().getFullYear()}-01-01`
@@ -22,7 +31,7 @@ function today(): string {
  * inclus : s'appuie uniquement sur MatchResult (déjà commun à tous les flux),
  * pas de logique spécifique à un sport.
  */
-export default function SeasonRecapTab() {
+export default function SeasonRecapTab({ club }: { club: Club }) {
   const [periodStart, setPeriodStart] = useState(startOfYear())
   const [periodEnd, setPeriodEnd] = useState(today())
   const [periodLabel, setPeriodLabel] = useState('de la saison')
@@ -33,6 +42,15 @@ export default function SeasonRecapTab() {
   const [posts, setPosts] = useState<Posts | null>(null)
   const [postIds, setPostIds] = useState<PostIds | null>(null)
   const [record, setRecord] = useState<{ wins: number; draws: number; losses: number } | null>(null)
+  const [recapId, setRecapId] = useState<string | null>(null)
+  const [personalizing, setPersonalizing] = useState(false)
+  const canvasRef = useRef<HTMLCanvasElement | null>(null)
+
+  async function getImageBlob(): Promise<Blob | null> {
+    const canvas = canvasRef.current
+    if (!canvas) return null
+    return new Promise(r => canvas.toBlob(r, 'image/png'))
+  }
 
   async function generate() {
     setGenerating(true); setError(null)
@@ -53,6 +71,7 @@ export default function SeasonRecapTab() {
       setPosts(data.posts)
       setPostIds(data.postIds ?? null)
       setRecord(data.record ?? null)
+      setRecapId(data.recapId ?? null)
     } catch (err) {
       setError((err as Error).message)
     } finally {
@@ -60,14 +79,50 @@ export default function SeasonRecapTab() {
     }
   }
 
-  if (posts) {
+  async function personalize(overrides: { tone?: string; customInstructions?: string }) {
+    if (!recapId) return
+    setPersonalizing(true)
+    try {
+      const res = await fetch('/api/posts/season-recap', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          periodStart, periodEnd, periodLabel, rankingNote: rankingNote || undefined,
+          id: recapId, regenerate: true,
+          tone: overrides.tone, customInstructions: overrides.customInstructions,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) return
+      setPosts(data.posts)
+      setPostIds(data.postIds ?? null)
+    } finally {
+      setPersonalizing(false)
+    }
+  }
+
+  if (posts && record) {
     return (
-      <TextPostsPanel
-        posts={posts}
-        postIds={postIds}
-        title={record ? `Bilan prêt — ${record.wins}V ${record.draws}N ${record.losses}D` : 'Votre bilan est prêt'}
-        onReset={() => { setPosts(null); setPostIds(null); setRecord(null) }}
-      />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-5xl">
+        <SeasonRecapVisualGenerator
+          club={club}
+          periodLabel={periodLabel}
+          wins={record.wins}
+          draws={record.draws}
+          losses={record.losses}
+          rankingNote={rankingNote || undefined}
+          onCanvasReady={c => { canvasRef.current = c }}
+        />
+        <TextPostsPanel
+          posts={posts}
+          postIds={postIds}
+          title={`Bilan prêt — ${record.wins}V ${record.draws}N ${record.losses}D`}
+          onReset={() => { setPosts(null); setPostIds(null); setRecord(null); setRecapId(null) }}
+          getImageBlob={getImageBlob}
+          onPersonalize={personalize}
+          personalizing={personalizing}
+        />
+      </div>
     )
   }
 

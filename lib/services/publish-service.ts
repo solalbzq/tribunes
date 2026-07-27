@@ -1,5 +1,7 @@
+import type { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { publishToFacebook, publishToInstagram } from '@/lib/social/meta'
+import { clubOwnershipOr } from '@/lib/postTypes'
 
 export type PublishResult = {
   id: string
@@ -55,12 +57,7 @@ export async function findClubGeneratedPost(clubId: string, generatedPostId: str
   return prisma.generatedPost.findFirst({
     where: {
       id: generatedPostId,
-      OR: [
-        { match: { clubId } },
-        { tournamentSchedule: { clubId } },
-        { weeklySchedule: { clubId } },
-        { seasonRecap: { clubId } },
-      ],
+      OR: clubOwnershipOr(clubId) as Prisma.GeneratedPostWhereInput[],
     },
   })
 }

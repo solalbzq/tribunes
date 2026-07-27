@@ -90,6 +90,19 @@ export function FieldLabel({ children }: { children: ReactNode }) {
   return <label className="mb-1.5 block text-sm font-semibold text-ink">{children}</label>
 }
 
+/** Style de champ utilisé par les écrans "Gestion du club" / "Personnalisation". */
+export const INPUT = 'w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2563eb]/30'
+
+/** Champ étiqueté, style "Gestion du club" / "Personnalisation". */
+export function Field({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div>
+      <label className="block text-sm font-semibold text-[#111827] mb-1.5">{label}</label>
+      {children}
+    </div>
+  )
+}
+
 /** Bouton principal (action unique par écran). */
 export function PrimaryButton({
   children,

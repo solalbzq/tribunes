@@ -8,6 +8,7 @@ import { splitPlatformPosts } from '@/lib/prompts/splitPlatforms'
 import { logAiUsage } from '@/lib/usage'
 import { checkAiQuota, quotaExceededResponse } from '@/lib/quota'
 import { resolveInitialStatus, runAutomationSideEffects } from '@/lib/automation'
+import { buildPersonalizationPrefix } from '@/lib/personalization'
 import type { TournamentMatch } from '@/lib/services/fft-pdf-parser'
 import type { Sport } from '@prisma/client'
 
@@ -38,6 +39,7 @@ export async function POST(req: Request) {
     matchDate: matchDateRaw,
     platforms = PLATFORMS,
     tone,
+    customInstructions,
   } = await req.json()
 
   if (!Array.isArray(matchesRaw) || matchesRaw.length === 0) {
@@ -62,9 +64,9 @@ export async function POST(req: Request) {
     },
   })
 
-  const prompt = isPadel
+  const prompt = buildPersonalizationPrefix(club, customInstructions) + (isPadel
     ? padelTournamentSchedulePromptAll(club.name, label, '', matchDate, '', clubMatches, voice)
-    : tournamentSchedulePromptAll(club.name, label, matchDate, '', clubMatches, voice)
+    : tournamentSchedulePromptAll(club.name, label, matchDate, '', clubMatches, voice))
 
   const completion = await openai.chat.completions.create({
     model: 'gpt-4o',

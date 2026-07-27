@@ -1,15 +1,21 @@
 'use client'
 
 import { useState } from 'react'
-import GenerateForm from './GenerateForm'
+import GenerateForm, { type MatchFormInitialValues } from './GenerateForm'
 import PostsResult from './PostsResult'
 import ProgrammeTab from './ProgrammeTab'
 import TournamentTab from './TournamentTab'
 import SeasonRecapTab from './SeasonRecapTab'
+import MatchAnnouncementTab, { type AnnouncementFormInitialValues } from './MatchAnnouncementTab'
+import PlayerSpotlightTab from './PlayerSpotlightTab'
+import ClubAnnouncementTab from './ClubAnnouncementTab'
+import EngagementPollTab from './EngagementPollTab'
+import DescribeIntentTab from './DescribeIntentTab'
 import VisualGenerator from './VisualGenerator'
 import TennisPadelTab from './posts/TennisPadelTab'
 import type { TennisVisualConfig } from './posts/TennisVisualGenerator'
 import { PageHeader, Segmented, GhostButton } from './ui'
+import { Icon } from './icons'
 
 type Club = {
   id: string
@@ -34,13 +40,66 @@ type MatchData = {
 
 type PostIds = Partial<Record<'instagram' | 'facebook' | 'whatsapp', string>>
 
+type Section = 'describe' | 'match' | 'programme' | 'tournament' | 'recap' | 'announcement' | 'spotlight' | 'club' | 'poll'
+
+type Prefill =
+  | { target: 'match'; values: MatchFormInitialValues; sourceText: string }
+  | { target: 'announcement'; values: AnnouncementFormInitialValues; sourceText: string }
+
 export default function ContentTab({ club }: { club: Club }) {
   const isTennisPadel = club.sport === 'Tennis' || club.sport === 'Padel'
-  const [section, setSection] = useState<'match' | 'programme' | 'tournament' | 'recap'>('match')
+  const [section, setSection] = useState<Section>('match')
+  const [prefill, setPrefill] = useState<Prefill | null>(null)
   const [generatedPosts, setGeneratedPosts] = useState<{ instagram: string; facebook: string; whatsapp: string } | null>(null)
   const [generatedPostIds, setGeneratedPostIds] = useState<PostIds | null>(null)
   const [generatedMatch, setGeneratedMatch] = useState<MatchData | null>(null)
+  const [generatedMatchId, setGeneratedMatchId] = useState<string | null>(null)
   const [generatedPhoto, setGeneratedPhoto] = useState<File | null>(null)
+  const [personalizing, setPersonalizing] = useState(false)
+
+  function handleSectionChange(next: Section) {
+    // Un ancien préremplissage ne doit jamais réapparaître silencieusement
+    // sur un onglet standard visité manuellement en dehors du flux "Décrire".
+    if (next !== section) setPrefill(null)
+    setSection(next)
+  }
+
+  function handleApply(target: 'match' | 'announcement', values: MatchFormInitialValues | AnnouncementFormInitialValues, sourceText: string) {
+    setPrefill(
+      target === 'match'
+        ? { target, values: values as MatchFormInitialValues, sourceText }
+        : { target, values: values as AnnouncementFormInitialValues, sourceText }
+    )
+    setSection(target)
+  }
+
+  async function personalizeMatch(overrides: { tone?: string; customInstructions?: string }) {
+    if (!generatedMatch || !generatedMatchId) return
+    setPersonalizing(true)
+    try {
+      const res = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...generatedMatch,
+          matchId: generatedMatchId,
+          regenerate: true,
+          tone: overrides.tone,
+          customInstructions: overrides.customInstructions,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) return
+      setGeneratedPosts(data.posts)
+      const postIds = Object.fromEntries(
+        ((data.match?.posts as Array<{ id: string; platform: keyof PostIds }> | undefined) ?? [])
+          .map(post => [post.platform, post.id])
+      ) as PostIds
+      setGeneratedPostIds(postIds)
+    } finally {
+      setPersonalizing(false)
+    }
+  }
 
   if (isTennisPadel) {
     return (
@@ -68,36 +127,50 @@ export default function ContentTab({ club }: { club: Club }) {
 
       <Segmented
         value={section}
-        onChange={setSection}
+        onChange={handleSectionChange}
         items={[
+          { key: 'describe', label: 'Décrire ma publication', icon: 'sparkles' },
           { key: 'match', label: 'Post de match', icon: 'target' },
           { key: 'programme', label: 'Programme', icon: 'calendar' },
           { key: 'tournament', label: 'Tournoi', icon: 'trophy' },
           { key: 'recap', label: 'Bilan', icon: 'trending' },
+          { key: 'announcement', label: 'Avant-match', icon: 'clock' },
+          { key: 'spotlight', label: 'Joueur à l\'honneur', icon: 'user' },
+          { key: 'club', label: 'Annonce du club', icon: 'users' },
+          { key: 'poll', label: 'Engagement', icon: 'heart' },
         ]}
       />
 
+      {section === 'describe' && <DescribeIntentTab onApply={handleApply} />}
+
       {section === 'match' && !generatedPosts && !generatedMatch && (
-        <GenerateForm
-          club={club}
-          onSuccess={(posts, match, photo, postIds) => {
-            setGeneratedPosts(posts)
-            setGeneratedPostIds(postIds)
-            setGeneratedMatch(match)
-            setGeneratedPhoto(photo)
-          }}
-          onVisualOnly={(match, photo) => {
-            setGeneratedMatch(match)
-            setGeneratedPhoto(photo)
-          }}
-        />
+        <div className="max-w-xl space-y-3">
+          {prefill?.target === 'match' && (
+            <SourceTextBanner sourceText={prefill.sourceText} onClear={() => setPrefill(null)} />
+          )}
+          <GenerateForm
+            club={club}
+            initialValues={prefill?.target === 'match' ? prefill.values : undefined}
+            onSuccess={(posts, match, photo, postIds, matchId) => {
+              setGeneratedPosts(posts)
+              setGeneratedPostIds(postIds)
+              setGeneratedMatch(match)
+              setGeneratedMatchId(matchId)
+              setGeneratedPhoto(photo)
+            }}
+            onVisualOnly={(match, photo) => {
+              setGeneratedMatch(match)
+              setGeneratedPhoto(photo)
+            }}
+          />
+        </div>
       )}
 
       {section === 'match' && !generatedPosts && generatedMatch && (
         <div className="max-w-2xl space-y-4">
           <div className="flex items-center justify-between">
             <PageHeader icon="image" title="Votre visuel est prêt" tone="gold" />
-            <GhostButton icon="arrowLeft" onClick={() => { setGeneratedMatch(null); setGeneratedPhoto(null) }}>
+            <GhostButton icon="arrowLeft" onClick={() => { setGeneratedMatch(null); setGeneratedPhoto(null); setPrefill(null) }}>
               Nouveau match
             </GhostButton>
           </div>
@@ -112,18 +185,49 @@ export default function ContentTab({ club }: { club: Club }) {
           club={club}
           match={generatedMatch}
           photoFile={generatedPhoto}
+          onPersonalize={personalizeMatch}
+          personalizing={personalizing}
           onReset={() => {
             setGeneratedPosts(null)
             setGeneratedPostIds(null)
             setGeneratedMatch(null)
+            setGeneratedMatchId(null)
             setGeneratedPhoto(null)
+            setPrefill(null)
           }}
         />
       )}
 
       {section === 'programme' && <ProgrammeTab club={club} />}
-      {section === 'tournament' && <TournamentTab />}
-      {section === 'recap' && <SeasonRecapTab />}
+      {section === 'tournament' && <TournamentTab club={club} />}
+      {section === 'recap' && <SeasonRecapTab club={club} />}
+      {section === 'announcement' && (
+        <div className="max-w-5xl space-y-3">
+          {prefill?.target === 'announcement' && (
+            <SourceTextBanner sourceText={prefill.sourceText} onClear={() => setPrefill(null)} />
+          )}
+          <MatchAnnouncementTab club={club} initialValues={prefill?.target === 'announcement' ? prefill.values : undefined} />
+        </div>
+      )}
+      {section === 'spotlight' && <PlayerSpotlightTab club={club} />}
+      {section === 'club' && <ClubAnnouncementTab club={club} />}
+      {section === 'poll' && <EngagementPollTab club={club} />}
+    </div>
+  )
+}
+
+function SourceTextBanner({ sourceText, onClear }: { sourceText: string; onClear: () => void }) {
+  return (
+    <div className="flex items-start justify-between gap-3 rounded-xl border border-brand/20 bg-brand-soft/40 p-3">
+      <div className="flex items-start gap-2 min-w-0">
+        <Icon name="sparkles" className="h-4 w-4 shrink-0 mt-0.5 text-brand" />
+        <p className="text-xs text-ink min-w-0 truncate">
+          <span className="font-semibold">Formulaire prérempli à partir de :</span> « {sourceText} »
+        </p>
+      </div>
+      <button type="button" onClick={onClear} className="shrink-0 text-xs font-semibold text-muted hover:text-ink">
+        Effacer
+      </button>
     </div>
   )
 }

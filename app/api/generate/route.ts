@@ -8,6 +8,8 @@ import { splitPlatformPosts } from '@/lib/prompts/splitPlatforms'
 import { logAiUsage } from '@/lib/usage'
 import { checkAiQuota, quotaExceededResponse } from '@/lib/quota'
 import { resolveInitialStatus, runAutomationSideEffects } from '@/lib/automation'
+import { buildPersonalizationPrefix } from '@/lib/personalization'
+import { deletePostsForRegenerate } from '@/lib/services/postGeneration'
 
 export async function POST(req: Request) {
   const supabase = createClient()
@@ -20,7 +22,7 @@ export async function POST(req: Request) {
   const quota = await checkAiQuota(club)
   if (!quota.allowed) return quotaExceededResponse(quota)
 
-  const { opponent, homeScore, awayScore, isHome, competition, date, notes, extraData, tone, mvpName } = await req.json()
+  const { opponent, homeScore, awayScore, isHome, competition, date, notes, extraData, tone, mvpName, customInstructions, matchId, regenerate } = await req.json()
   if (!opponent || homeScore === undefined || awayScore === undefined) {
     return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
   }
@@ -50,7 +52,7 @@ export async function POST(req: Request) {
     ? `Joueur/joueuse du match à mettre en avant : ${mvpName}. Cite-le/la nommément et valorise sa performance dans au moins un des posts.`
     : ''
 
-  const prompt = `Tu es le responsable communication du club de ${club.sport} "${club.name}".
+  const prompt = buildPersonalizationPrefix(club, customInstructions) + `Tu es le responsable communication du club de ${club.sport} "${club.name}".
 Rédige des posts pour annoncer ce résultat :
 
 - Sport : ${club.sport} ${vocab.emoji}
@@ -92,27 +94,48 @@ Format exact attendu :
   const posts = splitPlatformPosts(completion.choices[0].message.content ?? '')
   const initialStatus = await resolveInitialStatus(club)
 
-  const match = await prisma.matchResult.create({
-    data: {
-      clubId: club.id,
-      date: date ? new Date(date) : new Date(),
-      opponent,
-      homeScore: Number(homeScore),
-      awayScore: Number(awayScore),
-      isHome: Boolean(isHome),
-      competition: competition || null,
-      notes: notes || null,
-      extraData: extraData ?? undefined,
-      posts: {
-        create: [
-          { platform: 'instagram', content: posts.instagram, status: initialStatus },
-          { platform: 'facebook', content: posts.facebook, status: initialStatus },
-          { platform: 'whatsapp', content: posts.whatsapp, status: initialStatus },
-        ],
+  let match: Awaited<ReturnType<typeof prisma.matchResult.findUniqueOrThrow>> & { posts: Array<{ id: string; platform: string; content: string; imageUrl: string | null }> }
+
+  if (matchId && regenerate) {
+    const existing = await prisma.matchResult.findUnique({ where: { id: matchId, clubId: club.id } })
+    if (!existing) return NextResponse.json({ error: 'Match introuvable' }, { status: 404 })
+    await deletePostsForRegenerate('MATCH_RESULT', matchId)
+    match = await prisma.matchResult.update({
+      where: { id: matchId },
+      data: {
+        posts: {
+          create: [
+            { platform: 'instagram', content: posts.instagram, status: initialStatus, postType: 'MATCH_RESULT' },
+            { platform: 'facebook', content: posts.facebook, status: initialStatus, postType: 'MATCH_RESULT' },
+            { platform: 'whatsapp', content: posts.whatsapp, status: initialStatus, postType: 'MATCH_RESULT' },
+          ],
+        },
       },
-    },
-    include: { posts: true },
-  })
+      include: { posts: true },
+    })
+  } else {
+    match = await prisma.matchResult.create({
+      data: {
+        clubId: club.id,
+        date: date ? new Date(date) : new Date(),
+        opponent,
+        homeScore: Number(homeScore),
+        awayScore: Number(awayScore),
+        isHome: Boolean(isHome),
+        competition: competition || null,
+        notes: notes || null,
+        extraData: extraData ?? undefined,
+        posts: {
+          create: [
+            { platform: 'instagram', content: posts.instagram, status: initialStatus },
+            { platform: 'facebook', content: posts.facebook, status: initialStatus },
+            { platform: 'whatsapp', content: posts.whatsapp, status: initialStatus },
+          ],
+        },
+      },
+      include: { posts: true },
+    })
+  }
 
   await runAutomationSideEffects(club, match.posts)
 
