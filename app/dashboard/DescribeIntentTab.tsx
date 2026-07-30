@@ -9,6 +9,7 @@ import type { ClubAnnouncementFormInitialValues } from './ClubAnnouncementTab'
 import type { PlayerSpotlightFormInitialValues } from './PlayerSpotlightTab'
 import type { SeasonRecapFormInitialValues } from './SeasonRecapTab'
 import type { EngagementPollFormInitialValues } from './EngagementPollTab'
+import type { CustomPostFormInitialValues } from './CustomPostTab'
 
 type MatchResultFields = {
   opponent: string | null
@@ -73,12 +74,7 @@ type IntentExtractionResult =
   | { intent: 'CUSTOM'; confidence: number; fields: CustomFields; missingFields: string[] }
   | { intent: 'UNSUPPORTED'; confidence: number; fields: Record<string, never>; missingFields: [] }
 
-// CUSTOM n'a pas encore de formulaire dédié (mode "Publication libre" à venir) :
-// traité comme UNSUPPORTED côté UI — pas d'entrée dans INTENT_TO_TARGET, le
-// formulaire s'ouvre vierge sur le type choisi manuellement par l'utilisateur.
-const UNROUTED_INTENTS = new Set<IntentExtractionResult['intent']>(['UNSUPPORTED', 'CUSTOM'])
-
-type Target = 'match' | 'announcement' | 'clubAnnouncement' | 'playerSpotlight' | 'seasonRecap' | 'engagementPoll'
+type Target = 'match' | 'announcement' | 'clubAnnouncement' | 'playerSpotlight' | 'seasonRecap' | 'engagementPoll' | 'customPost'
 
 type ApplyValues =
   | MatchFormInitialValues
@@ -87,12 +83,14 @@ type ApplyValues =
   | PlayerSpotlightFormInitialValues
   | SeasonRecapFormInitialValues
   | EngagementPollFormInitialValues
+  | CustomPostFormInitialValues
 
 const TARGET_LABELS: Record<Target, string> = {
   match: 'Résultat de match',
   announcement: 'Annonce de match',
   clubAnnouncement: 'Annonce du club',
   playerSpotlight: "Joueur à l'honneur",
+  customPost: 'Publication libre',
   seasonRecap: 'Bilan de saison',
   engagementPoll: 'Sondage',
 }
@@ -104,6 +102,7 @@ const INTENT_TO_TARGET: Partial<Record<IntentExtractionResult['intent'], Target>
   PLAYER_SPOTLIGHT: 'playerSpotlight',
   SEASON_RECAP: 'seasonRecap',
   ENGAGEMENT_POLL: 'engagementPoll',
+  CUSTOM: 'customPost',
 }
 
 const RESULT_FIELD_LABELS: Record<keyof MatchResultFields, string> = {
@@ -125,6 +124,11 @@ const SEASON_RECAP_FIELD_LABELS: Record<keyof SeasonRecapFields, string> = {
 }
 const ENGAGEMENT_POLL_FIELD_LABELS: Record<keyof EngagementPollFields, string> = {
   question: 'Question', options: 'Options',
+}
+const CUSTOM_FIELD_LABELS: Record<keyof CustomFields, string> = {
+  objective: 'Objectif', subject: 'Sujet', keyInformation: 'Informations clés',
+  callToAction: 'Appel à l’action', targetAudience: 'Public visé', tone: 'Ton',
+  suggestedCategory: 'Catégorie suggérée',
 }
 const CATEGORY_LABELS: Record<ClubAnnouncementFields['category'], string> = {
   RECRUITMENT: 'Recrutement', SPONSOR: 'Sponsor', CLUB_LIFE: 'Vie du club',
@@ -253,6 +257,19 @@ export default function DescribeIntentTab({
         }, sourceText)
         return
       }
+      case 'CUSTOM': {
+        const f = result.fields
+        onApply('customPost', {
+          objective: f.objective ?? undefined,
+          subject: f.subject ?? undefined,
+          keyInformation: f.keyInformation.length ? f.keyInformation : undefined,
+          callToAction: f.callToAction ?? undefined,
+          targetAudience: f.targetAudience ?? undefined,
+          tone: f.tone ?? undefined,
+          suggestedCategory: f.suggestedCategory ?? undefined,
+        }, sourceText)
+        return
+      }
     }
   }
 
@@ -261,7 +278,7 @@ export default function DescribeIntentTab({
       <PageHeader
         icon="sparkles"
         title="Décrivez votre publication"
-        subtitle="Résultat, annonce de match, annonce du club, joueur à l'honneur, bilan ou sondage — l'IA prépare le formulaire, vous le vérifiez avant de générer."
+        subtitle="Résultat, annonce de match, annonce du club, joueur à l'honneur, bilan, sondage, ou toute autre publication libre — l'IA prépare le formulaire, vous le vérifiez avant de générer."
       />
 
       {!result && (
@@ -287,11 +304,7 @@ export default function DescribeIntentTab({
             <p className="text-sm text-ink whitespace-pre-wrap">{text.trim()}</p>
           </div>
 
-          {result.intent === 'CUSTOM' ? (
-            <p className="text-sm text-gray-600">
-              Cette demande ne correspond à aucun type structuré existant (ex : billetterie, jeu-concours, événement caritatif...). Le mode « Publication libre » arrive bientôt — en attendant, choisis le type le plus proche ci-dessous pour continuer avec un formulaire vierge, ou reformule ta demande.
-            </p>
-          ) : result.intent === 'UNSUPPORTED' ? (
+          {result.intent === 'UNSUPPORTED' ? (
             <p className="text-sm text-gray-600">
               Je n&apos;ai pas identifié de type de publication pris en charge dans ce texte (le tournoi et le programme de la semaine ne sont pas encore supportés ici). Choisis un type ci-dessous pour continuer avec un formulaire vierge, ou reformule ta demande.
             </p>
@@ -322,13 +335,14 @@ export default function DescribeIntentTab({
           {!targetChanged && result.intent === 'PLAYER_SPOTLIGHT' && <FieldsSummary fields={result.fields} labels={PLAYER_SPOTLIGHT_FIELD_LABELS} missingFields={result.missingFields} />}
           {!targetChanged && result.intent === 'SEASON_RECAP' && <FieldsSummary fields={result.fields} labels={SEASON_RECAP_FIELD_LABELS} missingFields={result.missingFields} />}
           {!targetChanged && result.intent === 'ENGAGEMENT_POLL' && <FieldsSummary fields={result.fields} labels={ENGAGEMENT_POLL_FIELD_LABELS} missingFields={result.missingFields} />}
+          {!targetChanged && result.intent === 'CUSTOM' && <FieldsSummary fields={result.fields} labels={CUSTOM_FIELD_LABELS} missingFields={result.missingFields} />}
 
           {targetChanged && (
             <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl p-3">
               Tu as changé le type par rapport à ce qui a été détecté : le formulaire s&apos;ouvrira vierge (les champs compris pour l&apos;autre type ne sont pas transférés). Le texte saisi reste accessible.
             </p>
           )}
-          {UNROUTED_INTENTS.has(result.intent) && selectedTarget && (
+          {result.intent === 'UNSUPPORTED' && selectedTarget && (
             <p className="text-xs text-gray-500">Le formulaire s&apos;ouvrira vierge, à remplir manuellement.</p>
           )}
 
