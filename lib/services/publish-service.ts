@@ -62,6 +62,23 @@ export async function findClubGeneratedPost(clubId: string, generatedPostId: str
   })
 }
 
+/** Statuts à partir desquels une publication peut être déclenchée. */
+const PUBLISHABLE_STATUSES = ['DRAFT', 'PENDING_REVIEW']
+
+/**
+ * Réserve atomiquement un GeneratedPost pour publication : ne transitionne
+ * DRAFT/PENDING_REVIEW → PUBLISHING que si aucune autre requête ne l'a déjà
+ * fait. Empêche la double publication sur un rejeu de webhook Telegram ou un
+ * double-clic (deux appels concurrents ne peuvent pas obtenir count === 1).
+ */
+export async function claimPostForPublishing(generatedPostId: string): Promise<boolean> {
+  const claim = await prisma.generatedPost.updateMany({
+    where: { id: generatedPostId, status: { in: PUBLISHABLE_STATUSES } },
+    data: { status: 'PUBLISHING' },
+  })
+  return claim.count === 1
+}
+
 /**
  * Point d'entrée unique pour publier un post déjà généré, sans passage par un
  * FormData/UI (utilisé par le mode FULL_AUTO et le callback "Publier" Telegram).
@@ -76,6 +93,11 @@ export async function publishGeneratedPost(params: { clubId: string; generatedPo
 
   if (post.platform !== 'facebook' && post.platform !== 'instagram') {
     return { ok: false, skipped: true, reason: `Plateforme "${post.platform}" non publiable via API`, results: [] as PublishResult[] }
+  }
+
+  const claimed = await claimPostForPublishing(post.id)
+  if (!claimed) {
+    return { ok: false, skipped: true, reason: 'Publication déjà en cours ou déjà traitée', results: [] as PublishResult[] }
   }
 
   const connections = await prisma.socialConnection.findMany({

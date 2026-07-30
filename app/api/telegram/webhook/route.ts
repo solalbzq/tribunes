@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import type { Prisma } from '@prisma/client'
+import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { sendMessage, answerCallbackQuery, clearReplyMarkup } from '@/lib/telegram'
 import { publishGeneratedPost } from '@/lib/services/publish-service'
@@ -39,10 +39,18 @@ async function handleStart(chatId: number, text: string) {
     return
   }
 
-  await prisma.club.update({
-    where: { id: club.id },
-    data: { telegramChatId: String(chatId), telegramLinkCode: null },
-  })
+  try {
+    await prisma.club.update({
+      where: { id: club.id },
+      data: { telegramChatId: String(chatId), telegramLinkCode: null },
+    })
+  } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+      await sendMessage(String(chatId), "Ce chat Telegram est déjà lié à un autre club Tribunes. Déconnecte-le d'abord depuis ce club avant de le relier ailleurs.")
+      return
+    }
+    throw err
+  }
   await sendMessage(String(chatId), `✅ Ce chat est maintenant lié à "${club.name}". Les posts à valider arriveront ici.`)
 }
 
@@ -68,7 +76,10 @@ async function handleCallback(callback: NonNullable<TelegramUpdate['callback_que
     await clearReplyMarkup(chatId, message.message_id)
     await answerCallbackQuery(callbackQueryId, result.ok ? 'Publié ✅' : (result.reason ?? 'Échec de publication'))
   } else {
-    await prisma.generatedPost.update({ where: { id: postId }, data: { status: 'REJECTED' } })
+    await prisma.generatedPost.updateMany({
+      where: { id: postId, status: { in: ['DRAFT', 'PENDING_REVIEW'] } },
+      data: { status: 'REJECTED' },
+    })
     await clearReplyMarkup(chatId, message.message_id)
     await answerCallbackQuery(callbackQueryId, 'Rejeté')
   }

@@ -76,7 +76,7 @@ model Club {
   tenupUrl            String?
   suspended           Boolean              @default(false)
   automationMode      String               @default("MANUAL") // MANUAL | AUTO_REVIEW | FULL_AUTO
-  telegramChatId      String?
+  telegramChatId      String?              @unique
   telegramLinkCode    String?              @unique
   contentTone         String               @default("STANDARD") // STANDARD | FUN | SOBER
   customInstructions  String?              @db.Text // consignes libres injectées dans tous les prompts IA
@@ -277,7 +277,9 @@ model GeneratedPost {
   platform             String
   content              String              @db.Text
   postType             String              @default("MATCH_RESULT")
-  // DRAFT | PENDING_REVIEW | PUBLISHED | PARTIAL | FAILED | REJECTED
+  // DRAFT | PENDING_REVIEW | PUBLISHING | PUBLISHED | PARTIAL | FAILED | REJECTED
+  // PUBLISHING est transitoire : réservé atomiquement le temps de l'appel aux
+  // API réseaux sociaux pour empêcher une double publication (cf. publishGeneratedPost).
   status               String              @default("DRAFT")
   imageUrl             String?
   publishedAt          DateTime?
