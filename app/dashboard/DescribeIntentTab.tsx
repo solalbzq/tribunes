@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { PageHeader, PrimaryButton, GhostButton } from './ui'
+import { Icon } from './icons'
 import { ErrorNotice, toUiError, type UiError } from './apiError'
 import type { MatchFormInitialValues } from './GenerateForm'
 import type { AnnouncementFormInitialValues } from './MatchAnnouncementTab'
@@ -145,8 +146,10 @@ function displayValue(v: string | number | boolean | string[] | null): string {
 
 export default function DescribeIntentTab({
   onApply,
+  onSwitchToManual,
 }: {
   onApply: (target: Target, values: ApplyValues, sourceText: string) => void
+  onSwitchToManual?: () => void
 }) {
   const [text, setText] = useState('')
   const [loading, setLoading] = useState(false)
@@ -182,6 +185,7 @@ export default function DescribeIntentTab({
     setResult(null)
     setSelectedTarget(null)
     setError(null)
+    setText('')
   }
 
   function apply() {
@@ -274,88 +278,150 @@ export default function DescribeIntentTab({
   }
 
   return (
-    <div className="max-w-2xl space-y-6">
+    <div className="mx-auto flex max-w-2xl flex-col gap-5">
       <PageHeader
         icon="sparkles"
-        title="Décrivez votre publication"
-        subtitle="Résultat, annonce de match, annonce du club, joueur à l'honneur, bilan, sondage, ou toute autre publication libre — l'IA prépare le formulaire, vous le vérifiez avant de générer."
+        title="Assistant Tribunes"
+        subtitle="Décris la publication que tu veux créer, en langage naturel."
+        action={onSwitchToManual && (
+          <GhostButton type="button" onClick={onSwitchToManual} icon="sliders">
+            Mode manuel
+          </GhostButton>
+        )}
       />
 
-      {!result && (
-        <div className="space-y-3">
-          <textarea
-            value={text}
-            onChange={e => setText(e.target.value)}
-            rows={4}
-            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#2563eb]/30 resize-none"
-            placeholder="Ex : Un post pour remercier notre sponsor Decathlon qui équipe l'équipe 1 cette saison."
-          />
-          <ErrorNotice error={error} />
-          <PrimaryButton onClick={analyze} disabled={loading || !text.trim()} loading={loading} icon={loading ? undefined : 'sparkles'}>
-            {loading ? 'Analyse en cours…' : 'Analyser'}
-          </PrimaryButton>
-        </div>
-      )}
+      <div className="space-y-3">
+        <ChatBubble from="bot">
+          Salut 👋 Décris-moi ce que tu veux publier — résultat, annonce, joueur à l&apos;honneur, bilan, sondage, ou toute autre communication du club (billetterie, recherche de bénévoles, événement...). Je prépare le formulaire, tu vérifies avant de générer.
+        </ChatBubble>
 
-      {result && (
-        <div className="space-y-5 rounded-card border border-line bg-white p-5 shadow-card sm:p-6">
-          <div className="rounded-xl bg-subtle p-3">
-            <p className="text-xs font-semibold text-muted mb-1">Texte saisi</p>
-            <p className="text-sm text-ink whitespace-pre-wrap">{text.trim()}</p>
-          </div>
+        {(loading || result) && (
+          <ChatBubble from="user">{text.trim()}</ChatBubble>
+        )}
 
-          {result.intent === 'UNSUPPORTED' ? (
-            <p className="text-sm text-gray-600">
-              Je n&apos;ai pas identifié de type de publication pris en charge dans ce texte (le tournoi et le programme de la semaine ne sont pas encore supportés ici). Choisis un type ci-dessous pour continuer avec un formulaire vierge, ou reformule ta demande.
-            </p>
-          ) : (
-            <p className="text-sm text-gray-600">
-              Type détecté : <span className="font-semibold text-ink">{TARGET_LABELS[INTENT_TO_TARGET[result.intent]!]}</span>
-              {result.confidence < 0.5 && <span className="ml-2 text-amber-600 font-medium">(confiance faible, vérifie bien les champs)</span>}
-            </p>
-          )}
+        {loading && <TypingBubble />}
 
-          <div>
-            <p className="text-xs font-semibold text-muted mb-2 uppercase tracking-wider">Type de publication</p>
-            <div className="grid grid-cols-2 gap-2">
-              {(Object.keys(TARGET_LABELS) as Target[]).map(t => (
-                <button key={t} type="button" onClick={() => setSelectedTarget(t)}
-                  className={`py-2.5 px-3 rounded-xl text-sm font-semibold border transition ${
-                    selectedTarget === t ? 'bg-[#111827] text-white border-[#111827]' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
-                  }`}>
-                  {TARGET_LABELS[t]}
-                </button>
-              ))}
+        {result && (
+          <ChatBubble from="bot">
+            <div className="space-y-4">
+              {result.intent === 'UNSUPPORTED' ? (
+                <p>
+                  Je n&apos;ai pas identifié de type de publication pris en charge dans ce texte (le tournoi et le programme de la semaine ne sont pas encore supportés ici). Choisis un type ci-dessous pour continuer avec un formulaire vierge, ou reformule ta demande.
+                </p>
+              ) : (
+                <p>
+                  Type détecté : <span className="font-semibold text-ink">{TARGET_LABELS[INTENT_TO_TARGET[result.intent]!]}</span>
+                  {result.confidence < 0.5 && <span className="ml-2 text-amber-600 font-medium">(confiance faible, vérifie bien les champs)</span>}
+                </p>
+              )}
+
+              <div>
+                <p className="text-xs font-semibold text-muted mb-2 uppercase tracking-wider">Type de publication</p>
+                <div className="flex flex-wrap gap-2">
+                  {(Object.keys(TARGET_LABELS) as Target[]).map(t => (
+                    <button key={t} type="button" onClick={() => setSelectedTarget(t)}
+                      className={`rounded-full px-3.5 py-1.5 text-sm font-semibold border transition ${
+                        selectedTarget === t ? 'bg-[#111827] text-white border-[#111827]' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
+                      }`}>
+                      {TARGET_LABELS[t]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {!targetChanged && result.intent === 'MATCH_RESULT' && <FieldsSummary fields={result.fields} labels={RESULT_FIELD_LABELS} missingFields={result.missingFields} />}
+              {!targetChanged && result.intent === 'MATCH_ANNOUNCEMENT' && <FieldsSummary fields={result.fields} labels={ANNOUNCEMENT_FIELD_LABELS} missingFields={result.missingFields} />}
+              {!targetChanged && result.intent === 'CLUB_ANNOUNCEMENT' && <FieldsSummary fields={result.fields} labels={CLUB_ANNOUNCEMENT_FIELD_LABELS} missingFields={result.missingFields} />}
+              {!targetChanged && result.intent === 'PLAYER_SPOTLIGHT' && <FieldsSummary fields={result.fields} labels={PLAYER_SPOTLIGHT_FIELD_LABELS} missingFields={result.missingFields} />}
+              {!targetChanged && result.intent === 'SEASON_RECAP' && <FieldsSummary fields={result.fields} labels={SEASON_RECAP_FIELD_LABELS} missingFields={result.missingFields} />}
+              {!targetChanged && result.intent === 'ENGAGEMENT_POLL' && <FieldsSummary fields={result.fields} labels={ENGAGEMENT_POLL_FIELD_LABELS} missingFields={result.missingFields} />}
+              {!targetChanged && result.intent === 'CUSTOM' && <FieldsSummary fields={result.fields} labels={CUSTOM_FIELD_LABELS} missingFields={result.missingFields} />}
+
+              {targetChanged && (
+                <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl p-3">
+                  Tu as changé le type par rapport à ce qui a été détecté : le formulaire s&apos;ouvrira vierge (les champs compris pour l&apos;autre type ne sont pas transférés). Le texte saisi reste accessible.
+                </p>
+              )}
+              {result.intent === 'UNSUPPORTED' && selectedTarget && (
+                <p className="text-xs text-gray-500">Le formulaire s&apos;ouvrira vierge, à remplir manuellement.</p>
+              )}
+
+              <div className="flex gap-3 pt-1">
+                <PrimaryButton onClick={apply} disabled={!selectedTarget} icon="arrowRight" className="flex-1">
+                  Utiliser ces informations
+                </PrimaryButton>
+                <GhostButton type="button" onClick={restart} icon="refresh">
+                  Nouveau message
+                </GhostButton>
+              </div>
             </div>
-          </div>
+          </ChatBubble>
+        )}
+      </div>
 
-          {!targetChanged && result.intent === 'MATCH_RESULT' && <FieldsSummary fields={result.fields} labels={RESULT_FIELD_LABELS} missingFields={result.missingFields} />}
-          {!targetChanged && result.intent === 'MATCH_ANNOUNCEMENT' && <FieldsSummary fields={result.fields} labels={ANNOUNCEMENT_FIELD_LABELS} missingFields={result.missingFields} />}
-          {!targetChanged && result.intent === 'CLUB_ANNOUNCEMENT' && <FieldsSummary fields={result.fields} labels={CLUB_ANNOUNCEMENT_FIELD_LABELS} missingFields={result.missingFields} />}
-          {!targetChanged && result.intent === 'PLAYER_SPOTLIGHT' && <FieldsSummary fields={result.fields} labels={PLAYER_SPOTLIGHT_FIELD_LABELS} missingFields={result.missingFields} />}
-          {!targetChanged && result.intent === 'SEASON_RECAP' && <FieldsSummary fields={result.fields} labels={SEASON_RECAP_FIELD_LABELS} missingFields={result.missingFields} />}
-          {!targetChanged && result.intent === 'ENGAGEMENT_POLL' && <FieldsSummary fields={result.fields} labels={ENGAGEMENT_POLL_FIELD_LABELS} missingFields={result.missingFields} />}
-          {!targetChanged && result.intent === 'CUSTOM' && <FieldsSummary fields={result.fields} labels={CUSTOM_FIELD_LABELS} missingFields={result.missingFields} />}
-
-          {targetChanged && (
-            <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl p-3">
-              Tu as changé le type par rapport à ce qui a été détecté : le formulaire s&apos;ouvrira vierge (les champs compris pour l&apos;autre type ne sont pas transférés). Le texte saisi reste accessible.
-            </p>
-          )}
-          {result.intent === 'UNSUPPORTED' && selectedTarget && (
-            <p className="text-xs text-gray-500">Le formulaire s&apos;ouvrira vierge, à remplir manuellement.</p>
-          )}
-
-          <div className="flex gap-3">
-            <PrimaryButton onClick={apply} disabled={!selectedTarget} icon="arrowRight" className="flex-1">
-              Utiliser ces informations
-            </PrimaryButton>
-            <GhostButton type="button" onClick={restart} icon="refresh">
-              Recommencer
-            </GhostButton>
+      {!result && !loading && (
+        <div className="space-y-2">
+          <ErrorNotice error={error} />
+          <div className="flex items-end gap-2 rounded-2xl border border-line bg-white p-2 shadow-card">
+            <textarea
+              value={text}
+              onChange={e => setText(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); analyze() }
+              }}
+              rows={2}
+              className="max-h-32 flex-1 resize-none border-0 bg-transparent px-2.5 py-2 text-sm focus:outline-none focus:ring-0"
+              placeholder="Écris ta publication ici, ex : Un post pour remercier notre sponsor Decathlon…"
+            />
+            <button
+              type="button"
+              onClick={analyze}
+              disabled={!text.trim()}
+              aria-label="Envoyer"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand text-white transition hover:bg-brand-hover disabled:opacity-40"
+            >
+              <Icon name="arrowRight" className="h-4 w-4" />
+            </button>
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+function ChatBubble({ from, children }: { from: 'bot' | 'user'; children: ReactNode }) {
+  if (from === 'user') {
+    return (
+      <div className="flex justify-end">
+        <div className="max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-br-md bg-brand px-4 py-2.5 text-sm text-white">
+          {children}
+        </div>
+      </div>
+    )
+  }
+  return (
+    <div className="flex items-start justify-start gap-2.5">
+      <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-soft text-brand">
+        <Icon name="sparkles" className="h-4 w-4" />
+      </span>
+      <div className="max-w-[85%] rounded-2xl rounded-bl-md border border-line bg-white px-4 py-3 text-sm text-ink shadow-card">
+        {children}
+      </div>
+    </div>
+  )
+}
+
+function TypingBubble() {
+  return (
+    <div className="flex items-center gap-2.5">
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-soft text-brand">
+        <Icon name="sparkles" className="h-4 w-4" />
+      </span>
+      <div className="flex items-center gap-1.5 rounded-2xl rounded-bl-md border border-line bg-white px-4 py-3 shadow-card">
+        <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted [animation-delay:-0.3s]" />
+        <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted [animation-delay:-0.15s]" />
+        <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted" />
+      </div>
     </div>
   )
 }

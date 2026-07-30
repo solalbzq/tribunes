@@ -43,7 +43,9 @@ type MatchData = {
 
 type PostIds = Partial<Record<'instagram' | 'facebook' | 'whatsapp', string>>
 
-type Section = 'describe' | 'match' | 'programme' | 'tournament' | 'recap' | 'announcement' | 'spotlight' | 'club' | 'poll' | 'customPost'
+type Mode = 'assistant' | 'manual'
+
+type Section = 'match' | 'programme' | 'tournament' | 'recap' | 'announcement' | 'spotlight' | 'club' | 'poll' | 'customPost'
 
 type DescribeTarget = 'match' | 'announcement' | 'clubAnnouncement' | 'playerSpotlight' | 'seasonRecap' | 'engagementPoll' | 'customPost'
 
@@ -68,6 +70,7 @@ const TARGET_TO_SECTION: Record<DescribeTarget, Section> = {
 
 export default function ContentTab({ club }: { club: Club }) {
   const isTennisPadel = club.sport === 'Tennis' || club.sport === 'Padel'
+  const [mode, setMode] = useState<Mode>('assistant')
   const [section, setSection] = useState<Section>('match')
   const [prefill, setPrefill] = useState<Prefill | null>(null)
   const [generatedPosts, setGeneratedPosts] = useState<{ instagram: string; facebook: string; whatsapp: string } | null>(null)
@@ -92,6 +95,7 @@ export default function ContentTab({ club }: { club: Club }) {
   ) {
     setPrefill({ target, values, sourceText } as Prefill)
     setSection(TARGET_TO_SECTION[target])
+    setMode('manual')
   }
 
   async function personalizeMatch(overrides: { tone?: string; customInstructions?: string }) {
@@ -138,19 +142,31 @@ export default function ContentTab({ club }: { club: Club }) {
     )
   }
 
+  if (mode === 'assistant') {
+    return (
+      <div className="max-w-5xl">
+        <DescribeIntentTab onApply={handleApply} onSwitchToManual={() => setMode('manual')} />
+      </div>
+    )
+  }
+
   return (
     <div className="max-w-5xl space-y-6">
       <PageHeader
         icon="sparkles"
         title="Générer du contenu"
         subtitle="Choisissez le type de contenu adapté à votre club."
+        action={
+          <GhostButton type="button" onClick={() => setMode('assistant')} icon="sparkles">
+            Assistant
+          </GhostButton>
+        }
       />
 
       <Segmented
         value={section}
         onChange={handleSectionChange}
         items={[
-          { key: 'describe', label: 'Décrire ma publication', icon: 'sparkles' },
           { key: 'match', label: 'Post de match', icon: 'target' },
           { key: 'programme', label: 'Programme', icon: 'calendar' },
           { key: 'tournament', label: 'Tournoi', icon: 'trophy' },
@@ -162,8 +178,6 @@ export default function ContentTab({ club }: { club: Club }) {
           { key: 'customPost', label: 'Publication libre', icon: 'fileText' },
         ]}
       />
-
-      {section === 'describe' && <DescribeIntentTab onApply={handleApply} />}
 
       {section === 'match' && !generatedPosts && !generatedMatch && (
         <div className="max-w-xl space-y-3">
