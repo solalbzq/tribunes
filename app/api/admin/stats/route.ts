@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 import { ensureAdmin } from '@/lib/admin-auth'
 import { prisma } from '@/lib/prisma'
+import { PLANS } from '@/lib/plans'
 
 const GPT4O_INPUT_COST_PER_M = 2.5
 const GPT4O_OUTPUT_COST_PER_M = 10.0
@@ -110,6 +111,16 @@ export async function GET(request: NextRequest) {
     PRO: countPro,
   }
 
+  // MRR théorique = comptage par plan × prix catalogue (lib/plans.ts). N'intègre
+  // ni remises, ni proration, ni choix mensuel/annuel réel côté Stripe — c'est
+  // une estimation d'ordre de grandeur, pas le MRR réel (voir Stripe Dashboard).
+  const mrrTheoreticalEur = Number(
+    (
+      countClub * (PLANS.CLUB.price.monthly ?? 0) +
+      countPro * (PLANS.PRO.price.monthly ?? 0)
+    ).toFixed(2),
+  )
+
   const rawSportCounts = [countFootball, countBasketball, countHandball, countVolleyball, countTennis]
   const sportCounts = SPORTS
     .map((sport, i) => ({ sport, count: rawSportCounts[i] }))
@@ -127,6 +138,7 @@ export async function GET(request: NextRequest) {
     totalOrgs,
     totalMembers,
     planCounts,
+    mrrTheoreticalEur,
     totalMatches,
     totalPosts,
     postsThisWeek,

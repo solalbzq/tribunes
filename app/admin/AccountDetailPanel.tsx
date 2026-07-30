@@ -167,6 +167,18 @@ export default function AccountDetailPanel({
                   </button>
                 ))}
               </div>
+              {org.stripeCustomerId ? (
+                <a
+                  href={`https://dashboard.stripe.com/customers/${org.stripeCustomerId}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-[#2563eb] hover:underline"
+                >
+                  Voir l&apos;abonnement dans Stripe →
+                </a>
+              ) : (
+                <p className="mt-2 text-xs text-[#9ca3af]">Pas de client Stripe associé.</p>
+              )}
             </div>
 
             <div>

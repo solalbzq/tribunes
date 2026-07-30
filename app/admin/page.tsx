@@ -19,6 +19,9 @@ import {
 import AccountDetailPanel from './AccountDetailPanel'
 import ConfirmDialog from './ConfirmDialog'
 import AuditLogTab from './AuditLogTab'
+import PublicationsTab from './PublicationsTab'
+import IntegrationsTab from './IntegrationsTab'
+import AlertsTab from './AlertsTab'
 import Logo from '@/components/Logo'
 
 type StatsResponse = {
@@ -34,6 +37,7 @@ type StatsResponse = {
   totalOrgs: number
   totalMembers: number
   planCounts: Record<string, number>
+  mrrTheoreticalEur: number
   // Usage
   totalMatches: number
   totalPosts: number
@@ -93,7 +97,7 @@ type EntriesResponse = {
   totalPages: number
 }
 
-type Tab = 'overview' | 'waitlist' | 'usage' | 'ai' | 'accounts' | 'audit'
+type Tab = 'overview' | 'waitlist' | 'usage' | 'ai' | 'accounts' | 'publications' | 'integrations' | 'alerts' | 'audit'
 type AccountsView = 'orgs' | 'clubs' | 'users'
 
 type OrgRow = {
@@ -375,10 +379,13 @@ export default function AdminDashboardPage() {
 
   const tabs: Array<{ id: Tab; label: string; icon: string }> = [
     { id: 'overview', label: 'Vue globale', icon: '📊' },
+    { id: 'alerts', label: 'Alertes', icon: '🚨' },
     { id: 'accounts', label: 'Comptes', icon: '🗂️' },
+    { id: 'publications', label: 'Publications', icon: '📮' },
     { id: 'waitlist', label: 'Waitlist', icon: '📋' },
     { id: 'usage', label: 'Usage', icon: '⚙️' },
     { id: 'ai', label: 'IA & Coûts', icon: '🤖' },
+    { id: 'integrations', label: 'Intégrations', icon: '🔗' },
     { id: 'audit', label: 'Journal d\'audit', icon: '🧾' },
   ]
 
@@ -429,8 +436,8 @@ export default function AdminDashboardPage() {
                 <span className="font-bold">{fmt(stats.totalPosts)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-white/60">Coût OpenAI</span>
-                <span className="font-bold text-[#2563eb]">${stats.estimatedCostUsd.toFixed(2)}</span>
+                <span className="text-white/60">Coût IA (30j, réel)</span>
+                <span className="font-bold text-[#2563eb]">${(realUsage?.totalCostUsd ?? 0).toFixed(2)}</span>
               </div>
             </div>
           )}
@@ -471,13 +478,19 @@ export default function AdminDashboardPage() {
               <StatCard icon="💳" label="Early adopters payants" value={isLoadingStats ? '...' : fmt(stats?.convertedEntries ?? 0)} accent />
               <StatCard icon="📈" label="Taux de conversion" value={isLoadingStats ? '...' : `${stats?.conversionRate ?? 0}%`} />
               <StatCard icon="👥" label="Membres (orgs)" value={isLoadingStats ? '...' : fmt(stats?.totalMembers ?? 0)} />
-              <StatCard icon="🤖" label="Coût OpenAI estimé" value={isLoadingStats ? '...' : `$${stats?.estimatedCostUsd.toFixed(2) ?? '0'}`} sub={`${fmt(stats?.totalCompletions ?? 0)} appels gpt-4o`} accent />
+              <StatCard icon="🤖" label="Coût IA réel (30j)" value={realUsage ? `$${realUsage.totalCostUsd.toFixed(2)}` : '...'} sub={realUsage ? `${fmt(realUsage.aiCalls)} appels IA` : 'mesuré via UsageEvent'} accent />
             </div>
 
             {/* Plans breakdown */}
             {!isLoadingStats && stats && (
               <div className="rounded-xl border border-[#e5e7eb] bg-white p-5 shadow-sm">
-                <SectionTitle>Répartition des plans</SectionTitle>
+                <div className="mb-4 flex items-center justify-between">
+                  <SectionTitle>Répartition des plans</SectionTitle>
+                  <div className="text-right">
+                    <p className="text-xl font-extrabold text-[#2563eb]">{stats.mrrTheoreticalEur.toLocaleString('fr-FR')} €<span className="text-sm font-semibold text-[#9ca3af]">/mois</span></p>
+                    <p className="text-xs text-[#9ca3af]">MRR théorique (catalogue, hors remises/proration)</p>
+                  </div>
+                </div>
                 <div className="grid gap-3 sm:grid-cols-3">
                   {PLAN_KEYS.map((plan) => (
                     <PlanBadge key={plan} plan={plan} count={stats.planCounts[plan] ?? 0} />
@@ -1097,6 +1110,12 @@ export default function AdminDashboardPage() {
             </div>
           </div>
         )}
+
+        {activeTab === 'publications' && <PublicationsTab />}
+
+        {activeTab === 'integrations' && <IntegrationsTab />}
+
+        {activeTab === 'alerts' && <AlertsTab onNavigate={(tab) => setActiveTab(tab as Tab)} />}
 
         {activeTab === 'audit' && <AuditLogTab />}
       </section>
