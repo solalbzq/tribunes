@@ -10,25 +10,6 @@ import { parseVisualConfigByFormat } from '@/lib/visualLayout'
  */
 export type ClubProfile = {
   city?: string
-  foundedYear?: string
-  venueName?: string
-  venueCapacity?: string
-  website?: string
-  instagramHandle?: string
-  facebookPage?: string
-  whatsappLink?: string
-  presidentName?: string
-  contactEmail?: string
-  playerCount?: string
-  youthCount?: string
-  volunteerCount?: string
-  coachCount?: string
-  staffCount?: string
-  teamCount?: string
-  womenCount?: string
-  partnerCount?: string
-  memberCount?: string
-  monthlyPostsTarget?: string
   story?: string
 }
 
@@ -38,25 +19,6 @@ export type StoredVisualConfig = VisualConfigByFormat & {
 
 export const EMPTY_PROFILE: ClubProfile = {
   city: '',
-  foundedYear: '',
-  venueName: '',
-  venueCapacity: '',
-  website: '',
-  instagramHandle: '',
-  facebookPage: '',
-  whatsappLink: '',
-  presidentName: '',
-  contactEmail: '',
-  playerCount: '',
-  youthCount: '',
-  volunteerCount: '',
-  coachCount: '',
-  staffCount: '',
-  teamCount: '',
-  womenCount: '',
-  partnerCount: '',
-  memberCount: '',
-  monthlyPostsTarget: '',
   story: '',
 }
 
