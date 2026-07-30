@@ -27,16 +27,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
   }
 
-  const today = startOfToday()
   const weekStart = startOfPastDays(7)
-  const chartStart = startOfPastDays(29)
 
   const [
-    totalEntries,
-    convertedEntries,
-    todayEntries,
-    weekEntries,
-    recentEntries,
     totalClubs,
     totalOrgs,
     totalMembers,
@@ -56,15 +49,6 @@ export async function GET(request: NextRequest) {
     countVolleyball,
     countTennis,
   ] = await prisma.$transaction([
-    prisma.waitlistEntry.count(),
-    prisma.waitlistEntry.count({ where: { converted: true } }),
-    prisma.waitlistEntry.count({ where: { createdAt: { gte: today } } }),
-    prisma.waitlistEntry.count({ where: { createdAt: { gte: weekStart } } }),
-    prisma.waitlistEntry.findMany({
-      where: { createdAt: { gte: chartStart } },
-      select: { createdAt: true },
-      orderBy: { createdAt: 'asc' },
-    }),
     prisma.club.count(),
     prisma.organization.count(),
     prisma.organizationMember.count(),
@@ -86,19 +70,6 @@ export async function GET(request: NextRequest) {
     prisma.club.count({ where: { sport: 'Volleyball' } }),
     prisma.club.count({ where: { sport: 'Tennis' } }),
   ])
-
-  // Chart data
-  const counts = new Map<string, number>()
-  for (let i = 0; i < 30; i++) {
-    const date = new Date(chartStart)
-    date.setDate(chartStart.getDate() + i)
-    counts.set(date.toISOString().slice(0, 10), 0)
-  }
-  for (const entry of recentEntries) {
-    const key = entry.createdAt.toISOString().slice(0, 10)
-    counts.set(key, (counts.get(key) ?? 0) + 1)
-  }
-  const entriesByDay = Array.from(counts.entries()).map(([date, count]) => ({ date, count }))
 
   const totalCompletions = Math.round(totalPosts / 3)
   const estimatedCostUsd =
@@ -128,12 +99,6 @@ export async function GET(request: NextRequest) {
     .sort((a, b) => b.count - a.count)
 
   return NextResponse.json({
-    totalEntries,
-    convertedEntries,
-    todayEntries,
-    weekEntries,
-    conversionRate: totalEntries === 0 ? 0 : Number(((convertedEntries / totalEntries) * 100).toFixed(1)),
-    entriesByDay,
     totalClubs,
     totalOrgs,
     totalMembers,

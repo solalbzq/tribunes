@@ -27,16 +27,6 @@ enum HomeAway {
   EXTERIEUR
 }
 
-model WaitlistEntry {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  sport     String?
-  clubName  String?
-  createdAt DateTime @default(now())
-  source    String   @default("landing")
-  converted Boolean  @default(false)
-}
-
 model Organization {
   id               String               @id @default(cuid())
   name             String

@@ -5,8 +5,6 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { PLAN_KEYS } from '@/lib/plans'
 import {
-  Area,
-  AreaChart,
   Bar,
   BarChart,
   CartesianGrid,
@@ -25,13 +23,6 @@ import AlertsTab from './AlertsTab'
 import Logo from '@/components/Logo'
 
 type StatsResponse = {
-  // Waitlist
-  totalEntries: number
-  convertedEntries: number
-  todayEntries: number
-  weekEntries: number
-  conversionRate: number
-  entriesByDay: Array<{ date: string; count: number }>
   // Accounts
   totalClubs: number
   totalOrgs: number
@@ -81,23 +72,7 @@ type CustomPostCategoriesResponse = {
   categories: CustomPostCategoryStats[]
 }
 
-type Entry = {
-  id: string
-  email: string
-  clubName: string | null
-  sport: string | null
-  createdAt: string
-  converted: boolean
-}
-
-type EntriesResponse = {
-  entries: Entry[]
-  total: number
-  page: number
-  totalPages: number
-}
-
-type Tab = 'overview' | 'waitlist' | 'usage' | 'ai' | 'accounts' | 'publications' | 'integrations' | 'alerts' | 'audit'
+type Tab = 'overview' | 'usage' | 'ai' | 'accounts' | 'publications' | 'integrations' | 'alerts' | 'audit'
 type AccountsView = 'orgs' | 'clubs' | 'users'
 
 type OrgRow = {
@@ -192,24 +167,6 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
   return <h2 className="mb-4 text-lg font-bold text-[#111827]">{children}</h2>
 }
 
-function ChartTooltipWaitlist({
-  active,
-  payload,
-  label,
-}: {
-  active?: boolean
-  payload?: Array<{ value: number }>
-  label?: string
-}) {
-  if (!active || !payload?.length || !label) return null
-  return (
-    <div className="rounded-xl border border-[#e5e7eb] bg-white px-3 py-2 shadow-sm">
-      <p className="text-sm font-semibold text-[#111827]">{fmtLong(`${label}T00:00:00`)}</p>
-      <p className="text-sm text-[#6b7280]">{payload[0].value} inscrit(s)</p>
-    </div>
-  )
-}
-
 function PlanBadge({ plan, count }: { plan: string; count: number }) {
   const colors: Record<string, string> = {
     FREE: 'bg-[#f3f4f6] text-[#4b5563]',
@@ -231,13 +188,8 @@ export default function AdminDashboardPage() {
   const [stats, setStats] = useState<StatsResponse | null>(null)
   const [realUsage, setRealUsage] = useState<RealUsage | null>(null)
   const [customPostCategories, setCustomPostCategories] = useState<CustomPostCategoriesResponse | null>(null)
-  const [entriesData, setEntriesData] = useState<EntriesResponse | null>(null)
   const [isLoadingStats, setIsLoadingStats] = useState(true)
-  const [isLoadingEntries, setIsLoadingEntries] = useState(true)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
-  const [page, setPage] = useState(1)
-  const [searchInput, setSearchInput] = useState('')
-  const [search, setSearch] = useState('')
   const [activeTab, setActiveTab] = useState<Tab>('overview')
 
   // Accounts tab
@@ -280,21 +232,6 @@ export default function AdminDashboardPage() {
       .catch(() => {})
     return () => { mounted = false }
   }, [router])
-
-  useEffect(() => {
-    let mounted = true
-    setIsLoadingEntries(true)
-    const params = new URLSearchParams({ page: String(page), limit: '20' })
-    if (search) params.set('search', search)
-    fetch(`/api/admin/entries?${params}`, { cache: 'no-store' })
-      .then(async (res) => {
-        if (res.status === 401) { router.replace('/login'); return }
-        const data = await res.json() as EntriesResponse
-        if (mounted) setEntriesData(data)
-      })
-      .finally(() => { if (mounted) setIsLoadingEntries(false) })
-    return () => { mounted = false }
-  }, [page, router, search])
 
   useEffect(() => {
     if (activeTab !== 'accounts') return
@@ -361,28 +298,11 @@ export default function AdminDashboardPage() {
     }
   }
 
-  function handleSearchSubmit(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    setPage(1)
-    setSearch(searchInput.trim())
-  }
-
-  function handleExportCsv() {
-    const params = new URLSearchParams({ format: 'csv' })
-    if (search) params.set('search', search)
-    window.location.href = `/api/admin/entries?${params}`
-  }
-
-  const total = entriesData?.total ?? 0
-  const startIndex = total === 0 ? 0 : (page - 1) * 20 + 1
-  const endIndex = total === 0 ? 0 : Math.min(page * 20, total)
-
   const tabs: Array<{ id: Tab; label: string; icon: string }> = [
     { id: 'overview', label: 'Vue globale', icon: '📊' },
     { id: 'alerts', label: 'Alertes', icon: '🚨' },
     { id: 'accounts', label: 'Comptes', icon: '🗂️' },
     { id: 'publications', label: 'Publications', icon: '📮' },
-    { id: 'waitlist', label: 'Waitlist', icon: '📋' },
     { id: 'usage', label: 'Usage', icon: '⚙️' },
     { id: 'ai', label: 'IA & Coûts', icon: '🤖' },
     { id: 'integrations', label: 'Intégrations', icon: '🔗' },
@@ -424,10 +344,6 @@ export default function AdminDashboardPage() {
           {!isLoadingStats && stats && (
             <div className="flex flex-col gap-3 rounded-xl bg-white/5 p-4 text-sm">
               <div className="flex justify-between">
-                <span className="text-white/60">Waitlist</span>
-                <span className="font-bold">{fmt(stats.totalEntries)}</span>
-              </div>
-              <div className="flex justify-between">
                 <span className="text-white/60">Clubs actifs</span>
                 <span className="font-bold">{fmt(stats.totalClubs)}</span>
               </div>
@@ -467,16 +383,10 @@ export default function AdminDashboardPage() {
             <h1 className="text-2xl font-extrabold text-[#111827]">Vue globale</h1>
 
             {/* Top KPIs */}
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              <StatCard icon="📋" label="Waitlist totale" value={isLoadingStats ? '...' : fmt(stats?.totalEntries ?? 0)} sub={`+${stats?.todayEntries ?? 0} aujourd'hui`} />
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
               <StatCard icon="🏟️" label="Clubs créés" value={isLoadingStats ? '...' : fmt(stats?.totalClubs ?? 0)} sub={`${stats?.totalOrgs ?? 0} organisations`} />
               <StatCard icon="⚽" label="Matchs encodés" value={isLoadingStats ? '...' : fmt(stats?.totalMatches ?? 0)} sub={`+${stats?.matchesThisWeek ?? 0} cette semaine`} />
               <StatCard icon="✍️" label="Posts générés" value={isLoadingStats ? '...' : fmt(stats?.totalPosts ?? 0)} accent sub={`+${stats?.postsThisWeek ?? 0} cette semaine`} />
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              <StatCard icon="💳" label="Early adopters payants" value={isLoadingStats ? '...' : fmt(stats?.convertedEntries ?? 0)} accent />
-              <StatCard icon="📈" label="Taux de conversion" value={isLoadingStats ? '...' : `${stats?.conversionRate ?? 0}%`} />
               <StatCard icon="👥" label="Membres (orgs)" value={isLoadingStats ? '...' : fmt(stats?.totalMembers ?? 0)} />
               <StatCard icon="🤖" label="Coût IA réel (30j)" value={realUsage ? `$${realUsage.totalCostUsd.toFixed(2)}` : '...'} sub={realUsage ? `${fmt(realUsage.aiCalls)} appels IA` : 'mesuré via UsageEvent'} accent />
             </div>
@@ -554,121 +464,6 @@ export default function AdminDashboardPage() {
                 </div>
               </div>
             )}
-          </div>
-        )}
-
-        {/* ─── WAITLIST ─── */}
-        {activeTab === 'waitlist' && (
-          <div className="space-y-6">
-            <h1 className="text-2xl font-extrabold text-[#111827]">Waitlist</h1>
-
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              <StatCard icon="📋" label="Total inscrits" value={isLoadingStats ? '...' : fmt(stats?.totalEntries ?? 0)} />
-              <StatCard icon="📅" label="Aujourd'hui" value={isLoadingStats ? '...' : fmt(stats?.todayEntries ?? 0)} />
-              <StatCard icon="📆" label="Cette semaine" value={isLoadingStats ? '...' : fmt(stats?.weekEntries ?? 0)} />
-              <StatCard icon="💳" label="Early adopters payants" value={isLoadingStats ? '...' : fmt(stats?.convertedEntries ?? 0)} accent sub={`Taux : ${stats?.conversionRate ?? 0}%`} />
-            </div>
-
-            {/* Chart */}
-            <div className="rounded-xl border border-[#e5e7eb] bg-white p-5 shadow-sm">
-              <div className="mb-4 flex items-center justify-between">
-                <div>
-                  <h2 className="text-lg font-bold">Inscriptions sur 30 jours</h2>
-                  <p className="text-sm text-[#6b7280]">{stats?.weekEntries ?? 0} inscriptions sur les 7 derniers jours</p>
-                </div>
-              </div>
-              <div className="h-[280px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={stats?.entriesByDay ?? []}>
-                    <defs>
-                      <linearGradient id="entriesFill" x1="0" x2="0" y1="0" y2="1">
-                        <stop offset="0%" stopColor="#2563eb" stopOpacity={0.18} />
-                        <stop offset="100%" stopColor="#2563eb" stopOpacity={0.02} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid stroke="#f0f0f0" vertical={false} />
-                    <XAxis dataKey="date" tickFormatter={fmtDate} stroke="#6b7280" tickLine={false} axisLine={false} />
-                    <YAxis allowDecimals={false} stroke="#6b7280" tickLine={false} axisLine={false} />
-                    <Tooltip content={<ChartTooltipWaitlist />} />
-                    <Area type="monotone" dataKey="count" stroke="#2563eb" strokeWidth={3} fill="url(#entriesFill)" />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-
-            {/* Entries table */}
-            <div className="rounded-xl border border-[#e5e7eb] bg-white p-5 shadow-sm">
-              <div className="mb-4 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                <div>
-                  <h2 className="text-lg font-bold">Liste des inscrits</h2>
-                  <p className="text-sm text-[#6b7280]">Recherche, pagination et export CSV.</p>
-                </div>
-                <div className="flex flex-col gap-3 sm:flex-row">
-                  <form className="flex flex-1 gap-3" onSubmit={handleSearchSubmit}>
-                    <input
-                      type="search"
-                      value={searchInput}
-                      onChange={(e) => setSearchInput(e.target.value)}
-                      placeholder="Rechercher un email"
-                      className="min-w-0 flex-1 rounded-lg border border-[#e5e7eb] px-4 py-2.5 outline-none transition focus:border-[#2563eb]"
-                    />
-                    <button type="submit" className="rounded-lg bg-[#2563eb] px-4 py-2.5 font-semibold text-white transition hover:bg-[#1d4ed8]">
-                      Rechercher
-                    </button>
-                  </form>
-                  <button type="button" onClick={handleExportCsv} className="rounded-lg border border-[#2563eb] px-4 py-2.5 font-semibold text-[#2563eb] transition hover:bg-[#2563eb] hover:text-white">
-                    ↓ CSV
-                  </button>
-                </div>
-              </div>
-
-              <div className="overflow-x-auto">
-                <table className="min-w-full border-separate border-spacing-0 text-left text-sm">
-                  <thead>
-                    <tr className="text-[#6b7280]">
-                      <th className="border-b border-[#e5e7eb] px-4 py-3 font-semibold">Email</th>
-                      <th className="border-b border-[#e5e7eb] px-4 py-3 font-semibold">Club</th>
-                      <th className="border-b border-[#e5e7eb] px-4 py-3 font-semibold">Sport</th>
-                      <th className="border-b border-[#e5e7eb] px-4 py-3 font-semibold">Date</th>
-                      <th className="border-b border-[#e5e7eb] px-4 py-3 font-semibold">Statut</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {isLoadingEntries ? (
-                      <tr><td className="px-4 py-6 text-[#6b7280]" colSpan={5}>Chargement...</td></tr>
-                    ) : entriesData?.entries.length ? (
-                      entriesData.entries.map((entry) => (
-                        <tr key={entry.id}>
-                          <td className="border-b border-[#f3f4f6] px-4 py-4 font-medium">{entry.email}</td>
-                          <td className="border-b border-[#f3f4f6] px-4 py-4">{entry.clubName ?? '—'}</td>
-                          <td className="border-b border-[#f3f4f6] px-4 py-4">{entry.sport ?? '—'}</td>
-                          <td className="border-b border-[#f3f4f6] px-4 py-4">{fmtLong(entry.createdAt)}</td>
-                          <td className="border-b border-[#f3f4f6] px-4 py-4">
-                            <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${entry.converted ? 'bg-[#dcfce7] text-[#166534]' : 'bg-[#f3f4f6] text-[#4b5563]'}`}>
-                              {entry.converted ? 'Payant' : 'En attente'}
-                            </span>
-                          </td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr><td className="px-4 py-6 text-[#6b7280]" colSpan={5}>Aucun inscrit trouvé.</td></tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-
-              <div className="mt-4 flex flex-col gap-3 text-sm text-[#6b7280] sm:flex-row sm:items-center sm:justify-between">
-                <p>{startIndex}–{endIndex} sur {total}</p>
-                <div className="flex gap-3">
-                  <button type="button" onClick={() => setPage((p) => Math.max(p - 1, 1))} disabled={page <= 1} className="rounded-lg border border-[#e5e7eb] bg-white px-4 py-2 font-semibold text-[#111827] transition hover:border-[#2563eb] disabled:opacity-50">
-                    Précédent
-                  </button>
-                  <button type="button" onClick={() => setPage((p) => Math.min(p + 1, entriesData?.totalPages ?? p))} disabled={page >= (entriesData?.totalPages ?? 1)} className="rounded-lg border border-[#e5e7eb] bg-white px-4 py-2 font-semibold text-[#111827] transition hover:border-[#2563eb] disabled:opacity-50">
-                    Suivant
-                  </button>
-                </div>
-              </div>
-            </div>
           </div>
         )}
 
