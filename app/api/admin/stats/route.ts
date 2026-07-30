@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-import { getAdminCookieName, isAdminPayload, verifyAdminToken } from '@/lib/admin-auth'
+import { ensureAdmin } from '@/lib/admin-auth'
 import { prisma } from '@/lib/prisma'
 
 const GPT4O_INPUT_COST_PER_M = 2.5
@@ -19,17 +19,6 @@ function startOfPastDays(days: number) {
   const date = startOfToday()
   date.setDate(date.getDate() - days)
   return date
-}
-
-async function ensureAdmin(request: NextRequest) {
-  const token = request.cookies.get(getAdminCookieName())?.value
-  if (!token) return false
-  try {
-    const payload = await verifyAdminToken(token)
-    return isAdminPayload(payload)
-  } catch {
-    return false
-  }
 }
 
 export async function GET(request: NextRequest) {

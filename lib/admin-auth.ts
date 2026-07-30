@@ -1,51 +1,24 @@
-import type { JWTPayload } from 'jose'
-import { SignJWT } from 'jose/jwt/sign'
-import { jwtVerify } from 'jose/jwt/verify'
-import type { NextRequest } from 'next/server'
+import type { User } from '@supabase/supabase-js'
+import { createClient } from '@/lib/supabase/server'
 
-const ADMIN_COOKIE_NAME = 'admin_token'
-const ADMIN_TOKEN_DURATION = '24h'
-
-function getAdminSecret() {
-  const secret = process.env.ADMIN_SECRET
-
-  if (!secret) {
-    throw new Error('ADMIN_SECRET is not configured.')
-  }
-
-  return new TextEncoder().encode(secret)
+/**
+ * Un admin est un compte Supabase normal dont app_metadata.role === 'admin'.
+ * app_metadata n'est modifiable que via l'API service-role (jamais par le
+ * client authentifié lui-même) — cf. scripts/promote-admin.mjs pour en
+ * attribuer un. supabase.auth.getUser() revalide le JWT côté serveur Supabase
+ * (contrairement à getSession()), donc ce champ est fiable une fois vérifié.
+ */
+export function isAdminUser(user: Pick<User, 'app_metadata'> | null | undefined) {
+  return user?.app_metadata?.role === 'admin'
 }
 
-export function getAdminCookieName() {
-  return ADMIN_COOKIE_NAME
-}
-
-export async function createAdminToken() {
-  return new SignJWT({ role: 'admin' })
-    .setProtectedHeader({ alg: 'HS256' })
-    .setIssuedAt()
-    .setExpirationTime(ADMIN_TOKEN_DURATION)
-    .sign(getAdminSecret())
-}
-
-export async function verifyAdminToken(token: string) {
-  const { payload } = await jwtVerify(token, getAdminSecret())
-
-  return payload
-}
-
-export function isAdminPayload(payload: JWTPayload) {
-  return payload.role === 'admin'
-}
-
-export async function ensureAdmin(request: NextRequest) {
-  const token = request.cookies.get(getAdminCookieName())?.value
-  if (!token) return false
-
-  try {
-    const payload = await verifyAdminToken(token)
-    return isAdminPayload(payload)
-  } catch {
-    return false
-  }
+/**
+ * Signature volontairement compatible avec l'ancien ensureAdmin(request) —
+ * la session admin vit dans les cookies Supabase lus via next/headers, pas
+ * besoin de l'objet request, mais ça évite de toucher chaque route appelante.
+ */
+export async function ensureAdmin(_request?: unknown) {
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  return isAdminUser(user)
 }

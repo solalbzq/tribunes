@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-import { getAdminCookieName, isAdminPayload, verifyAdminToken } from '@/lib/admin-auth'
+import { ensureAdmin } from '@/lib/admin-auth'
 import { prisma } from '@/lib/prisma'
 
 function escapeCsvValue(value: string) {
@@ -13,21 +13,6 @@ function formatDate(value: Date) {
     dateStyle: 'short',
     timeStyle: 'short',
   }).format(value)
-}
-
-async function ensureAdmin(request: NextRequest) {
-  const token = request.cookies.get(getAdminCookieName())?.value
-
-  if (!token) {
-    return false
-  }
-
-  try {
-    const payload = await verifyAdminToken(token)
-    return isAdminPayload(payload)
-  } catch {
-    return false
-  }
 }
 
 export async function GET(request: NextRequest) {

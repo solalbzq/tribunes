@@ -1,18 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-import { getAdminCookieName, isAdminPayload, verifyAdminToken } from '@/lib/admin-auth'
+import { ensureAdmin } from '@/lib/admin-auth'
 import { prisma } from '@/lib/prisma'
 import { aiCostUsd, scrapeCostUsd, TENUP_SCRAPE_CREDITS } from '@/lib/pricing'
-
-async function ensureAdmin(request: NextRequest) {
-  const token = request.cookies.get(getAdminCookieName())?.value
-  if (!token) return false
-  try {
-    return isAdminPayload(await verifyAdminToken(token))
-  } catch {
-    return false
-  }
-}
 
 export async function GET(request: NextRequest) {
   if (!(await ensureAdmin(request))) {

@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
 import {
   Area,
   AreaChart,
@@ -236,7 +237,7 @@ export default function AdminDashboardPage() {
     setIsLoadingStats(true)
     fetch('/api/admin/stats', { cache: 'no-store' })
       .then(async (res) => {
-        if (res.status === 401) { router.replace('/admin/login'); return }
+        if (res.status === 401) { router.replace('/login'); return }
         const data = await res.json() as StatsResponse
         if (mounted) setStats(data)
       })
@@ -259,7 +260,7 @@ export default function AdminDashboardPage() {
     if (search) params.set('search', search)
     fetch(`/api/admin/entries?${params}`, { cache: 'no-store' })
       .then(async (res) => {
-        if (res.status === 401) { router.replace('/admin/login'); return }
+        if (res.status === 401) { router.replace('/login'); return }
         const data = await res.json() as EntriesResponse
         if (mounted) setEntriesData(data)
       })
@@ -277,7 +278,7 @@ export default function AdminDashboardPage() {
 
     fetch(`/api/admin/${endpoint}?${params}`, { cache: 'no-store' })
       .then(async (res) => {
-        if (res.status === 401) { router.replace('/admin/login'); return }
+        if (res.status === 401) { router.replace('/login'); return }
         const data = await res.json()
         if (!mounted) return
         if (accountsView === 'orgs') setOrgsData(data)
@@ -324,8 +325,12 @@ export default function AdminDashboardPage() {
 
   async function handleLogout() {
     setIsLoggingOut(true)
-    try { await fetch('/api/admin/logout', { method: 'POST' }) }
-    finally { router.replace('/admin/login'); router.refresh(); setIsLoggingOut(false) }
+    try {
+      const supabase = createClient()
+      await supabase.auth.signOut()
+    } finally {
+      router.replace('/login'); router.refresh(); setIsLoggingOut(false)
+    }
   }
 
   function handleSearchSubmit(e: FormEvent<HTMLFormElement>) {

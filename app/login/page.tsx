@@ -19,12 +19,12 @@ export default function LoginPage() {
     setLoading(true)
     setError('')
     const supabase = createClient()
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) {
       setError('Email ou mot de passe incorrect.')
       setLoading(false)
     } else {
-      router.push('/dashboard')
+      router.push(data.user?.app_metadata?.role === 'admin' ? '/admin' : '/dashboard')
       router.refresh()
     }
   }
