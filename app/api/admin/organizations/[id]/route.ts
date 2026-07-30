@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-import { ensureAdmin } from '@/lib/admin-auth'
+import { ensureAdmin, getAdminUser } from '@/lib/admin-auth'
 import { prisma } from '@/lib/prisma'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { PLAN_KEYS } from '@/lib/plans'
+import { logAdminAction } from '@/lib/adminAudit'
 
 const VALID_PLANS: string[] = PLAN_KEYS
 
@@ -36,7 +37,8 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 }
 
 export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
-  if (!(await ensureAdmin(request))) {
+  const admin = await getAdminUser()
+  if (!admin) {
     return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
   }
 
@@ -58,16 +60,30 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     return NextResponse.json({ message: 'Nothing to update' }, { status: 400 })
   }
 
+  const before = await prisma.organization.findUnique({ where: { id: params.id }, select: { plan: true, suspended: true } })
   const org = await prisma.organization.update({ where: { id: params.id }, data })
+
+  const action = data.plan !== undefined ? 'organization.plan_change' : 'organization.suspend_toggle'
+  await logAdminAction({
+    admin,
+    action,
+    resourceType: 'organization',
+    resourceId: params.id,
+    beforeValue: before,
+    afterValue: { plan: org.plan, suspended: org.suspended },
+  })
+
   return NextResponse.json(org)
 }
 
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
-  if (!(await ensureAdmin(request))) {
+  const admin = await getAdminUser()
+  if (!admin) {
     return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
   }
 
   const mode = request.nextUrl.searchParams.get('mode') === 'cascade' ? 'cascade' : 'detach'
+  const before = await prisma.organization.findUnique({ where: { id: params.id }, select: { name: true, plan: true } })
 
   await prisma.$transaction(async (tx) => {
     if (mode === 'cascade') {
@@ -76,6 +92,15 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
       await tx.club.updateMany({ where: { orgId: params.id }, data: { orgId: null } })
     }
     await tx.organization.delete({ where: { id: params.id } })
+  })
+
+  await logAdminAction({
+    admin,
+    action: 'organization.delete',
+    resourceType: 'organization',
+    resourceId: params.id,
+    beforeValue: before,
+    afterValue: { mode },
   })
 
   return NextResponse.json({ ok: true, mode })

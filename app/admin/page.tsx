@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { PLAN_KEYS } from '@/lib/plans'
 import {
   Area,
   AreaChart,
@@ -17,6 +18,7 @@ import {
 } from 'recharts'
 import AccountDetailPanel from './AccountDetailPanel'
 import ConfirmDialog from './ConfirmDialog'
+import AuditLogTab from './AuditLogTab'
 import Logo from '@/components/Logo'
 
 type StatsResponse = {
@@ -91,7 +93,7 @@ type EntriesResponse = {
   totalPages: number
 }
 
-type Tab = 'overview' | 'waitlist' | 'usage' | 'ai' | 'accounts'
+type Tab = 'overview' | 'waitlist' | 'usage' | 'ai' | 'accounts' | 'audit'
 type AccountsView = 'orgs' | 'clubs' | 'users'
 
 type OrgRow = {
@@ -207,8 +209,8 @@ function ChartTooltipWaitlist({
 function PlanBadge({ plan, count }: { plan: string; count: number }) {
   const colors: Record<string, string> = {
     FREE: 'bg-[#f3f4f6] text-[#4b5563]',
-    PRO: 'bg-[#dbeafe] text-[#1d4ed8]',
-    STRUCTURE: 'bg-[#dcfce7] text-[#166534]',
+    CLUB: 'bg-[#dbeafe] text-[#1d4ed8]',
+    PRO: 'bg-[#dcfce7] text-[#166534]',
   }
   return (
     <div className="flex items-center justify-between rounded-lg border border-[#e5e7eb] bg-white px-4 py-3">
@@ -377,6 +379,7 @@ export default function AdminDashboardPage() {
     { id: 'waitlist', label: 'Waitlist', icon: '📋' },
     { id: 'usage', label: 'Usage', icon: '⚙️' },
     { id: 'ai', label: 'IA & Coûts', icon: '🤖' },
+    { id: 'audit', label: 'Journal d\'audit', icon: '🧾' },
   ]
 
   return (
@@ -476,7 +479,7 @@ export default function AdminDashboardPage() {
               <div className="rounded-xl border border-[#e5e7eb] bg-white p-5 shadow-sm">
                 <SectionTitle>Répartition des plans</SectionTitle>
                 <div className="grid gap-3 sm:grid-cols-3">
-                  {['FREE', 'PRO', 'STRUCTURE'].map((plan) => (
+                  {PLAN_KEYS.map((plan) => (
                     <PlanBadge key={plan} plan={plan} count={stats.planCounts[plan] ?? 0} />
                   ))}
                 </div>
@@ -678,7 +681,7 @@ export default function AdminDashboardPage() {
               <div className="rounded-xl border border-[#e5e7eb] bg-white p-5 shadow-sm">
                 <SectionTitle>Organisations par plan</SectionTitle>
                 <div className="grid gap-3 sm:grid-cols-3">
-                  {['FREE', 'PRO', 'STRUCTURE'].map((plan) => (
+                  {PLAN_KEYS.map((plan) => (
                     <PlanBadge key={plan} plan={plan} count={stats.planCounts[plan] ?? 0} />
                   ))}
                 </div>
@@ -1094,6 +1097,8 @@ export default function AdminDashboardPage() {
             </div>
           </div>
         )}
+
+        {activeTab === 'audit' && <AuditLogTab />}
       </section>
 
       {detailPanel && (
@@ -1128,8 +1133,8 @@ export default function AdminDashboardPage() {
 function PlanBadgeInline({ plan }: { plan: string }) {
   const colors: Record<string, string> = {
     FREE: 'bg-[#f3f4f6] text-[#4b5563]',
-    PRO: 'bg-[#dbeafe] text-[#1d4ed8]',
-    STRUCTURE: 'bg-[#dcfce7] text-[#166534]',
+    CLUB: 'bg-[#dbeafe] text-[#1d4ed8]',
+    PRO: 'bg-[#dcfce7] text-[#166534]',
   }
   return (
     <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${colors[plan] ?? 'bg-[#f3f4f6] text-[#4b5563]'}`}>

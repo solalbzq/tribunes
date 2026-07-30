@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-import { ensureAdmin } from '@/lib/admin-auth'
+import { getAdminUser } from '@/lib/admin-auth'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { logAdminAction } from '@/lib/adminAudit'
 
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
-  if (!(await ensureAdmin(request))) {
+  const admin = await getAdminUser()
+  if (!admin) {
     return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
   }
 
@@ -16,8 +18,17 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
   })
 
   if (error) {
+    await logAdminAction({
+      admin, action: banned ? 'user.suspend' : 'user.unsuspend', resourceType: 'user', resourceId: params.id,
+      result: 'failure', errorMessage: error.message,
+    })
     return NextResponse.json({ message: error.message }, { status: 500 })
   }
+
+  await logAdminAction({
+    admin, action: banned ? 'user.suspend' : 'user.unsuspend', resourceType: 'user', resourceId: params.id,
+    afterValue: { banned: Boolean(banned) },
+  })
 
   return NextResponse.json({ ok: true, banned: Boolean(banned) })
 }

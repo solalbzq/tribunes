@@ -2,11 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 import { ensureAdmin } from '@/lib/admin-auth'
 import { prisma } from '@/lib/prisma'
-
-function escapeCsvValue(value: string) {
-  const normalized = value.replace(/"/g, '""')
-  return `"${normalized}"`
-}
+import { escapeCsvValue } from '@/lib/csv'
 
 function formatDate(value: Date) {
   return new Intl.DateTimeFormat('fr-FR', {

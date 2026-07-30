@@ -326,3 +326,27 @@ model TelegramMessage {
 
   @@index([generatedPostId])
 }
+
+/// Trace des actions administratives sensibles (suspension, suppression,
+/// changement de plan...) depuis le dashboard admin. adminId/adminEmail
+/// viennent du compte Supabase (app_metadata.role='admin'), pas d'une table
+/// locale d'administrateurs. Pas de relation FK vers la ressource : le log
+/// doit survivre à sa suppression. Jamais modifiable/supprimable depuis
+/// l'interface standard.
+model AdminAuditLog {
+  id           String   @id @default(cuid())
+  adminId      String
+  adminEmail   String?
+  action       String // ex: "club.suspend" | "organization.plan_change" | "user.delete"
+  resourceType String // "club" | "organization" | "user"
+  resourceId   String?
+  beforeValue  Json?
+  afterValue   Json?
+  result       String   @default("success") // "success" | "failure"
+  errorMessage String?
+  createdAt    DateTime @default(now())
+
+  @@index([adminId, createdAt])
+  @@index([resourceType, resourceId])
+  @@index([createdAt])
+}

@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
+import type { Prisma } from '@prisma/client'
 
-import { ensureAdmin } from '@/lib/admin-auth'
+import { ensureAdmin, getAdminUser } from '@/lib/admin-auth'
 import { prisma } from '@/lib/prisma'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { logAdminAction } from '@/lib/adminAudit'
 
 const EDITABLE_FIELDS = ['name', 'sport', 'primaryColor', 'secondaryColor', 'logoUrl', 'suspended'] as const
 
@@ -43,7 +45,8 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 }
 
 export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
-  if (!(await ensureAdmin(request))) {
+  const admin = await getAdminUser()
+  if (!admin) {
     return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
   }
 
@@ -60,15 +63,37 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     return NextResponse.json({ message: 'Nothing to update' }, { status: 400 })
   }
 
+  const before = await prisma.club.findUnique({ where: { id: params.id }, select: { name: true, suspended: true } })
   const club = await prisma.club.update({ where: { id: params.id }, data })
+
+  await logAdminAction({
+    admin,
+    action: data.suspended !== undefined ? 'club.suspend_toggle' : 'club.update',
+    resourceType: 'club',
+    resourceId: params.id,
+    beforeValue: before,
+    afterValue: data as Prisma.InputJsonValue,
+  })
+
   return NextResponse.json(club)
 }
 
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
-  if (!(await ensureAdmin(request))) {
+  const admin = await getAdminUser()
+  if (!admin) {
     return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
   }
 
+  const before = await prisma.club.findUnique({ where: { id: params.id }, select: { name: true, sport: true, orgId: true } })
   await prisma.club.delete({ where: { id: params.id } })
+
+  await logAdminAction({
+    admin,
+    action: 'club.delete',
+    resourceType: 'club',
+    resourceId: params.id,
+    beforeValue: before,
+  })
+
   return NextResponse.json({ ok: true })
 }

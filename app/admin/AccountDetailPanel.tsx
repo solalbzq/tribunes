@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import ConfirmDialog from './ConfirmDialog'
+import { PLAN_KEYS } from '@/lib/plans'
 
 type OrgDetail = {
   id: string
@@ -37,7 +38,7 @@ type ClubDetail = {
   }>
 }
 
-const PLANS = ['FREE', 'PRO', 'STRUCTURE']
+const PLANS = PLAN_KEYS
 
 function fmtLong(value: string) {
   return new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))

@@ -22,3 +22,10 @@ export async function ensureAdmin(_request?: unknown) {
   const { data: { user } } = await supabase.auth.getUser()
   return isAdminUser(user)
 }
+
+/** Comme ensureAdmin, mais renvoie l'identité (pour la journaliser) au lieu d'un booléen. */
+export async function getAdminUser(): Promise<User | null> {
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  return isAdminUser(user) ? user : null
+}
