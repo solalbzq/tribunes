@@ -24,7 +24,7 @@ type Club = {
   automationMode: string;
   telegramChatId: string | null;
   automationEnabled: boolean;
-  plan: 'FREE' | 'CLUB' | 'PRO';
+  plan: "FREE" | "CLUB" | "PRO";
   contentTone: string;
   matches: Array<{
     id: string;
@@ -34,7 +34,12 @@ type Club = {
     isHome: boolean;
     competition: string | null;
     date: string;
-    posts: Array<{ id: string; platform: string; content: string; status: string }>;
+    posts: Array<{
+      id: string;
+      platform: string;
+      content: string;
+      status: string;
+    }>;
   }>;
 } | null;
 
@@ -76,7 +81,8 @@ type Draft = {
   } | null;
 };
 
-type View = "home" | "content" | "history" | "reseaux" | "personnalisation" | "settings";
+type View =
+  "home" | "content" | "history" | "reseaux" | "personnalisation" | "settings";
 
 const NAV: {
   key: View;
@@ -274,7 +280,9 @@ function HomeView({
   onNavigate: (v: View) => void;
   initials: string;
 }) {
-  const [connections, setConnections] = useState<SocialConnection[] | null>(null);
+  const [connections, setConnections] = useState<SocialConnection[] | null>(
+    null,
+  );
   const totalPosts = club.matches.reduce((acc, m) => acc + m.posts.length, 0);
   const recent = [...club.matches]
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
@@ -288,8 +296,7 @@ function HomeView({
   );
   const pendingPosts = club.matches.reduce(
     (acc, match) =>
-      acc +
-      match.posts.filter((post) => post.status !== "PUBLISHED").length,
+      acc + match.posts.filter((post) => post.status !== "PUBLISHED").length,
     0,
   );
 
@@ -352,8 +359,7 @@ function HomeView({
           </div>
         </div>
         <p className="border-t border-line bg-subtle/60 px-6 py-3 text-[13px] text-muted sm:px-8">
-          Votre communication est prête en quelques secondes — un résultat, un
-          match ou un programme suffit.
+          Votre communication est prête en quelques secondes.
         </p>
       </section>
 
@@ -390,8 +396,12 @@ function HomeView({
                   <Icon name={action.icon} className="h-[18px] w-[18px]" />
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-ink">{action.label}</p>
-                  <p className="mt-1 text-sm text-muted">{action.description}</p>
+                  <p className="text-sm font-semibold text-ink">
+                    {action.label}
+                  </p>
+                  <p className="mt-1 text-sm text-muted">
+                    {action.description}
+                  </p>
                 </div>
                 <Icon
                   name="arrowRight"
@@ -425,7 +435,11 @@ function HomeView({
         />
         <StatTile
           icon="sparkles"
-          label={scheduledPosts > 0 ? "Publications publiees" : "Publications en attente"}
+          label={
+            scheduledPosts > 0
+              ? "Publications publiees"
+              : "Publications en attente"
+          }
           value={String(scheduledPosts > 0 ? scheduledPosts : pendingPosts)}
           tone={scheduledPosts > 0 ? "gold" : "brand"}
           helper={scheduledPosts > 0 ? "Deja envoyees" : "Pretes a relire"}
@@ -491,7 +505,9 @@ function HomeView({
                 className="flex items-center justify-between rounded-btn border border-line bg-subtle/50 px-4 py-3"
               >
                 <div>
-                  <p className="text-sm font-semibold text-ink">{network.label}</p>
+                  <p className="text-sm font-semibold text-ink">
+                    {network.label}
+                  </p>
                   <p className="text-xs text-muted">{network.helper}</p>
                 </div>
                 <span
@@ -563,14 +579,14 @@ function HistoryView({
   const sorted = [...club.matches].sort(
     (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
   );
-  const draftMatches = new Set(drafts.map((draft) => draft.match?.id).filter(Boolean));
+  const draftMatches = new Set(
+    drafts.map((draft) => draft.match?.id).filter(Boolean),
+  );
 
   if (club.matches.length === 0) {
     return (
       <div className="space-y-4">
-        {drafts.length > 0 && (
-          <DraftsPanel drafts={drafts} />
-        )}
+        {drafts.length > 0 && <DraftsPanel drafts={drafts} />}
         <Card>
           <EmptyState
             icon="clock"
@@ -950,7 +966,9 @@ function DraftEditorCard({ draft }: { draft: Draft }) {
     setReviewing("publish");
     setMessage(null);
     try {
-      const connsRes = await fetch("/api/social/connections", { cache: "no-store" });
+      const connsRes = await fetch("/api/social/connections", {
+        cache: "no-store",
+      });
       const connsData = await connsRes.json();
       const targets: string[] = (connsData.connections ?? [])
         .filter((c: { provider: string }) => c.provider === draft.platform)
@@ -965,7 +983,10 @@ function DraftEditorCard({ draft }: { draft: Draft }) {
       fd.append("text", content);
       fd.append("targets", JSON.stringify(targets));
       fd.append("generatedPostId", draft.id);
-      const res = await fetch("/api/social/publish", { method: "POST", body: fd });
+      const res = await fetch("/api/social/publish", {
+        method: "POST",
+        body: fd,
+      });
       const data = await res.json();
       if (!res.ok && res.status !== 207) {
         setMessage(data.error ?? "Échec de la publication.");
@@ -998,7 +1019,9 @@ function DraftEditorCard({ draft }: { draft: Draft }) {
               </span>
             )}
           </div>
-          <p className="text-sm font-semibold text-ink">{describeDraftContext(draft)}</p>
+          <p className="text-sm font-semibold text-ink">
+            {describeDraftContext(draft)}
+          </p>
           <p className="text-xs text-muted">
             Cree le {formatDateTime(draft.createdAt)}
           </p>
@@ -1041,8 +1064,14 @@ function DraftEditorCard({ draft }: { draft: Draft }) {
 
       <div className="mt-3 flex flex-col gap-2 text-xs text-muted sm:flex-row sm:items-center sm:justify-between">
         <span>{content.length} caracteres</span>
-        <span className={message === "Brouillon mis a jour." ? "text-emerald-700" : "text-muted"}>
-          {message ?? (dirty ? "Modifications non enregistrees" : "" )}
+        <span
+          className={
+            message === "Brouillon mis a jour."
+              ? "text-emerald-700"
+              : "text-muted"
+          }
+        >
+          {message ?? (dirty ? "Modifications non enregistrees" : "")}
         </span>
       </div>
     </div>
@@ -1067,7 +1096,9 @@ function HistoryMatchCard({
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 space-y-2">
           <div className="flex flex-wrap items-center gap-2">
-            <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${resultTone(result)}`}>
+            <span
+              className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${resultTone(result)}`}
+            >
               {result}
             </span>
             <span className="rounded-full bg-subtle px-3 py-1 text-xs font-semibold text-muted">
@@ -1080,7 +1111,11 @@ function HistoryMatchCard({
             )}
           </div>
           <p className="text-base font-bold text-ink sm:text-lg">
-            {club.name} <span className="tabular-nums">{us}–{them}</span> {match.opponent}
+            {club.name}{" "}
+            <span className="tabular-nums">
+              {us}–{them}
+            </span>{" "}
+            {match.opponent}
           </p>
           <p className="text-sm text-muted">
             {match.competition ?? "Match amical"}
@@ -1243,14 +1278,18 @@ function buildTodayActions({
   const sortedMatches = [...club.matches].sort(
     (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
   );
-  const nextUnpublished = sortedMatches.find((match) => match.posts.length === 0);
+  const nextUnpublished = sortedMatches.find(
+    (match) => match.posts.length === 0,
+  );
   const lastDraft = [...sortedMatches]
     .reverse()
     .find((match) => match.posts.some((post) => post.status !== "PUBLISHED"));
   const hasFacebook =
-    connections?.some((connection) => connection.provider === "facebook") ?? false;
+    connections?.some((connection) => connection.provider === "facebook") ??
+    false;
   const hasInstagram =
-    connections?.some((connection) => connection.provider === "instagram") ?? false;
+    connections?.some((connection) => connection.provider === "instagram") ??
+    false;
   const needsBrandSetup =
     !club.logoUrl ||
     club.primaryColor === "#1a1a2e" ||
@@ -1312,7 +1351,9 @@ function getResultLabel(match: NonNullable<Club>["matches"][number]) {
 }
 
 function buildConnectionItems(connections: SocialConnection[] | null) {
-  const providers = new Set((connections ?? []).map((connection) => connection.provider));
+  const providers = new Set(
+    (connections ?? []).map((connection) => connection.provider),
+  );
 
   return [
     {
