@@ -9,6 +9,12 @@ import { buildPersonalizationPrefix } from '@/lib/personalization'
 const PLATFORMS = ['instagram', 'facebook', 'whatsapp'] as const
 type Platform = typeof PLATFORMS[number]
 
+// Bornes serveur pour un contenu par nature libre : le client (CustomPostTab)
+// applique déjà des limites côté UI, mais elles ne doivent jamais être la
+// seule protection contre un appel API direct avec un texte disproportionné.
+const MAX_FIELD_LENGTH = 200
+const MAX_KEY_INFORMATION_ITEMS = 10
+
 function strArray(v: unknown): string[] {
   return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string' && x.trim().length > 0).map(x => x.trim()) : []
 }
@@ -49,13 +55,27 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Objectif, sujet et au moins une plateforme sont requis' }, { status: 400 })
   }
 
+  const keyInformationArr = strArray(keyInformation)
+  const callToActionStr = nullableStr(callToAction)
+  const targetAudienceStr = nullableStr(targetAudience)
+  const toneStr = nullableStr(tone)
+
+  const tooLong = [objectiveStr, subjectStr, ...keyInformationArr, callToActionStr, targetAudienceStr, toneStr]
+    .some(v => (v?.length ?? 0) > MAX_FIELD_LENGTH)
+  if (tooLong) {
+    return NextResponse.json({ error: `Chaque champ est limité à ${MAX_FIELD_LENGTH} caractères` }, { status: 400 })
+  }
+  if (keyInformationArr.length > MAX_KEY_INFORMATION_ITEMS) {
+    return NextResponse.json({ error: `Maximum ${MAX_KEY_INFORMATION_ITEMS} informations clés` }, { status: 400 })
+  }
+
   const data: CustomPostData = {
     objective: objectiveStr,
     subject: subjectStr,
-    keyInformation: strArray(keyInformation),
-    callToAction: nullableStr(callToAction),
-    targetAudience: nullableStr(targetAudience),
-    tone: nullableStr(tone),
+    keyInformation: keyInformationArr,
+    callToAction: callToActionStr,
+    targetAudience: targetAudienceStr,
+    tone: toneStr,
     desiredPlatforms: platforms,
     suggestedCategory: nullableStr(suggestedCategory),
   }

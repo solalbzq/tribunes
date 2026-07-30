@@ -27,6 +27,9 @@ const PLATFORMS: { key: keyof Posts; label: string }[] = [
 ]
 
 const MAX_KEY_INFO = 6
+// Cohérent avec MAX_FIELD_LENGTH côté serveur (app/api/posts/custom-post/route.ts) —
+// dupliqué ici car ce composant n'importe pas de code serveur.
+const MAX_FIELD_LENGTH = 200
 
 export type CustomPostFormInitialValues = Partial<{
   objective: string
@@ -172,14 +175,18 @@ export default function CustomPostTab({ club, initialValues }: { club: Club; ini
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-5xl">
       <div className="space-y-4">
+        <p className="text-xs text-gray-400 bg-subtle rounded-xl px-3 py-2">
+          N&apos;incluez pas d&apos;informations personnelles sensibles (identité complète d&apos;un mineur, coordonnées privées...) : ce texte est envoyé à un modèle d&apos;IA tiers pour la génération.
+        </p>
+
         <div>
           <label className="block text-xs text-gray-400 mb-1">Objectif</label>
-          <input value={objective} onChange={e => setObjective(e.target.value)} className={FIELD} placeholder="Ex : Vendre des billets pour le match de gala" />
+          <input value={objective} onChange={e => setObjective(e.target.value)} className={FIELD} maxLength={MAX_FIELD_LENGTH} placeholder="Ex : Vendre des billets pour le match de gala" />
         </div>
 
         <div>
           <label className="block text-xs text-gray-400 mb-1">Sujet</label>
-          <input value={subject} onChange={e => setSubject(e.target.value)} className={FIELD} placeholder="Ex : Match de gala du 12 septembre" />
+          <input value={subject} onChange={e => setSubject(e.target.value)} className={FIELD} maxLength={MAX_FIELD_LENGTH} placeholder="Ex : Match de gala du 12 septembre" />
         </div>
 
         <div>
@@ -190,7 +197,7 @@ export default function CustomPostTab({ club, initialValues }: { club: Club; ini
           <div className="space-y-2">
             {keyInformation.map((info, i) => (
               <div key={i} className="flex items-center gap-2">
-                <input value={info} onChange={e => updateKeyInfo(i, e.target.value)} className={FIELD} placeholder="Ex : 10€ sur place, gratuit -12 ans" />
+                <input value={info} onChange={e => updateKeyInfo(i, e.target.value)} className={FIELD} maxLength={MAX_FIELD_LENGTH} placeholder="Ex : 10€ sur place, gratuit -12 ans" />
                 {keyInformation.length > 1 && (
                   <button onClick={() => removeKeyInfo(i)} className="text-xs text-red-400 hover:text-red-600 transition shrink-0">
                     Supprimer
@@ -211,12 +218,12 @@ export default function CustomPostTab({ club, initialValues }: { club: Club; ini
 
         <div>
           <label className="block text-xs text-gray-400 mb-1">Appel à l&apos;action (optionnel)</label>
-          <input value={callToAction} onChange={e => setCallToAction(e.target.value)} className={FIELD} placeholder="Ex : Réservez vos places au secrétariat" />
+          <input value={callToAction} onChange={e => setCallToAction(e.target.value)} className={FIELD} maxLength={MAX_FIELD_LENGTH} placeholder="Ex : Réservez vos places au secrétariat" />
         </div>
 
         <div>
           <label className="block text-xs text-gray-400 mb-1">Public visé (optionnel)</label>
-          <input value={targetAudience} onChange={e => setTargetAudience(e.target.value)} className={FIELD} placeholder="Ex : Licenciés et familles" />
+          <input value={targetAudience} onChange={e => setTargetAudience(e.target.value)} className={FIELD} maxLength={MAX_FIELD_LENGTH} placeholder="Ex : Licenciés et familles" />
         </div>
 
         <div>
