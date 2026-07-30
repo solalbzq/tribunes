@@ -3,8 +3,15 @@
 import { useEffect, useState } from 'react'
 import { PageHeader } from './ui'
 import { Icon } from './icons'
+import { ErrorNotice, toUiError, type UiError } from './apiError'
 
 type Conn = { id: string; provider: string; accountName: string; avatarUrl?: string | null; tokenExpiresAt?: string | null }
+
+type ClubAutomation = {
+  automationMode: string
+  telegramChatId: string | null
+  automationEnabled: boolean
+}
 
 const STATUS: Record<string, { ok: boolean; text: string }> = {
   connected: { ok: true, text: 'Réseaux connectés avec succès.' },
@@ -16,10 +23,26 @@ const STATUS: Record<string, { ok: boolean; text: string }> = {
   notconfigured: { ok: false, text: "La connexion aux réseaux n'est pas configurée." },
 }
 
-export default function SocialTab() {
+const AUTOMATION_MODES: { key: string; label: string; description: string }[] = [
+  { key: 'MANUAL', label: 'Manuel', description: 'Vous relisez et publiez chaque contenu depuis le dashboard.' },
+  { key: 'AUTO_REVIEW', label: 'Auto + validation', description: 'Chaque publication est envoyée sur Telegram pour validation avant sa mise en ligne.' },
+  { key: 'FULL_AUTO', label: 'Automatique', description: 'Facebook et Instagram sont publiés automatiquement dès la génération.' },
+]
+
+export default function SocialTab({ club }: { club: ClubAutomation }) {
   const [connections, setConnections] = useState<Conn[] | null>(null)
   const [configured, setConfigured] = useState(true)
   const [status, setStatus] = useState<{ ok: boolean; text: string } | null>(null)
+
+  const [automationMode, setAutomationMode] = useState(club.automationMode)
+  const [modeSaving, setModeSaving] = useState(false)
+  const [modeError, setModeError] = useState<UiError>(null)
+
+  const [telegramChatId, setTelegramChatId] = useState(club.telegramChatId)
+  const [linkUrl, setLinkUrl] = useState<string | null>(null)
+  const [telegramBusy, setTelegramBusy] = useState(false)
+  const [telegramError, setTelegramError] = useState<string | null>(null)
+  const [linkCopied, setLinkCopied] = useState(false)
 
   async function load() {
     const d = await fetch('/api/social/connections', { cache: 'no-store' }).then(r => r.json())
@@ -44,6 +67,82 @@ export default function SocialTab() {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }),
     })
     load()
+  }
+
+  async function changeAutomationMode(mode: string) {
+    if (mode === automationMode || modeSaving) return
+    setModeSaving(true)
+    setModeError(null)
+    try {
+      const res = await fetch('/api/clubs/automation', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ automationMode: mode }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setModeError(toUiError(data, 'Impossible de changer le mode.'))
+        return
+      }
+      setAutomationMode(data.automationMode)
+    } catch {
+      setModeError(toUiError(null, 'Impossible de changer le mode.'))
+    } finally {
+      setModeSaving(false)
+    }
+  }
+
+  async function generateTelegramLink() {
+    setTelegramBusy(true)
+    setTelegramError(null)
+    try {
+      const res = await fetch('/api/telegram/link-code', { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok) {
+        setTelegramError(data.error ?? 'Impossible de générer le lien.')
+        return
+      }
+      setLinkUrl(data.linkUrl)
+    } catch {
+      setTelegramError('Impossible de générer le lien.')
+    } finally {
+      setTelegramBusy(false)
+    }
+  }
+
+  async function checkTelegramLink() {
+    setTelegramBusy(true)
+    setTelegramError(null)
+    try {
+      const res = await fetch('/api/clubs', { cache: 'no-store' })
+      const data = res.ok ? await res.json() : null
+      if (data?.telegramChatId) {
+        setTelegramChatId(data.telegramChatId)
+        setLinkUrl(null)
+      } else {
+        setTelegramError('Aucune connexion détectée pour le moment. Ouvrez le lien dans Telegram puis réessayez.')
+      }
+    } finally {
+      setTelegramBusy(false)
+    }
+  }
+
+  async function disconnectTelegram() {
+    setTelegramBusy(true)
+    try {
+      await fetch('/api/telegram/link-code', { method: 'DELETE' })
+      setTelegramChatId(null)
+      setLinkUrl(null)
+    } finally {
+      setTelegramBusy(false)
+    }
+  }
+
+  function copyTelegramLink() {
+    if (!linkUrl) return
+    navigator.clipboard.writeText(linkUrl)
+    setLinkCopied(true)
+    setTimeout(() => setLinkCopied(false), 2000)
   }
 
   const facebook = connections?.filter(c => c.provider === 'facebook') ?? []
@@ -115,6 +214,111 @@ export default function SocialTab() {
           </p>
         </>
       )}
+
+      {/* Automatisation & Telegram */}
+      <div className="rounded-card border border-line bg-white p-6 shadow-card">
+        <div className="mb-4">
+          <p className="font-bold text-ink">Automatisation</p>
+          <p className="text-sm text-muted">
+            Choisissez comment vos publications générées sont validées et diffusées.
+          </p>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-3">
+          {AUTOMATION_MODES.map((mode) => {
+            const locked = mode.key !== 'MANUAL' && !club.automationEnabled
+            const active = automationMode === mode.key
+            return (
+              <button
+                key={mode.key}
+                onClick={() => changeAutomationMode(mode.key)}
+                disabled={modeSaving || locked}
+                className={`rounded-btn border p-4 text-left transition ${
+                  active ? 'border-brand bg-brand-soft' : 'border-line bg-white hover:bg-subtle'
+                } ${locked ? 'cursor-not-allowed opacity-60' : ''}`}
+              >
+                <p className={`text-sm font-semibold ${active ? 'text-brand' : 'text-ink'}`}>
+                  {mode.label}
+                  {locked && <span className="ml-1.5 text-xs font-normal text-muted">(Pro)</span>}
+                </p>
+                <p className="mt-1 text-xs text-muted">{mode.description}</p>
+              </button>
+            )
+          })}
+        </div>
+
+        {modeError && (
+          <div className="mt-4">
+            <ErrorNotice error={modeError} />
+          </div>
+        )}
+
+        {automationMode !== 'MANUAL' && (
+          <div className="mt-5 border-t border-line pt-5">
+            <p className="mb-3 text-sm font-semibold text-ink">Telegram</p>
+
+            {telegramChatId ? (
+              <div className="flex items-center justify-between gap-3 rounded-btn border border-line px-4 py-3">
+                <p className="flex items-center gap-2 text-sm text-success">
+                  <span className="h-1.5 w-1.5 rounded-full bg-success" /> Compte Telegram connecté
+                </p>
+                <button
+                  onClick={disconnectTelegram}
+                  disabled={telegramBusy}
+                  className="rounded-btn px-3 py-1.5 text-xs font-semibold text-muted transition hover:bg-subtle hover:text-danger"
+                >
+                  Déconnecter
+                </button>
+              </div>
+            ) : linkUrl ? (
+              <div className="space-y-3 rounded-btn border border-line px-4 py-3">
+                <p className="text-sm text-muted">
+                  Ouvrez ce lien dans Telegram pour lier votre club, puis revenez ici pour vérifier la connexion.
+                </p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <a
+                    href={linkUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-2 rounded-btn bg-brand px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-hover"
+                  >
+                    <Icon name="link" className="h-4 w-4" /> Ouvrir dans Telegram
+                  </a>
+                  <button
+                    onClick={copyTelegramLink}
+                    className="inline-flex items-center gap-2 rounded-btn border border-line px-4 py-2 text-sm font-semibold text-ink transition hover:bg-subtle"
+                  >
+                    <Icon name="copy" className="h-4 w-4" /> {linkCopied ? 'Copié' : 'Copier le lien'}
+                  </button>
+                  <button
+                    onClick={checkTelegramLink}
+                    disabled={telegramBusy}
+                    className="inline-flex items-center gap-2 rounded-btn border border-line px-4 py-2 text-sm font-semibold text-ink transition hover:bg-subtle disabled:opacity-50"
+                  >
+                    <Icon name="refresh" className="h-4 w-4" /> Vérifier la connexion
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={generateTelegramLink}
+                disabled={telegramBusy}
+                className="inline-flex items-center gap-2 rounded-btn bg-brand px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-hover disabled:opacity-50"
+              >
+                <Icon name="link" className="h-4 w-4" /> Connecter Telegram
+              </button>
+            )}
+
+            {telegramError && <p className="mt-2 text-xs text-danger">{telegramError}</p>}
+
+            <p className="mt-3 text-xs text-muted">
+              {automationMode === 'AUTO_REVIEW'
+                ? 'En mode Auto + validation, chaque publication vous est envoyée sur Telegram avec des boutons Publier / Rejeter.'
+                : 'Le mode Automatique publie sans validation ; Telegram reste utile pour suivre les publications envoyées.'}
+            </p>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

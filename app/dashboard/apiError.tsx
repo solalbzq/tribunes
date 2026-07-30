@@ -7,7 +7,7 @@ export type UiError = { message: string; quota: boolean } | null
 /** Transforme le corps JSON d'une réponse API non-OK en erreur affichable. */
 export function toUiError(json: unknown, fallback: string): UiError {
   const j = json as { error?: string; code?: string } | null
-  return { message: j?.error ?? fallback, quota: j?.code === 'QUOTA_EXCEEDED' }
+  return { message: j?.error ?? fallback, quota: j?.code === 'QUOTA_EXCEEDED' || j?.code === 'PLAN_REQUIRED' }
 }
 
 /** Affiche une erreur API ; propose l'upgrade quand le quota IA est épuisé. */

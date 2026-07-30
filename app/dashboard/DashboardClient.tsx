@@ -249,7 +249,7 @@ export default function DashboardClient({
             />
           )}
           {view === "content" && <ContentTab club={club} />}
-          {view === "reseaux" && <SocialTab />}
+          {view === "reseaux" && <SocialTab club={club} />}
           {view === "history" && (
             <HistoryView club={club} drafts={drafts} onNavigate={setView} />
           )}
