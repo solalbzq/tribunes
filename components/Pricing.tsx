@@ -97,10 +97,6 @@ export function Pricing() {
             )
           })}
         </div>
-
-        <p className="mt-8 text-center text-[13px] text-muted">
-          Les prix affichés sont pensés pour rester accessibles aux clubs amateurs.
-        </p>
       </div>
     </section>
   )
