@@ -94,6 +94,7 @@ model Club {
   playerSpotlights    PlayerSpotlight[]
   clubAnnouncements   ClubAnnouncement[]
   engagementPolls     EngagementPoll[]
+  customPosts         CustomPost[]
 }
 
 model SocialConnection {
@@ -256,6 +257,27 @@ model EngagementPoll {
   posts     GeneratedPost[]
 }
 
+// Publication libre (assistant conversationnel dashboard, mode CUSTOM) —
+// réservée aux demandes qui ne correspondent à aucun type structuré existant
+// ni à une catégorie de ClubAnnouncement. Suit le même pattern qu'un type
+// structuré (1 table par type + entrée dans lib/postTypes.ts) pour préserver
+// l'isolation multi-club (clubOwnershipOr) sans dupliquer de logique.
+model CustomPost {
+  id                String          @id @default(cuid())
+  clubId            String
+  club              Club            @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  objective         String // ce que le club cherche à obtenir (ex: "recruter des bénévoles")
+  subject           String // sujet concret de la publication (ex: "buvette du tournoi")
+  keyInformation    Json // string[] — informations factuelles explicitement fournies, jamais inventées
+  callToAction      String?
+  targetAudience    String?
+  tone              String?
+  desiredPlatforms  Json // string[] parmi 'instagram' | 'facebook' | 'whatsapp'
+  suggestedCategory String? // pour la boucle d'évolution produit (analytics), jamais le texte brut
+  createdAt         DateTime        @default(now())
+  posts             GeneratedPost[]
+}
+
 model GeneratedPost {
   id                   String              @id @default(cuid())
   matchId              String?
@@ -274,6 +296,8 @@ model GeneratedPost {
   clubAnnouncement     ClubAnnouncement?   @relation(fields: [clubAnnouncementId], references: [id], onDelete: Cascade)
   engagementPollId     String?
   engagementPoll       EngagementPoll?     @relation(fields: [engagementPollId], references: [id], onDelete: Cascade)
+  customPostId         String?
+  customPost           CustomPost?         @relation(fields: [customPostId], references: [id], onDelete: Cascade)
   platform             String
   content              String              @db.Text
   postType             String              @default("MATCH_RESULT")

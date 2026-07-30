@@ -92,6 +92,14 @@ export default async function DashboardPage() {
               question: true,
             },
           },
+          customPost: {
+            select: {
+              id: true,
+              objective: true,
+              subject: true,
+              suggestedCategory: true,
+            },
+          },
         },
       })
     : []
@@ -148,6 +156,7 @@ export default async function DashboardPage() {
     playerSpotlight: draft.playerSpotlight ?? null,
     clubAnnouncement: draft.clubAnnouncement ?? null,
     engagementPoll: draft.engagementPoll ?? null,
+    customPost: draft.customPost ?? null,
   }))
 
   return (
