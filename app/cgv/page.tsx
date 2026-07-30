@@ -20,8 +20,7 @@ export default function CgvPage() {
             <h2 className="text-lg font-bold text-[#111827]">1. Objet</h2>
             <p className="mt-2">
               Les présentes conditions générales de vente et d&apos;utilisation (« CGV ») régissent l&apos;accès
-              et l&apos;utilisation du service Tribunes, édité par [À COMPLÉTER : nom de l&apos;entrepreneur
-              individuel] (voir nos <Link href="/mentions-legales" className="text-[#2563eb]">mentions légales</Link>).
+              et l&apos;utilisation du service Tribunes, édité par MiouKi (voir nos <Link href="/mentions-legales" className="text-[#2563eb]">mentions légales</Link>).
               Tribunes est un service en ligne qui génère et permet de publier des contenus réseaux
               sociaux pour des clubs sportifs amateurs, à partir des résultats, programmes et
               informations fournis par le club.
@@ -36,9 +35,9 @@ export default function CgvPage() {
             <h2 className="text-lg font-bold text-[#111827]">2. Offres et tarifs</h2>
             <p className="mt-2">Tribunes propose trois offres, sans engagement de durée :</p>
             <ul className="mt-2 list-disc space-y-2 pl-5">
-              <li><strong>Découverte (gratuit)</strong> : jusqu&apos;à 3 publications par mois, génération IA incluse, publication manuelle, logo Tribunes apposé sur les visuels.</li>
+              <li><strong>Découverte (gratuit)</strong> : jusqu&apos;à 3 publications par mois, publication manuelle, logo Tribunes apposé sur les visuels.</li>
               <li><strong>Club</strong> : 9,90&nbsp;€/mois ou 99&nbsp;€/an, publications illimitées, sans marque Tribunes, personnalisation complète.</li>
-              <li><strong>Pro</strong> : 19,90&nbsp;€/mois ou 199&nbsp;€/an, multi-administrateurs, validation avant publication, statistiques avancées.</li>
+              <li><strong>Pro</strong> : 19,90&nbsp;€/mois ou 199&nbsp;€/an, multi-comptes pour le même club.</li>
             </ul>
             <p className="mt-2">
               Les tarifs sont indiqués en euros. En tant qu&apos;entrepreneur individuel bénéficiant du
