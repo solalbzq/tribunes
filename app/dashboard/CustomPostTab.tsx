@@ -71,6 +71,7 @@ export default function CustomPostTab({ club, initialValues }: { club: Club; ini
   const [postIds, setPostIds] = useState<PostIds | null>(null)
   const [customPostId, setCustomPostId] = useState<string | null>(null)
   const [personalizing, setPersonalizing] = useState(false)
+  const [angleLoading, setAngleLoading] = useState(false)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
 
   async function getImageBlob(): Promise<Blob | null> {
@@ -130,43 +131,67 @@ export default function CustomPostTab({ club, initialValues }: { club: Club; ini
     }
   }
 
-  async function personalize(overrides: { tone?: string; customInstructions?: string }) {
+  async function regenerate(overrides: { tone?: string; customInstructions?: string; alternateAngle?: boolean }) {
     if (!customPostId) return
+    const res = await fetch('/api/posts/custom-post', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        objective, subject,
+        keyInformation: filledKeyInfo,
+        callToAction: callToAction || undefined,
+        targetAudience: targetAudience || undefined,
+        desiredPlatforms: Array.from(platforms),
+        id: customPostId, regenerate: true,
+        tone: overrides.tone, customInstructions: overrides.customInstructions,
+        alternateAngle: overrides.alternateAngle ?? false,
+      }),
+    })
+    const data = await res.json()
+    if (!res.ok) return
+    setPosts(data.posts)
+    setPostIds(data.postIds ?? null)
+  }
+
+  async function personalize(overrides: { tone?: string; customInstructions?: string }) {
     setPersonalizing(true)
     try {
-      const res = await fetch('/api/posts/custom-post', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          objective, subject,
-          keyInformation: filledKeyInfo,
-          callToAction: callToAction || undefined,
-          targetAudience: targetAudience || undefined,
-          desiredPlatforms: Array.from(platforms),
-          id: customPostId, regenerate: true,
-          tone: overrides.tone, customInstructions: overrides.customInstructions,
-        }),
-      })
-      const data = await res.json()
-      if (!res.ok) return
-      setPosts(data.posts)
-      setPostIds(data.postIds ?? null)
+      await regenerate(overrides)
     } finally {
       setPersonalizing(false)
     }
   }
 
+  async function regenerateAlternateAngle() {
+    setAngleLoading(true)
+    try {
+      await regenerate({ tone: tone || undefined, alternateAngle: true })
+    } finally {
+      setAngleLoading(false)
+    }
+  }
+
   if (posts) {
     return (
-      <TextPostsPanel
-        posts={posts}
-        postIds={postIds}
-        title="Vos légendes sont prêtes"
-        onReset={() => { setPosts(null); setPostIds(null); setCustomPostId(null) }}
-        getImageBlob={getImageBlob}
-        onPersonalize={personalize}
-        personalizing={personalizing}
-      />
+      <div className="max-w-2xl space-y-4">
+        <button
+          onClick={regenerateAlternateAngle}
+          disabled={angleLoading || personalizing}
+          className="flex w-full items-center justify-center gap-2 rounded-btn border border-dashed border-line py-2.5 text-sm font-semibold text-muted transition hover:border-brand hover:text-brand disabled:opacity-60"
+        >
+          <Icon name="refresh" className={`h-4 w-4 ${angleLoading ? 'animate-spin' : ''}`} />
+          {angleLoading ? 'Nouvel angle en cours…' : 'Proposer un autre angle'}
+        </button>
+        <TextPostsPanel
+          posts={posts}
+          postIds={postIds}
+          title="Vos légendes sont prêtes"
+          onReset={() => { setPosts(null); setPostIds(null); setCustomPostId(null) }}
+          getImageBlob={getImageBlob}
+          onPersonalize={personalize}
+          personalizing={personalizing}
+        />
+      </div>
     )
   }
 

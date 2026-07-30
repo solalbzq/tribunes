@@ -41,6 +41,7 @@ export async function POST(req: Request) {
     desiredPlatforms,
     suggestedCategory,
     customInstructions,
+    alternateAngle = false,
     id: existingId,
     regenerate = false,
   } = await req.json()
@@ -81,7 +82,7 @@ export async function POST(req: Request) {
   }
 
   const prompt = buildPersonalizationPrefix(club, customInstructions)
-    + customPostPromptAll(club.sport, club.name, data, club.contentTone)
+    + customPostPromptAll(club.sport, club.name, data, club.contentTone, Boolean(alternateAngle))
 
   const gen = await generatePlatformPosts({ club, platforms, prompt, route: 'posts/custom-post' })
   if (!gen.ok) return gen.response
