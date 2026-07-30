@@ -53,6 +53,16 @@ type EngagementPollFields = {
   options: string[]
 }
 
+type CustomFields = {
+  objective: string | null
+  subject: string | null
+  keyInformation: string[]
+  callToAction: string | null
+  targetAudience: string | null
+  tone: string | null
+  suggestedCategory: string | null
+}
+
 type IntentExtractionResult =
   | { intent: 'MATCH_RESULT'; confidence: number; fields: MatchResultFields; missingFields: string[] }
   | { intent: 'MATCH_ANNOUNCEMENT'; confidence: number; fields: MatchAnnouncementFields; missingFields: string[] }
@@ -60,7 +70,13 @@ type IntentExtractionResult =
   | { intent: 'PLAYER_SPOTLIGHT'; confidence: number; fields: PlayerSpotlightFields; missingFields: string[] }
   | { intent: 'SEASON_RECAP'; confidence: number; fields: SeasonRecapFields; missingFields: string[] }
   | { intent: 'ENGAGEMENT_POLL'; confidence: number; fields: EngagementPollFields; missingFields: string[] }
+  | { intent: 'CUSTOM'; confidence: number; fields: CustomFields; missingFields: string[] }
   | { intent: 'UNSUPPORTED'; confidence: number; fields: Record<string, never>; missingFields: [] }
+
+// CUSTOM n'a pas encore de formulaire dédié (mode "Publication libre" à venir) :
+// traité comme UNSUPPORTED côté UI — pas d'entrée dans INTENT_TO_TARGET, le
+// formulaire s'ouvre vierge sur le type choisi manuellement par l'utilisateur.
+const UNROUTED_INTENTS = new Set<IntentExtractionResult['intent']>(['UNSUPPORTED', 'CUSTOM'])
 
 type Target = 'match' | 'announcement' | 'clubAnnouncement' | 'playerSpotlight' | 'seasonRecap' | 'engagementPoll'
 
@@ -271,7 +287,11 @@ export default function DescribeIntentTab({
             <p className="text-sm text-ink whitespace-pre-wrap">{text.trim()}</p>
           </div>
 
-          {result.intent === 'UNSUPPORTED' ? (
+          {result.intent === 'CUSTOM' ? (
+            <p className="text-sm text-gray-600">
+              Cette demande ne correspond à aucun type structuré existant (ex : billetterie, jeu-concours, événement caritatif...). Le mode « Publication libre » arrive bientôt — en attendant, choisis le type le plus proche ci-dessous pour continuer avec un formulaire vierge, ou reformule ta demande.
+            </p>
+          ) : result.intent === 'UNSUPPORTED' ? (
             <p className="text-sm text-gray-600">
               Je n&apos;ai pas identifié de type de publication pris en charge dans ce texte (le tournoi et le programme de la semaine ne sont pas encore supportés ici). Choisis un type ci-dessous pour continuer avec un formulaire vierge, ou reformule ta demande.
             </p>
@@ -308,7 +328,7 @@ export default function DescribeIntentTab({
               Tu as changé le type par rapport à ce qui a été détecté : le formulaire s&apos;ouvrira vierge (les champs compris pour l&apos;autre type ne sont pas transférés). Le texte saisi reste accessible.
             </p>
           )}
-          {result.intent === 'UNSUPPORTED' && selectedTarget && (
+          {UNROUTED_INTENTS.has(result.intent) && selectedTarget && (
             <p className="text-xs text-gray-500">Le formulaire s&apos;ouvrira vierge, à remplir manuellement.</p>
           )}
 
