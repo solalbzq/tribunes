@@ -25,6 +25,8 @@ const CATEGORIES: { key: ClubAnnouncementCategory; label: string }[] = [
   { key: 'RECRUITMENT', label: 'Recrutement' },
   { key: 'SPONSOR', label: 'Sponsor' },
   { key: 'CLUB_LIFE', label: 'Vie du club' },
+  { key: 'VOLUNTEER', label: 'Bénévolat' },
+  { key: 'THANKS', label: 'Remerciement' },
 ]
 
 export type ClubAnnouncementFormInitialValues = Partial<{

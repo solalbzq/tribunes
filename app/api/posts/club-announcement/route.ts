@@ -8,7 +8,7 @@ import { buildPersonalizationPrefix } from '@/lib/personalization'
 
 const PLATFORMS = ['instagram', 'facebook', 'whatsapp'] as const
 type Platform = typeof PLATFORMS[number]
-const CATEGORIES: ClubAnnouncementCategory[] = ['RECRUITMENT', 'SPONSOR', 'CLUB_LIFE']
+const CATEGORIES: ClubAnnouncementCategory[] = ['RECRUITMENT', 'SPONSOR', 'CLUB_LIFE', 'VOLUNTEER', 'THANKS']
 
 export async function POST(req: Request) {
   const supabase = createClient()

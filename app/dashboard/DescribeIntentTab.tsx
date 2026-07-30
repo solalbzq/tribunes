@@ -30,7 +30,7 @@ type MatchAnnouncementFields = {
 }
 
 type ClubAnnouncementFields = {
-  category: 'RECRUITMENT' | 'SPONSOR' | 'CLUB_LIFE'
+  category: 'RECRUITMENT' | 'SPONSOR' | 'CLUB_LIFE' | 'VOLUNTEER' | 'THANKS'
   title: string | null
   description: string | null
 }
@@ -112,6 +112,7 @@ const ENGAGEMENT_POLL_FIELD_LABELS: Record<keyof EngagementPollFields, string> =
 }
 const CATEGORY_LABELS: Record<ClubAnnouncementFields['category'], string> = {
   RECRUITMENT: 'Recrutement', SPONSOR: 'Sponsor', CLUB_LIFE: 'Vie du club',
+  VOLUNTEER: 'Bénévolat', THANKS: 'Remerciement',
 }
 
 function displayValue(v: string | number | boolean | string[] | null): string {

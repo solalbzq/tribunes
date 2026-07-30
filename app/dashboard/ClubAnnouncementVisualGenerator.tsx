@@ -20,6 +20,8 @@ const CATEGORY_LABEL: Record<ClubAnnouncementCategory, string> = {
   RECRUITMENT: '📣 RECRUTEMENT',
   SPONSOR: '🤝 MERCI À NOTRE PARTENAIRE',
   CLUB_LIFE: '🎉 VIE DU CLUB',
+  VOLUNTEER: '🙌 APPEL AUX BÉNÉVOLES',
+  THANKS: '💛 MERCI',
 }
 
 /**
