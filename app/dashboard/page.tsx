@@ -63,6 +63,35 @@ export default async function DashboardPage() {
               losses: true,
             },
           },
+          matchAnnouncement: {
+            select: {
+              id: true,
+              opponent: true,
+              matchDate: true,
+              competition: true,
+              isHome: true,
+            },
+          },
+          playerSpotlight: {
+            select: {
+              id: true,
+              playerName: true,
+              achievement: true,
+            },
+          },
+          clubAnnouncement: {
+            select: {
+              id: true,
+              category: true,
+              title: true,
+            },
+          },
+          engagementPoll: {
+            select: {
+              id: true,
+              question: true,
+            },
+          },
         },
       })
     : []
@@ -110,6 +139,15 @@ export default async function DashboardPage() {
           periodEnd: draft.seasonRecap.periodEnd.toISOString(),
         }
       : null,
+    matchAnnouncement: draft.matchAnnouncement
+      ? {
+          ...draft.matchAnnouncement,
+          matchDate: draft.matchAnnouncement.matchDate.toISOString(),
+        }
+      : null,
+    playerSpotlight: draft.playerSpotlight ?? null,
+    clubAnnouncement: draft.clubAnnouncement ?? null,
+    engagementPoll: draft.engagementPoll ?? null,
   }))
 
   return (
