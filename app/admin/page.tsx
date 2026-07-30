@@ -61,6 +61,19 @@ type RealUsage = {
   byClub: Array<{ clubId: string; name: string; aiCalls: number; intentExtractionCalls: number; scrapes: number; costUsd: number }>
 }
 
+type CustomPostCategoryStats = {
+  category: string
+  count: number
+  validatedCount: number
+  validationRate: number
+  lastUsedAt: string
+}
+
+type CustomPostCategoriesResponse = {
+  totalCustomPosts: number
+  categories: CustomPostCategoryStats[]
+}
+
 type Entry = {
   id: string
   email: string
@@ -210,6 +223,7 @@ export default function AdminDashboardPage() {
   const router = useRouter()
   const [stats, setStats] = useState<StatsResponse | null>(null)
   const [realUsage, setRealUsage] = useState<RealUsage | null>(null)
+  const [customPostCategories, setCustomPostCategories] = useState<CustomPostCategoriesResponse | null>(null)
   const [entriesData, setEntriesData] = useState<EntriesResponse | null>(null)
   const [isLoadingStats, setIsLoadingStats] = useState(true)
   const [isLoadingEntries, setIsLoadingEntries] = useState(true)
@@ -247,6 +261,14 @@ export default function AdminDashboardPage() {
         if (!res.ok) return
         const data = await res.json() as RealUsage
         if (mounted) setRealUsage(data)
+      })
+      .catch(() => {})
+    // Boucle d'évolution produit : catégories de publications libres
+    fetch('/api/admin/custom-post-categories', { cache: 'no-store' })
+      .then(async (res) => {
+        if (!res.ok) return
+        const data = await res.json() as CustomPostCategoriesResponse
+        if (mounted) setCustomPostCategories(data)
       })
       .catch(() => {})
     return () => { mounted = false }
@@ -735,6 +757,45 @@ export default function AdminDashboardPage() {
                       </table>
                     </div>
                   )}
+                </>
+              )}
+            </div>
+
+            {/* Boucle d'évolution produit — catégories de publications libres (CUSTOM_POST) */}
+            <div className="rounded-xl border border-[#e5e7eb] bg-white p-5 shadow-sm">
+              <div className="mb-4 flex items-center justify-between">
+                <SectionTitle>📝 Catégories de publications libres</SectionTitle>
+                <span className="text-xs text-[#9ca3af]">{fmt(customPostCategories?.totalCustomPosts ?? 0)} au total</span>
+              </div>
+              {!customPostCategories || customPostCategories.categories.length === 0 ? (
+                <p className="text-sm text-[#6b7280]">Aucune publication libre pour l&apos;instant.</p>
+              ) : (
+                <>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full text-sm">
+                      <thead>
+                        <tr className="text-[#6b7280]">
+                          <th className="border-b border-[#e5e7eb] px-4 py-2 text-left font-semibold">Catégorie suggérée</th>
+                          <th className="border-b border-[#e5e7eb] px-4 py-2 text-right font-semibold">Occurrences</th>
+                          <th className="border-b border-[#e5e7eb] px-4 py-2 text-right font-semibold">Taux de validation</th>
+                          <th className="border-b border-[#e5e7eb] px-4 py-2 text-right font-semibold">Dernière utilisation</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {customPostCategories.categories.map((c) => (
+                          <tr key={c.category}>
+                            <td className="border-b border-[#f3f4f6] px-4 py-2 font-medium font-mono">{c.category}</td>
+                            <td className="border-b border-[#f3f4f6] px-4 py-2 text-right">{fmt(c.count)}</td>
+                            <td className="border-b border-[#f3f4f6] px-4 py-2 text-right">{c.validationRate}%</td>
+                            <td className="border-b border-[#f3f4f6] px-4 py-2 text-right text-[#6b7280]">{fmtDate(c.lastUsedAt)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <p className="mt-3 text-xs text-[#9ca3af]">
+                    Une catégorie fréquente et régulièrement validée (publiée) est un candidat pour devenir un type officiel Tribunes, avec un prompt et un template dédiés. Taux de validation = part des publications de cette catégorie effectivement publiées ou partiellement publiées.
+                  </p>
                 </>
               )}
             </div>
