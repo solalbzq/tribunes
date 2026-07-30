@@ -13,6 +13,8 @@ export type PlanDef = {
   price: { monthly: number | null; yearly: number | null }
   priceDisplay: { monthly: string; yearly: string }
   features: string[]
+  /** Couleur d'accent pour les badges de plan (pastille, pill...). */
+  color: string
   quotas: {
     /** Générations IA par mois calendaire ; null = illimité. */
     aiGenerationsPerMonth: number | null
@@ -33,34 +35,34 @@ export const PLANS: Record<PlanKey, PlanDef> = {
   FREE: {
     key: 'FREE',
     label: 'Découverte',
-    tagline: 'Pour tester Tribunes sans engagement.',
+    tagline: 'Découvrez Tribunes gratuitement.',
     price: { monthly: null, yearly: null },
     priceDisplay: { monthly: 'Gratuit', yearly: 'Gratuit' },
     features: [
-      "Jusqu'à 3 publications par mois",
-      'Génération IA incluse',
+      'Jusqu’à 3 générations de visuels par mois',
+      'Création de publications',
       'Publication manuelle',
-      'Personnalisation limitée',
+      'Personnalisation de base',
       'Logo Tribunes sur les visuels',
     ],
+    color: '#6b7280',
     quotas: { aiGenerationsPerMonth: 3, maxMembers: 1, watermark: true, automationEnabled: false },
     cta: 'Commencer gratuitement',
   },
   CLUB: {
     key: 'CLUB',
     label: 'Club',
-    tagline: 'Le meilleur rapport qualité/prix.',
+    tagline: 'Toute la communication de votre club, au même endroit.',
     price: { monthly: 9.9, yearly: 99 },
     priceDisplay: { monthly: '9,90 €', yearly: '99 €' },
     features: [
-      'Publications IA illimitées',
-      "Génération d'affiches de match",
-      'Instagram, Facebook, LinkedIn',
-      'Personnalisation complète',
-      'Calendrier & synchronisation Ten’Up',
-      'Historique & médias illimités',
-      'Support prioritaire',
+      'Publications illimitées',
+      'Création automatique d’affiches de match',
+      'Publication sur Facebook & Instagram',
+      'Personnalisation complète de votre club',
+      'Photos et médias illimités',
     ],
+    color: '#2563eb',
     quotas: { aiGenerationsPerMonth: null, maxMembers: 1, watermark: false, automationEnabled: false },
     highlight: true,
     cta: 'Choisir Club',
@@ -68,17 +70,19 @@ export const PLANS: Record<PlanKey, PlanDef> = {
   PRO: {
     key: 'PRO',
     label: 'Pro',
-    tagline: 'Pour les clubs structurés.',
+    tagline: 'Pensé pour les clubs les plus exigeants.',
     price: { monthly: 19.9, yearly: 199 },
     priceDisplay: { monthly: '19,90 €', yearly: '199 €' },
     features: [
-      'Tout de l’offre Club',
-      'Plusieurs administrateurs & sections',
-      'Validation avant publication',
+      'Tout ce qui est inclus dans Club, plus :',
+      'Plusieurs administrateurs',
+      'Plusieurs sections / équipes',
+      'Validation des publications',
       'Planification avancée',
-      'Statistiques & analyses',
-      'Support premium & accès anticipé',
+      'Statistiques détaillées',
+      'Accès anticipé aux nouveautés',
     ],
+    color: '#111827',
     quotas: { aiGenerationsPerMonth: null, maxMembers: null, watermark: false, automationEnabled: true },
     cta: 'Choisir Pro',
   },

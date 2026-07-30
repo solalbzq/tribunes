@@ -1,21 +1,15 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { prisma } from '@/lib/prisma'
-import Stripe from 'stripe'
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2024-06-20' })
-
-const PRICE_IDS: Record<string, string> = {
-  PRO: process.env.STRIPE_PRICE_PRO ?? '',
-  STRUCTURE: process.env.STRIPE_PRICE_STRUCTURE ?? '',
-}
+import { getStripe, getPriceId } from '@/lib/stripe'
+import { PAID_PLAN_KEYS, type BillingInterval } from '@/lib/plans'
 
 export async function POST(req: Request) {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { action, plan } = await req.json() // action: 'checkout' | 'portal'
+  const { action, plan, interval } = await req.json() // action: 'checkout' | 'portal'
 
   const membership = await prisma.organizationMember.findFirst({
     where: { userId: user.id, role: 'OWNER' },
@@ -25,6 +19,7 @@ export async function POST(req: Request) {
 
   const org = membership.org
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL!
+  const stripe = getStripe()
 
   if (action === 'portal' && org.stripeCustomerId) {
     const session = await stripe.billingPortal.sessions.create({
@@ -34,8 +29,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ url: session.url })
   }
 
-  if (action === 'checkout' && plan) {
-    const priceId = PRICE_IDS[plan]
+  if (action === 'checkout' && PAID_PLAN_KEYS.includes(plan)) {
+    const billingInterval: BillingInterval = interval === 'yearly' ? 'yearly' : 'monthly'
+    const priceId = getPriceId(plan, billingInterval)
     if (!priceId) return NextResponse.json({ error: 'Invalid plan' }, { status: 400 })
 
     // Create or reuse Stripe customer

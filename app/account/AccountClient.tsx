@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Logo from '@/components/Logo'
+import { PLANS, PLAN_KEYS, normalizePlan, yearlyAsMonthly, type BillingInterval } from '@/lib/plans'
 
 type Org = {
   id: string
@@ -20,12 +21,6 @@ type ResolvedMember = {
   role: string
   createdAt: string
   email: string | null
-}
-
-const PLAN_LABELS: Record<string, { label: string; color: string; desc: string; price: string }> = {
-  FREE:       { label: 'Gratuit',    color: '#6b7280', desc: '1 compte, fonctionnalités limitées', price: '0€' },
-  PRO:        { label: 'Pro',        color: '#3b82f6', desc: '1 compte, tout illimité',            price: '10€/mois' },
-  STRUCTURE:  { label: 'Structure',  color: '#2563eb', desc: 'Comptes illimités dans votre équipe', price: '25€/mois' },
 }
 
 export default function AccountClient({
@@ -50,8 +45,10 @@ export default function AccountClient({
   const [memberActionError, setMemberActionError] = useState('')
   const [memberActionId, setMemberActionId] = useState<string | null>(null)
 
-  const plan = org?.plan ?? 'FREE'
-  const planInfo = PLAN_LABELS[plan]
+  const [billing, setBilling] = useState<BillingInterval>('monthly')
+  const planKey = normalizePlan(org?.plan)
+  const planInfo = PLANS[planKey]
+  const canInviteMembers = planInfo.quotas.maxMembers === null
   const isOwner = role === 'OWNER' || !org
   const ownerCount = members.filter((m) => m.role === 'OWNER').length
 
@@ -111,10 +108,10 @@ export default function AccountClient({
     router.refresh()
   }
 
-  async function goToPortal(action: string, plan?: string) {
+  async function goToPortal(action: string, targetPlan?: string) {
     const res = await fetch('/api/organization/portal', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action, plan }),
+      body: JSON.stringify({ action, plan: targetPlan, interval: billing }),
     })
     const data = await res.json()
     if (data.url) window.location.href = data.url
@@ -181,9 +178,11 @@ export default function AccountClient({
                 <span className="px-3 py-1 rounded-full text-sm font-bold text-white" style={{ background: planInfo.color }}>
                   {planInfo.label}
                 </span>
-                <span className="text-sm font-bold text-[#111827]">{planInfo.price}</span>
+                <span className="text-sm font-bold text-[#111827]">
+                  {planInfo.priceDisplay.monthly}{planKey !== 'FREE' && '/mois'}
+                </span>
               </div>
-              <p className="text-sm text-gray-500">{planInfo.desc}</p>
+              <p className="text-sm text-gray-500">{planInfo.tagline}</p>
               <button onClick={() => setTab('abonnement')}
                 className="text-sm font-semibold text-[#2563eb] hover:underline">
                 Gérer l'abonnement →
@@ -279,7 +278,7 @@ export default function AccountClient({
                   {isOwner && (
                     <div>
                       <p className="text-sm font-semibold text-[#111827] mb-2">Inviter un collaborateur</p>
-                      {plan === 'STRUCTURE' ? (
+                      {canInviteMembers ? (
                         <div className="flex gap-3">
                           <input type="email" value={inviteEmail} onChange={e => setInviteEmail(e.target.value)}
                             placeholder="email@collaborateur.com"
@@ -291,10 +290,10 @@ export default function AccountClient({
                         </div>
                       ) : (
                         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center justify-between">
-                          <p className="text-sm text-amber-700">L'invitation de membres nécessite le plan Structure.</p>
+                          <p className="text-sm text-amber-700">L'invitation de membres nécessite le plan Pro.</p>
                           <button onClick={() => setTab('abonnement')}
                             className="text-sm font-bold text-[#2563eb] hover:underline shrink-0 ml-3">
-                            Passer à Structure →
+                            Passer à Pro →
                           </button>
                         </div>
                       )}
@@ -311,38 +310,59 @@ export default function AccountClient({
         {/* ── ABONNEMENT */}
         {tab === 'abonnement' && (
           <div className="space-y-6 max-w-3xl">
+            <div className="flex justify-center">
+              <div className="inline-flex rounded-xl border border-gray-100 bg-white p-1">
+                {(['monthly', 'yearly'] as const).map((i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => setBilling(i)}
+                    className={`rounded-lg px-4 py-1.5 text-sm font-semibold transition ${
+                      billing === i ? 'bg-[#111827] text-white' : 'text-gray-500 hover:text-[#111827]'
+                    }`}
+                  >
+                    {i === 'monthly' ? 'Mensuel' : 'Annuel'}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {[
-                { key: 'FREE',      price: '0€',     period: '',         features: ['1 compte', '5 visuels/mois', 'Fonctionnalités de base'] },
-                { key: 'PRO',       price: '10€',    period: '/mois',    features: ['1 compte', 'Visuels illimités', 'Posts IA illimités', 'Éditeur avancé'] },
-                { key: 'STRUCTURE', price: '25€',    period: '/mois',    features: ['Comptes illimités', 'Tout de Pro', 'Gestion d\'équipe', 'Support prioritaire'] },
-              ].map(p => {
-                const info = PLAN_LABELS[p.key]
-                const isCurrent = plan === p.key
+              {PLAN_KEYS.map(key => {
+                const info = PLANS[key]
+                const isPaid = info.price.monthly != null
+                const isCurrent = planKey === key
+                const monthlyEq = yearlyAsMonthly(info)
                 return (
-                  <div key={p.key} className={`bg-white rounded-2xl border-2 p-6 flex flex-col ${isCurrent ? 'border-[#2563eb]' : 'border-gray-100'}`}>
+                  <div key={key} className={`bg-white rounded-2xl border-2 p-6 flex flex-col ${isCurrent ? 'border-[#2563eb]' : 'border-gray-100'}`}>
                     {isCurrent && <span className="text-xs font-bold text-[#2563eb] mb-2">Plan actuel</span>}
                     <h3 className="font-extrabold text-[#111827] text-lg">{info.label}</h3>
+                    <p className="text-xs text-gray-400 mt-0.5">{info.tagline}</p>
                     <div className="flex items-baseline gap-1 my-2">
-                      <span className="text-3xl font-black text-[#111827]">{p.price}</span>
-                      <span className="text-sm text-gray-400">{p.period}</span>
+                      <span className="text-3xl font-black text-[#111827]">
+                        {isPaid ? info.priceDisplay[billing] : 'Gratuit'}
+                      </span>
+                      {isPaid && <span className="text-sm text-gray-400">{billing === 'monthly' ? '/mois' : '/an'}</span>}
                     </div>
+                    <p className="h-4 text-xs text-gray-400 mb-2">
+                      {isPaid && billing === 'yearly' && monthlyEq ? `soit ${monthlyEq}/mois` : ''}
+                    </p>
                     <ul className="space-y-1.5 flex-1 mb-4">
-                      {p.features.map(f => (
+                      {info.features.map(f => (
                         <li key={f} className="text-sm text-gray-600 flex items-center gap-2">
                           <span className="text-[#22c55e]">✓</span> {f}
                         </li>
                       ))}
                     </ul>
-                    {!isCurrent && p.key !== 'FREE' && (
+                    {!isCurrent && key !== 'FREE' && (
                       <button
-                        onClick={() => goToPortal('checkout', p.key)}
+                        onClick={() => goToPortal('checkout', key)}
                         className="w-full py-2.5 rounded-xl font-bold text-sm text-white transition"
                         style={{ background: info.color }}>
-                        Passer à {info.label}
+                        {info.cta}
                       </button>
                     )}
-                    {isCurrent && plan !== 'FREE' && org?.stripeCustomerId && (
+                    {isCurrent && planKey !== 'FREE' && org?.stripeCustomerId && (
                       <button onClick={() => goToPortal('portal')}
                         className="w-full py-2.5 rounded-xl font-bold text-sm border border-gray-200 text-gray-600 hover:bg-gray-50 transition">
                         Gérer / Annuler
