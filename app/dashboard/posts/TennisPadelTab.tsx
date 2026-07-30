@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react'
 import type { TournamentMatch } from '@/lib/services/fft-pdf-parser'
-import GenerateForm from '../GenerateForm'
+import GenerateForm, { type MatchFormInitialValues } from '../GenerateForm'
 import PostsResult from '../PostsResult'
 import VisualGenerator from '../VisualGenerator'
 import TennisProgrammeSection from './TennisProgrammeSection'
@@ -10,11 +10,13 @@ import TennisResultSection from './TennisResultSection'
 import TennisActions from './TennisActions'
 import TennisVisualGenerator, { type TennisVisualConfig, DEFAULT_TENNIS_CONFIG } from './TennisVisualGenerator'
 import ToneSelector from '../ToneSelector'
-import SeasonRecapTab from '../SeasonRecapTab'
-import MatchAnnouncementTab from '../MatchAnnouncementTab'
-import PlayerSpotlightTab from '../PlayerSpotlightTab'
-import ClubAnnouncementTab from '../ClubAnnouncementTab'
-import EngagementPollTab from '../EngagementPollTab'
+import SeasonRecapTab, { type SeasonRecapFormInitialValues } from '../SeasonRecapTab'
+import MatchAnnouncementTab, { type AnnouncementFormInitialValues } from '../MatchAnnouncementTab'
+import PlayerSpotlightTab, { type PlayerSpotlightFormInitialValues } from '../PlayerSpotlightTab'
+import ClubAnnouncementTab, { type ClubAnnouncementFormInitialValues } from '../ClubAnnouncementTab'
+import EngagementPollTab, { type EngagementPollFormInitialValues } from '../EngagementPollTab'
+import CustomPostTab, { type CustomPostFormInitialValues } from '../CustomPostTab'
+import DescribeIntentTab from '../DescribeIntentTab'
 import { PageHeader, Segmented, GhostButton } from '../ui'
 import { Icon } from '../icons'
 import { ErrorNotice, toUiError, type UiError } from '../apiError'
@@ -77,7 +79,7 @@ function PostDisplay({ posts }: { posts: Record<string, string> }) {
   )
 }
 
-function MatchSection({ club }: { club: Club }) {
+function MatchSection({ club, initialValues }: { club: Club; initialValues?: MatchFormInitialValues }) {
   const [generatedPosts, setGeneratedPosts] = useState<{ instagram: string; facebook: string; whatsapp: string } | null>(null)
   const [generatedPostIds, setGeneratedPostIds] = useState<PostIds | null>(null)
   const [generatedMatch, setGeneratedMatch] = useState<MatchData | null>(null)
@@ -124,6 +126,7 @@ function MatchSection({ club }: { club: Club }) {
       {!generatedPosts && !generatedMatch && (
         <GenerateForm
           club={club}
+          initialValues={initialValues}
           onSuccess={(posts, match, photo, postIds, matchId) => {
             setGeneratedPosts(posts)
             setGeneratedPostIds(postIds)
@@ -401,9 +404,73 @@ function TournamentSection({ club }: { club: Club }) {
 
 // ── Main component ─────────────────────────────────────────────────────────
 
+type Section = 'match' | 'programme' | 'tournament' | 'results' | 'recap' | 'announcement' | 'spotlight' | 'club' | 'poll' | 'customPost'
+type Mode = 'assistant' | 'manual'
+type DescribeTarget = 'match' | 'announcement' | 'clubAnnouncement' | 'playerSpotlight' | 'seasonRecap' | 'engagementPoll' | 'customPost'
+
+type Prefill =
+  | { target: 'match'; values: MatchFormInitialValues; sourceText: string }
+  | { target: 'announcement'; values: AnnouncementFormInitialValues; sourceText: string }
+  | { target: 'clubAnnouncement'; values: ClubAnnouncementFormInitialValues; sourceText: string }
+  | { target: 'playerSpotlight'; values: PlayerSpotlightFormInitialValues; sourceText: string }
+  | { target: 'seasonRecap'; values: SeasonRecapFormInitialValues; sourceText: string }
+  | { target: 'engagementPoll'; values: EngagementPollFormInitialValues; sourceText: string }
+  | { target: 'customPost'; values: CustomPostFormInitialValues; sourceText: string }
+
+const TARGET_TO_SECTION: Record<DescribeTarget, Section> = {
+  match: 'match',
+  announcement: 'announcement',
+  clubAnnouncement: 'club',
+  playerSpotlight: 'spotlight',
+  seasonRecap: 'recap',
+  engagementPoll: 'poll',
+  customPost: 'customPost',
+}
+
+function SourceTextBanner({ sourceText, onClear }: { sourceText: string; onClear: () => void }) {
+  return (
+    <div className="flex items-start justify-between gap-3 rounded-xl border border-brand/20 bg-brand-soft/40 p-3">
+      <div className="flex items-start gap-2 min-w-0">
+        <Icon name="sparkles" className="h-4 w-4 shrink-0 mt-0.5 text-brand" />
+        <p className="text-xs text-ink min-w-0 truncate">
+          <span className="font-semibold">Formulaire prérempli à partir de :</span> « {sourceText} »
+        </p>
+      </div>
+      <button type="button" onClick={onClear} className="shrink-0 text-xs font-semibold text-muted hover:text-ink">
+        Effacer
+      </button>
+    </div>
+  )
+}
+
 export default function TennisPadelTab({ club }: { club: Club }) {
-  const [section, setSection] = useState<'match' | 'programme' | 'tournament' | 'results' | 'recap' | 'announcement' | 'spotlight' | 'club' | 'poll'>('match')
+  const [mode, setMode] = useState<Mode>('assistant')
+  const [section, setSection] = useState<Section>('match')
+  const [prefill, setPrefill] = useState<Prefill | null>(null)
   const sport = club.sport === 'Padel' ? 'Padel' : 'Tennis'
+
+  function handleSectionChange(next: Section) {
+    if (next !== section) setPrefill(null)
+    setSection(next)
+  }
+
+  function handleApply(
+    target: DescribeTarget,
+    values: MatchFormInitialValues | AnnouncementFormInitialValues | ClubAnnouncementFormInitialValues | PlayerSpotlightFormInitialValues | SeasonRecapFormInitialValues | EngagementPollFormInitialValues | CustomPostFormInitialValues,
+    sourceText: string
+  ) {
+    setPrefill({ target, values, sourceText } as Prefill)
+    setSection(TARGET_TO_SECTION[target])
+    setMode('manual')
+  }
+
+  if (mode === 'assistant') {
+    return (
+      <div className="max-w-5xl">
+        <DescribeIntentTab onApply={handleApply} onSwitchToManual={() => setMode('manual')} />
+      </div>
+    )
+  }
 
   return (
     <div className="max-w-5xl space-y-6">
@@ -411,11 +478,16 @@ export default function TennisPadelTab({ club }: { club: Club }) {
         icon="sparkles"
         title={`Générer du contenu ${sport}`}
         subtitle="Choisissez le type de contenu adapté à votre club."
+        action={
+          <GhostButton type="button" onClick={() => setMode('assistant')} icon="sparkles">
+            Assistant
+          </GhostButton>
+        }
       />
 
       <Segmented
         value={section}
-        onChange={setSection}
+        onChange={handleSectionChange}
         items={[
           { key: 'match', label: 'Post de match', icon: 'target' },
           { key: 'programme', label: 'Programme', icon: 'calendar' },
@@ -426,18 +498,69 @@ export default function TennisPadelTab({ club }: { club: Club }) {
           { key: 'spotlight', label: 'Joueur à l\'honneur', icon: 'user' },
           { key: 'club', label: 'Annonce du club', icon: 'users' },
           { key: 'poll', label: 'Engagement', icon: 'heart' },
+          { key: 'customPost', label: 'Publication libre', icon: 'fileText' },
         ]}
       />
 
-      {section === 'match'        && <MatchSection            club={club} />}
-      {section === 'programme'    && <TennisProgrammeSection  club={club} />}
-      {section === 'tournament'   && <TournamentSection       club={club} />}
-      {section === 'results'      && <TennisResultSection     club={club} />}
-      {section === 'recap'        && <SeasonRecapTab club={club} />}
-      {section === 'announcement' && <MatchAnnouncementTab club={club} />}
-      {section === 'spotlight'    && <PlayerSpotlightTab club={club} />}
-      {section === 'club'         && <ClubAnnouncementTab club={club} />}
-      {section === 'poll'         && <EngagementPollTab club={club} />}
+      {section === 'match' && (
+        <div className="space-y-3">
+          {prefill?.target === 'match' && (
+            <SourceTextBanner sourceText={prefill.sourceText} onClear={() => setPrefill(null)} />
+          )}
+          <MatchSection club={club} initialValues={prefill?.target === 'match' ? prefill.values : undefined} />
+        </div>
+      )}
+      {section === 'programme' && <TennisProgrammeSection club={club} />}
+      {section === 'tournament' && <TournamentSection club={club} />}
+      {section === 'results' && <TennisResultSection club={club} />}
+      {section === 'recap' && (
+        <div className="space-y-3">
+          {prefill?.target === 'seasonRecap' && (
+            <SourceTextBanner sourceText={prefill.sourceText} onClear={() => setPrefill(null)} />
+          )}
+          <SeasonRecapTab club={club} initialValues={prefill?.target === 'seasonRecap' ? prefill.values : undefined} />
+        </div>
+      )}
+      {section === 'announcement' && (
+        <div className="space-y-3">
+          {prefill?.target === 'announcement' && (
+            <SourceTextBanner sourceText={prefill.sourceText} onClear={() => setPrefill(null)} />
+          )}
+          <MatchAnnouncementTab club={club} initialValues={prefill?.target === 'announcement' ? prefill.values : undefined} />
+        </div>
+      )}
+      {section === 'spotlight' && (
+        <div className="space-y-3">
+          {prefill?.target === 'playerSpotlight' && (
+            <SourceTextBanner sourceText={prefill.sourceText} onClear={() => setPrefill(null)} />
+          )}
+          <PlayerSpotlightTab club={club} initialValues={prefill?.target === 'playerSpotlight' ? prefill.values : undefined} />
+        </div>
+      )}
+      {section === 'club' && (
+        <div className="space-y-3">
+          {prefill?.target === 'clubAnnouncement' && (
+            <SourceTextBanner sourceText={prefill.sourceText} onClear={() => setPrefill(null)} />
+          )}
+          <ClubAnnouncementTab club={club} initialValues={prefill?.target === 'clubAnnouncement' ? prefill.values : undefined} />
+        </div>
+      )}
+      {section === 'poll' && (
+        <div className="space-y-3">
+          {prefill?.target === 'engagementPoll' && (
+            <SourceTextBanner sourceText={prefill.sourceText} onClear={() => setPrefill(null)} />
+          )}
+          <EngagementPollTab club={club} initialValues={prefill?.target === 'engagementPoll' ? prefill.values : undefined} />
+        </div>
+      )}
+      {section === 'customPost' && (
+        <div className="space-y-3">
+          {prefill?.target === 'customPost' && (
+            <SourceTextBanner sourceText={prefill.sourceText} onClear={() => setPrefill(null)} />
+          )}
+          <CustomPostTab club={club} initialValues={prefill?.target === 'customPost' ? prefill.values : undefined} />
+        </div>
+      )}
     </div>
   )
 }

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { prisma } from '@/lib/prisma'
-import { publishToSocialConnections, recordPublishResult, findClubGeneratedPost } from '@/lib/services/publish-service'
+import { publishToSocialConnections, recordPublishResult, findClubGeneratedPost, claimPostForPublishing } from '@/lib/services/publish-service'
 
 export async function POST(req: Request) {
   const supabase = createClient()
@@ -34,6 +34,20 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Aucun réseau connecté trouvé.' }, { status: 404 })
   }
 
+  // Réserve le brouillon avant tout appel réseau, pour empêcher qu'un
+  // double-clic sur "Publier" ne déclenche deux publications sur Facebook/Instagram.
+  let post: Awaited<ReturnType<typeof findClubGeneratedPost>> = null
+  if (generatedPostId) {
+    post = await findClubGeneratedPost(club.id, generatedPostId)
+    if (!post) {
+      return NextResponse.json({ error: 'Post introuvable' }, { status: 404 })
+    }
+    const claimed = await claimPostForPublishing(post.id)
+    if (!claimed) {
+      return NextResponse.json({ error: 'Cette publication est déjà en cours ou a déjà été traitée.' }, { status: 409 })
+    }
+  }
+
   // Upload du visuel (URL publique nécessaire pour Instagram)
   let imageUrl: string | undefined
   if (image) {
@@ -51,17 +65,13 @@ export async function POST(req: Request) {
   const results = await publishToSocialConnections(connections, text, imageUrl)
   const allOk = results.every(r => r.ok)
 
-  if (generatedPostId) {
-    const post = await findClubGeneratedPost(club.id, generatedPostId)
-
-    if (post) {
-      // Le visuel fraîchement uploadé est conservé sur le post pour être
-      // réutilisable (aperçu Telegram, re-publication) sans re-upload.
-      if (imageUrl) {
-        await prisma.generatedPost.update({ where: { id: post.id }, data: { imageUrl } })
-      }
-      await recordPublishResult(post.id, results)
+  if (post) {
+    // Le visuel fraîchement uploadé est conservé sur le post pour être
+    // réutilisable (aperçu Telegram, re-publication) sans re-upload.
+    if (imageUrl) {
+      await prisma.generatedPost.update({ where: { id: post.id }, data: { imageUrl } })
     }
+    await recordPublishResult(post.id, results)
   }
 
   return NextResponse.json({ ok: allOk, results }, { status: allOk ? 200 : 207 })

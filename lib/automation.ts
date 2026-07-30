@@ -70,3 +70,30 @@ export async function runAutomationSideEffects(
     await notifyPendingReview(club, post)
   }
 }
+
+/**
+ * Variante de resolveInitialStatus/runAutomationSideEffects pour un contenu
+ * moins contraint qu'un type structuré (CUSTOM_POST : texte libre sans les
+ * garde-fous factuels d'un formulaire — score, adversaire, enum fermé...).
+ * FULL_AUTO y est traité comme AUTO_REVIEW : jamais de publication
+ * automatique sans relecture humaine pour ce type de contenu, quel que soit
+ * le mode d'automatisation du club. Cf. analyse assistant conversationnel —
+ * risque de contenu ambigu ou sensible publié sans revue.
+ */
+export async function resolveInitialStatusUnconstrained(club: ClubForAutomation): Promise<'DRAFT' | 'PENDING_REVIEW'> {
+  const mode = await resolveEffectiveMode(club)
+  return mode === 'MANUAL' ? 'DRAFT' : 'PENDING_REVIEW'
+}
+
+export async function runAutomationSideEffectsUnconstrained(
+  club: ClubForAutomation,
+  posts: Array<{ id: string; platform: string; content: string; imageUrl: string | null }>
+): Promise<void> {
+  const mode = await resolveEffectiveMode(club)
+  if (mode === 'MANUAL') return
+
+  const publishable = posts.filter(p => p.platform === 'facebook' || p.platform === 'instagram')
+  for (const post of publishable) {
+    await notifyPendingReview(club, post)
+  }
+}

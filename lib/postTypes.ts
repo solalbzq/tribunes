@@ -17,6 +17,7 @@ export const POST_TYPES = {
   PLAYER_SPOTLIGHT: { label: "Joueur à l'honneur", relation: 'playerSpotlight' },
   CLUB_ANNOUNCEMENT: { label: 'Annonce du club', relation: 'clubAnnouncement' },
   ENGAGEMENT_POLL: { label: "Post d'engagement", relation: 'engagementPoll' },
+  CUSTOM_POST: { label: 'Publication libre', relation: 'customPost' },
 } as const
 
 export type PostType = keyof typeof POST_TYPES

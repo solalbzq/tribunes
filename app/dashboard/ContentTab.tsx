@@ -10,6 +10,7 @@ import MatchAnnouncementTab, { type AnnouncementFormInitialValues } from './Matc
 import PlayerSpotlightTab, { type PlayerSpotlightFormInitialValues } from './PlayerSpotlightTab'
 import ClubAnnouncementTab, { type ClubAnnouncementFormInitialValues } from './ClubAnnouncementTab'
 import EngagementPollTab, { type EngagementPollFormInitialValues } from './EngagementPollTab'
+import CustomPostTab, { type CustomPostFormInitialValues } from './CustomPostTab'
 import DescribeIntentTab from './DescribeIntentTab'
 import VisualGenerator from './VisualGenerator'
 import FormatToggle from './FormatToggle'
@@ -42,9 +43,11 @@ type MatchData = {
 
 type PostIds = Partial<Record<'instagram' | 'facebook' | 'whatsapp', string>>
 
-type Section = 'describe' | 'match' | 'programme' | 'tournament' | 'recap' | 'announcement' | 'spotlight' | 'club' | 'poll'
+type Mode = 'assistant' | 'manual'
 
-type DescribeTarget = 'match' | 'announcement' | 'clubAnnouncement' | 'playerSpotlight' | 'seasonRecap' | 'engagementPoll'
+type Section = 'match' | 'programme' | 'tournament' | 'recap' | 'announcement' | 'spotlight' | 'club' | 'poll' | 'customPost'
+
+type DescribeTarget = 'match' | 'announcement' | 'clubAnnouncement' | 'playerSpotlight' | 'seasonRecap' | 'engagementPoll' | 'customPost'
 
 type Prefill =
   | { target: 'match'; values: MatchFormInitialValues; sourceText: string }
@@ -53,6 +56,7 @@ type Prefill =
   | { target: 'playerSpotlight'; values: PlayerSpotlightFormInitialValues; sourceText: string }
   | { target: 'seasonRecap'; values: SeasonRecapFormInitialValues; sourceText: string }
   | { target: 'engagementPoll'; values: EngagementPollFormInitialValues; sourceText: string }
+  | { target: 'customPost'; values: CustomPostFormInitialValues; sourceText: string }
 
 const TARGET_TO_SECTION: Record<DescribeTarget, Section> = {
   match: 'match',
@@ -61,10 +65,12 @@ const TARGET_TO_SECTION: Record<DescribeTarget, Section> = {
   playerSpotlight: 'spotlight',
   seasonRecap: 'recap',
   engagementPoll: 'poll',
+  customPost: 'customPost',
 }
 
 export default function ContentTab({ club }: { club: Club }) {
   const isTennisPadel = club.sport === 'Tennis' || club.sport === 'Padel'
+  const [mode, setMode] = useState<Mode>('assistant')
   const [section, setSection] = useState<Section>('match')
   const [prefill, setPrefill] = useState<Prefill | null>(null)
   const [generatedPosts, setGeneratedPosts] = useState<{ instagram: string; facebook: string; whatsapp: string } | null>(null)
@@ -84,11 +90,12 @@ export default function ContentTab({ club }: { club: Club }) {
 
   function handleApply(
     target: DescribeTarget,
-    values: MatchFormInitialValues | AnnouncementFormInitialValues | ClubAnnouncementFormInitialValues | PlayerSpotlightFormInitialValues | SeasonRecapFormInitialValues | EngagementPollFormInitialValues,
+    values: MatchFormInitialValues | AnnouncementFormInitialValues | ClubAnnouncementFormInitialValues | PlayerSpotlightFormInitialValues | SeasonRecapFormInitialValues | EngagementPollFormInitialValues | CustomPostFormInitialValues,
     sourceText: string
   ) {
     setPrefill({ target, values, sourceText } as Prefill)
     setSection(TARGET_TO_SECTION[target])
+    setMode('manual')
   }
 
   async function personalizeMatch(overrides: { tone?: string; customInstructions?: string }) {
@@ -135,19 +142,31 @@ export default function ContentTab({ club }: { club: Club }) {
     )
   }
 
+  if (mode === 'assistant') {
+    return (
+      <div className="max-w-5xl">
+        <DescribeIntentTab onApply={handleApply} onSwitchToManual={() => setMode('manual')} />
+      </div>
+    )
+  }
+
   return (
     <div className="max-w-5xl space-y-6">
       <PageHeader
         icon="sparkles"
         title="Générer du contenu"
         subtitle="Choisissez le type de contenu adapté à votre club."
+        action={
+          <GhostButton type="button" onClick={() => setMode('assistant')} icon="sparkles">
+            Assistant
+          </GhostButton>
+        }
       />
 
       <Segmented
         value={section}
         onChange={handleSectionChange}
         items={[
-          { key: 'describe', label: 'Décrire ma publication', icon: 'sparkles' },
           { key: 'match', label: 'Post de match', icon: 'target' },
           { key: 'programme', label: 'Programme', icon: 'calendar' },
           { key: 'tournament', label: 'Tournoi', icon: 'trophy' },
@@ -156,10 +175,9 @@ export default function ContentTab({ club }: { club: Club }) {
           { key: 'spotlight', label: 'Joueur à l\'honneur', icon: 'user' },
           { key: 'club', label: 'Annonce du club', icon: 'users' },
           { key: 'poll', label: 'Engagement', icon: 'heart' },
+          { key: 'customPost', label: 'Publication libre', icon: 'fileText' },
         ]}
       />
-
-      {section === 'describe' && <DescribeIntentTab onApply={handleApply} />}
 
       {section === 'match' && !generatedPosts && !generatedMatch && (
         <div className="max-w-xl space-y-3">
@@ -257,6 +275,14 @@ export default function ContentTab({ club }: { club: Club }) {
             <SourceTextBanner sourceText={prefill.sourceText} onClear={() => setPrefill(null)} />
           )}
           <EngagementPollTab club={club} initialValues={prefill?.target === 'engagementPoll' ? prefill.values : undefined} />
+        </div>
+      )}
+      {section === 'customPost' && (
+        <div className="max-w-5xl space-y-3">
+          {prefill?.target === 'customPost' && (
+            <SourceTextBanner sourceText={prefill.sourceText} onClear={() => setPrefill(null)} />
+          )}
+          <CustomPostTab club={club} initialValues={prefill?.target === 'customPost' ? prefill.values : undefined} />
         </div>
       )}
     </div>

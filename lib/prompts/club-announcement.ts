@@ -2,12 +2,14 @@ import { getSportVocab, getVocabHints } from '@/lib/sports'
 import { getVoiceInstruction } from '@/lib/voice'
 import { MULTI_PLATFORM_FORMAT } from './splitPlatforms'
 
-export type ClubAnnouncementCategory = 'RECRUITMENT' | 'SPONSOR' | 'CLUB_LIFE'
+export type ClubAnnouncementCategory = 'RECRUITMENT' | 'SPONSOR' | 'CLUB_LIFE' | 'VOLUNTEER' | 'THANKS'
 
 const CATEGORY_INSTRUCTIONS: Record<ClubAnnouncementCategory, string> = {
   RECRUITMENT: "Ton appel à l'action, énergique : donne envie de rejoindre le club, précise comment postuler/contacter (adhésion, essai gratuit, contact du bureau...).",
   SPONSOR: 'Ton de remerciement sincère envers le partenaire : mets en avant sa contribution au club, reste professionnel et chaleureux.',
   CLUB_LIFE: "Ton chaleureux et communautaire : partage un moment de vie du club (événement, récompense, anecdote), donne envie de faire partie de l'aventure.",
+  VOLUNTEER: "Ton mobilisateur, convivial : explique clairement le besoin (quoi, quand) et facilite la prise de contact pour se proposer comme bénévole.",
+  THANKS: "Ton sincère et chaleureux : remercie nommément le public visé (supporters, bénévoles, licenciés...) pour sa contribution, sans appel à l'action commercial.",
 }
 
 /**
@@ -27,7 +29,13 @@ export function clubAnnouncementPromptAll(
   const vocab = getSportVocab(sport)
   const tag = clubName.toLowerCase().replace(/\s/g, '')
   const voiceInstruction = getVoiceInstruction(voice)
-  const categoryTag = { RECRUITMENT: '#recrutement', SPONSOR: '#partenaire', CLUB_LIFE: '#viedeclub' }[category]
+  const categoryTag = {
+    RECRUITMENT: '#recrutement',
+    SPONSOR: '#partenaire',
+    CLUB_LIFE: '#viedeclub',
+    VOLUNTEER: '#benevolat',
+    THANKS: '#merci',
+  }[category]
 
   return `Tu es le community manager du club de ${sport} "${clubName}" ${vocab.emoji}.
 Rédige les posts réseaux sociaux pour l'annonce suivante.
