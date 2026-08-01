@@ -21,7 +21,13 @@ const TONE_LABELS: Record<string, string> = { STANDARD: 'Standard', FUN: 'Fun et
 
 type Section = 'overview' | 'brand' | 'tone' | 'types' | 'previews' | 'history'
 
-export default function IdentityOverview({ club, onNavigate }: { club: Club; onNavigate: (section: Section) => void }) {
+export default function IdentityOverview({
+  club, onNavigate, onOpenOnboarding,
+}: {
+  club: Club
+  onNavigate: (section: Section) => void
+  onOpenOnboarding: () => void
+}) {
   const [overridesCount, setOverridesCount] = useState<number | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
 
@@ -57,6 +63,12 @@ export default function IdentityOverview({ club, onNavigate }: { club: Club; onN
             </button>
             {menuOpen && (
               <div className="absolute right-0 mt-1 w-56 rounded-xl border border-line bg-white shadow-card py-1.5 z-10">
+                <button
+                  onClick={() => { setMenuOpen(false); onOpenOnboarding() }}
+                  className="w-full text-left px-4 py-2 text-sm text-ink hover:bg-subtle transition"
+                >
+                  Relancer la personnalisation rapide
+                </button>
                 <button
                   onClick={() => { setMenuOpen(false); onNavigate('history') }}
                   className="w-full text-left px-4 py-2 text-sm text-ink hover:bg-subtle transition"

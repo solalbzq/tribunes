@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState, type ChangeEvent } from 'react'
+import { useEffect, useRef, useState, type ChangeEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import VisualEditor from './VisualEditor'
 import TennisVisualEditor from './TennisVisualEditor'
@@ -8,6 +8,7 @@ import PostVisualEditor from './PostVisualEditor'
 import IdentityOverview from './IdentityOverview'
 import IdentityTypeStyles, { type VisualTarget } from './IdentityTypeStyles'
 import IdentityHistory from './IdentityHistory'
+import OnboardingWizard from './OnboardingWizard'
 import type { VisualConfig, VisualFormat, PostVisualConfig, PostVisualKind } from '@/lib/visualLayout'
 import { parsePostVisualConfig } from '@/lib/visualLayout'
 import type { TennisVisualConfig } from './posts/TennisVisualGenerator'
@@ -74,6 +75,24 @@ export default function PersonnalisationView({ club }: { club: Club }) {
   const [logoError, setLogoError] = useState<string | null>(null)
   const [detecting, setDetecting] = useState(false)
   const [detectError, setDetectError] = useState<string | null>(null)
+  const [showWizard, setShowWizard] = useState(false)
+  const [showWizardBanner, setShowWizardBanner] = useState(false)
+
+  const isUnconfigured = !club.logoUrl && !club.customInstructions
+
+  useEffect(() => {
+    if (!isUnconfigured) return
+    try {
+      if (window.localStorage.getItem(`onboarding_done_${club.id}`) || window.localStorage.getItem(`onboarding_dismissed_${club.id}`)) return
+    } catch {}
+    setShowWizardBanner(true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  function dismissWizardBanner() {
+    setShowWizardBanner(false)
+    try { window.localStorage.setItem(`onboarding_dismissed_${club.id}`, '1') } catch {}
+  }
 
   const currentClub: Club = { ...club, logoUrl, primaryColor: primary, secondaryColor: secondary, contentTone, customInstructions, signaturePhrase, bannedWords }
 
@@ -175,6 +194,9 @@ export default function PersonnalisationView({ club }: { club: Club }) {
     }
     setSavedIdentity(true)
     setTimeout(() => setSavedIdentity(false), 2000)
+    // Une sauvegarde manuelle (sans passer par le wizard) est aussi une
+    // configuration délibérée — pas besoin de continuer à suggérer l'onboarding.
+    dismissWizardBanner()
   }
 
   async function handleSaveLayout(format: VisualFormat, cfg: VisualConfig) {
@@ -226,6 +248,29 @@ export default function PersonnalisationView({ club }: { club: Club }) {
 
   return (
     <div className="max-w-7xl space-y-6">
+      {showWizard && (
+        <OnboardingWizard
+          club={currentClub}
+          onClose={() => setShowWizard(false)}
+          onActivated={() => setShowWizardBanner(false)}
+        />
+      )}
+
+      {showWizardBanner && (
+        <div className="flex items-center justify-between gap-4 rounded-2xl border border-brand/30 bg-brand-soft/40 px-5 py-4">
+          <div>
+            <p className="font-bold text-ink text-sm">Configurez l&apos;identité de votre club en 5 minutes</p>
+            <p className="text-xs text-muted mt-0.5">Logo, couleurs, ton — pour que chaque publication ressemble vraiment à votre club.</p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button onClick={dismissWizardBanner} className="text-xs font-semibold text-muted hover:text-ink transition">Plus tard</button>
+            <button onClick={() => setShowWizard(true)} className="px-4 py-2 rounded-xl bg-[#2563eb] text-white text-sm font-semibold hover:bg-[#1d4fd8] transition">
+              Commencer
+            </button>
+          </div>
+        </div>
+      )}
+
       <PageHeader
         icon="sliders"
         title="Identité du club"
@@ -246,7 +291,7 @@ export default function PersonnalisationView({ club }: { club: Club }) {
       />
 
       {section === 'overview' && (
-        <IdentityOverview club={currentClub} onNavigate={setSection} />
+        <IdentityOverview club={currentClub} onNavigate={setSection} onOpenOnboarding={() => setShowWizard(true)} />
       )}
 
       {section === 'brand' && (

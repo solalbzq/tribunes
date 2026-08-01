@@ -109,10 +109,12 @@ export default function DashboardClient({
   const router = useRouter();
   const [view, setView] = useState<View>("home");
 
-  // Ouvre l'onglet Réseaux au retour du flux OAuth (?tab=reseaux)
+  // Ouvre l'onglet demandé au chargement (?tab=reseaux au retour du flux OAuth,
+  // ?tab=personnalisation depuis l'onboarding "parcours complet"...).
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get("tab") === "reseaux") setView("reseaux");
+    const tab = params.get("tab");
+    if (tab && NAV.some((n) => n.key === tab)) setView(tab as View);
   }, []);
 
   useEffect(() => {
