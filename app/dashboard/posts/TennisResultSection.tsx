@@ -37,6 +37,7 @@ export default function TennisResultSection({ club }: { club: Club }) {
   const [matchResultId, setMatchResultId] = useState<string | null>(null)
   const [aiPosts, setAiPosts] = useState<Posts | null>(null)
   const [generatingCaption, setGeneratingCaption] = useState(false)
+  const [bannedWordsWarning, setBannedWordsWarning] = useState<Record<string, string[]> | null>(null)
 
   const hasScore = clubScore !== '' && oppScore !== '' && opponent.trim() !== ''
 
@@ -94,6 +95,7 @@ export default function TennisResultSection({ club }: { club: Club }) {
     setGeneratingCaption(false)
     if (!res.ok) { setError(toUiError(json, 'Génération impossible')); return }
     setAiPosts(json.posts)
+    setBannedWordsWarning(json.bannedWordsWarning ?? null)
   }
 
   async function getImageBlob(): Promise<Blob | null> {
@@ -168,6 +170,18 @@ export default function TennisResultSection({ club }: { club: Club }) {
       </div>
 
       <ErrorNotice error={error} />
+
+      {bannedWordsWarning && Object.keys(bannedWordsWarning).length > 0 && (
+        <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-800">
+          <p className="font-semibold">Expression à éviter détectée</p>
+          <p className="mt-1">
+            {Object.entries(bannedWordsWarning).map(([platform, words]) => (
+              <span key={platform} className="block">{platform} : {words.join(', ')}</span>
+            ))}
+          </p>
+          <p className="mt-1 text-xs text-amber-700">La publication automatique est désactivée pour ce contenu.</p>
+        </div>
+      )}
 
       {/* Aperçu + actions */}
       {hasScore && (

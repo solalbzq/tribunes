@@ -46,6 +46,7 @@ export default function MatchAnnouncementTab({ club, initialValues }: { club: Cl
   const [postIds, setPostIds] = useState<PostIds | null>(null)
   const [announcementId, setAnnouncementId] = useState<string | null>(null)
   const [personalizing, setPersonalizing] = useState(false)
+  const [bannedWordsWarning, setBannedWordsWarning] = useState<Record<string, string[]> | null>(null)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
 
   async function getImageBlob(): Promise<Blob | null> {
@@ -78,6 +79,7 @@ export default function MatchAnnouncementTab({ club, initialValues }: { club: Cl
       setPosts(data.posts)
       setPostIds(data.postIds ?? null)
       setAnnouncementId(data.announcementId ?? null)
+      setBannedWordsWarning(data.bannedWordsWarning ?? null)
     } catch (err) {
       setError((err as Error).message)
     } finally {
@@ -103,6 +105,7 @@ export default function MatchAnnouncementTab({ club, initialValues }: { club: Cl
       if (!res.ok) return
       setPosts(data.posts)
       setPostIds(data.postIds ?? null)
+      setBannedWordsWarning(data.bannedWordsWarning ?? null)
     } finally {
       setPersonalizing(false)
     }
@@ -114,10 +117,11 @@ export default function MatchAnnouncementTab({ club, initialValues }: { club: Cl
         posts={posts}
         postIds={postIds}
         title="Vos légendes avant-match sont prêtes"
-        onReset={() => { setPosts(null); setPostIds(null); setAnnouncementId(null) }}
+        onReset={() => { setPosts(null); setPostIds(null); setAnnouncementId(null); setBannedWordsWarning(null) }}
         getImageBlob={getImageBlob}
         onPersonalize={personalize}
         personalizing={personalizing}
+        bannedWordsWarning={bannedWordsWarning}
       />
     )
   }

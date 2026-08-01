@@ -61,7 +61,7 @@ type CustomFields = {
   keyInformation: string[]
   callToAction: string | null
   targetAudience: string | null
-  tone: string | null
+  desiredMood: string | null
   suggestedCategory: string | null
 }
 
@@ -128,7 +128,7 @@ const ENGAGEMENT_POLL_FIELD_LABELS: Record<keyof EngagementPollFields, string> =
 }
 const CUSTOM_FIELD_LABELS: Record<keyof CustomFields, string> = {
   objective: 'Objectif', subject: 'Sujet', keyInformation: 'Informations clés',
-  callToAction: 'Appel à l’action', targetAudience: 'Public visé', tone: 'Ton',
+  callToAction: 'Appel à l’action', targetAudience: 'Public visé', desiredMood: 'Ambiance souhaitée',
   suggestedCategory: 'Catégorie suggérée',
 }
 const CATEGORY_LABELS: Record<ClubAnnouncementFields['category'], string> = {
@@ -269,7 +269,7 @@ export default function DescribeIntentTab({
           keyInformation: f.keyInformation.length ? f.keyInformation : undefined,
           callToAction: f.callToAction ?? undefined,
           targetAudience: f.targetAudience ?? undefined,
-          tone: f.tone ?? undefined,
+          desiredMood: f.desiredMood ?? undefined,
           suggestedCategory: f.suggestedCategory ?? undefined,
         }, sourceText)
         return

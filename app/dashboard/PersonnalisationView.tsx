@@ -67,6 +67,8 @@ export default function PersonnalisationView({ club }: { club: Club }) {
   const [uploading, setUploading] = useState(false)
   const [savingIdentity, setSavingIdentity] = useState(false)
   const [savedIdentity, setSavedIdentity] = useState(false)
+  const [identityError, setIdentityError] = useState<string | null>(null)
+  const [logoError, setLogoError] = useState<string | null>(null)
 
   function buildVisualConfigPayload(format?: VisualFormat, cfg?: VisualConfig): StoredVisualConfig {
     const stored = getStoredVisualConfig(club.visualConfig)
@@ -81,8 +83,8 @@ export default function PersonnalisationView({ club }: { club: Club }) {
     visualConfig?: StoredVisualConfig
     tennisVisualConfig?: TennisVisualConfig
     postVisualConfigs?: Record<string, unknown>
-  } = {}) {
-    await fetch('/api/clubs', {
+  } = {}): Promise<{ ok: true } | { ok: false; error: string }> {
+    const res = await fetch('/api/clubs', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -99,7 +101,12 @@ export default function PersonnalisationView({ club }: { club: Club }) {
         ...(extra.postVisualConfigs !== undefined ? { postVisualConfigs: extra.postVisualConfigs } : {}),
       }),
     })
+    if (!res.ok) {
+      const data = await res.json().catch(() => null)
+      return { ok: false, error: data?.error ?? 'Échec de la sauvegarde' }
+    }
     router.refresh()
+    return { ok: true }
   }
 
   async function handleSavePostVisual(kind: PostVisualKind, format: VisualFormat, cfg: PostVisualConfig) {
@@ -117,14 +124,18 @@ export default function PersonnalisationView({ club }: { club: Club }) {
   async function handleLogoChange(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
+    setLogoError(null)
     setLogoPreview(URL.createObjectURL(file))
     setUploading(true)
     const fd = new FormData()
     fd.append('logo', file)
     const res = await fetch('/api/clubs/logo', { method: 'POST', body: fd })
+    const data = await res.json().catch(() => null)
     if (res.ok) {
-      const data = await res.json()
-      setLogoUrl(data.logoUrl)
+      setLogoUrl(data?.logoUrl ?? null)
+    } else {
+      setLogoPreview(club.logoUrl)
+      setLogoError(data?.error ?? 'Échec de l’envoi du logo')
     }
     setUploading(false)
     router.refresh()
@@ -132,8 +143,13 @@ export default function PersonnalisationView({ club }: { club: Club }) {
 
   async function handleSaveIdentity() {
     setSavingIdentity(true)
-    await saveClubBase({ visualConfig: buildVisualConfigPayload() })
+    setIdentityError(null)
+    const result = await saveClubBase({ visualConfig: buildVisualConfigPayload() })
     setSavingIdentity(false)
+    if (!result.ok) {
+      setIdentityError(result.error)
+      return
+    }
     setSavedIdentity(true)
     setTimeout(() => setSavedIdentity(false), 2000)
   }
@@ -197,11 +213,12 @@ export default function PersonnalisationView({ club }: { club: Club }) {
                     >
                       {uploading ? 'Upload en cours...' : 'Choisir un logo'}
                     </button>
-                    <p className="text-xs text-gray-400 mt-1">PNG, JPG, SVG - max 2 Mo</p>
-                    {logoUrl && !uploading && <p className="text-xs text-[#22c55e] mt-1">✓ Logo sauvegarde</p>}
+                    <p className="text-xs text-gray-400 mt-1">PNG, JPG ou WEBP - max 5 Mo</p>
+                    {logoError && <p className="text-xs text-red-500 mt-1">{logoError}</p>}
+                    {logoUrl && !uploading && !logoError && <p className="text-xs text-[#22c55e] mt-1">✓ Logo sauvegarde</p>}
                   </div>
                 </div>
-                <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleLogoChange} />
+                <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={handleLogoChange} />
               </div>
 
               <div className="bg-gray-50 rounded-2xl p-5 space-y-5">
@@ -263,9 +280,11 @@ export default function PersonnalisationView({ club }: { club: Club }) {
                     value={customInstructions}
                     onChange={e => setCustomInstructions(e.target.value)}
                     rows={3}
+                    maxLength={1000}
                     className={`${INPUT} resize-none`}
                     placeholder="Ex: n'utilise jamais d'emoji, mentionne toujours notre sponsor principal..."
                   />
+                  <p className="mt-1 text-right text-xs text-gray-400">{customInstructions.length}/1000</p>
                 </Field>
                 <Field label="Mots à éviter (optionnel)">
                   <input
@@ -275,18 +294,21 @@ export default function PersonnalisationView({ club }: { club: Club }) {
                     className={INPUT}
                     placeholder="Ex: déception, échec, faible affluence"
                   />
+                  <p className="mt-1 text-xs text-gray-400">Séparez par des virgules — 30 expressions maximum, 50 caractères chacune.</p>
                 </Field>
                 <Field label="Phrase de signature (optionnel)">
                   <input
                     type="text"
                     value={signaturePhrase}
                     onChange={e => setSignaturePhrase(e.target.value)}
+                    maxLength={200}
                     className={INPUT}
                     placeholder="Ex: Allez les Rouge et Blanc !"
                   />
                 </Field>
               </div>
 
+              {identityError && <p className="text-xs text-red-500">{identityError}</p>}
               <button
                 onClick={handleSaveIdentity}
                 disabled={savingIdentity}

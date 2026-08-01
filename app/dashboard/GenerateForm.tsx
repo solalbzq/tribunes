@@ -238,7 +238,7 @@ export default function GenerateForm({
   initialValues,
 }: {
   club: Club
-  onSuccess: (posts: Posts, match: MatchData, photoFile: File | null, postIds: PostIds, matchId: string) => void
+  onSuccess: (posts: Posts, match: MatchData, photoFile: File | null, postIds: PostIds, matchId: string, bannedWordsWarning: Record<string, string[]> | null) => void
   onVisualOnly: (match: MatchData, photoFile: File | null) => void
   initialValues?: MatchFormInitialValues
 }) {
@@ -346,7 +346,7 @@ export default function GenerateForm({
         ((data.match?.posts as Array<{ id: string; platform: keyof Posts }> | undefined) ?? [])
           .map(post => [post.platform, post.id])
       ) as PostIds
-      onSuccess(data.posts, getMatchData(), photoFile, postIds, data.match.id)
+      onSuccess(data.posts, getMatchData(), photoFile, postIds, data.match.id, data.bannedWordsWarning ?? null)
     } catch {
       setError({ message: 'Une erreur est survenue. Réessaie.', quota: false })
     } finally {

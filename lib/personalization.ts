@@ -14,6 +14,76 @@ export type ClubPersonalization = {
   bannedWords?: string | null
 }
 
+/**
+ * Bornes serveur pour les champs de personnalisation — jamais uniquement
+ * côté client (le navigateur ne protège rien contre un appel API direct).
+ * `bannedWords` est stocké comme une seule chaîne séparée par des virgules
+ * (pas un tableau en base) : la limite porte sur le nombre d'expressions et
+ * la longueur de chacune, pas sur la longueur totale de la chaîne.
+ */
+export const PERSONALIZATION_LIMITS = {
+  customInstructions: 1000,
+  oneTimeInstructions: 300,
+  signaturePhrase: 200,
+  typeInstructions: 500,
+  bannedWordsMaxItems: 30,
+  bannedWordMaxLength: 50,
+} as const
+
+type ValidationResult<T> = { ok: true; value: T } | { ok: false; error: string }
+
+function normalizeText(value: unknown): string | null {
+  if (typeof value !== 'string') return null
+  const trimmed = value.trim()
+  return trimmed.length ? trimmed : null
+}
+
+function splitBannedWords(value: string): string[] {
+  return value.split(',').map(w => w.trim()).filter(Boolean)
+}
+
+/** Valide et normalise les 3 champs de personnalité générale du club (route `/api/clubs`). */
+export function validateClubPersonalizationInput(input: {
+  customInstructions?: unknown
+  signaturePhrase?: unknown
+  bannedWords?: unknown
+}): ValidationResult<{ customInstructions: string | null; signaturePhrase: string | null; bannedWords: string | null }> {
+  const customInstructions = normalizeText(input.customInstructions)
+  if (customInstructions && customInstructions.length > PERSONALIZATION_LIMITS.customInstructions) {
+    return { ok: false, error: `Les consignes personnalisées sont limitées à ${PERSONALIZATION_LIMITS.customInstructions} caractères` }
+  }
+
+  const signaturePhrase = normalizeText(input.signaturePhrase)
+  if (signaturePhrase && signaturePhrase.length > PERSONALIZATION_LIMITS.signaturePhrase) {
+    return { ok: false, error: `La signature est limitée à ${PERSONALIZATION_LIMITS.signaturePhrase} caractères` }
+  }
+
+  const bannedWordsRaw = normalizeText(input.bannedWords)
+  let bannedWords: string | null = null
+  if (bannedWordsRaw) {
+    const items = splitBannedWords(bannedWordsRaw)
+    if (items.length > PERSONALIZATION_LIMITS.bannedWordsMaxItems) {
+      return { ok: false, error: `Maximum ${PERSONALIZATION_LIMITS.bannedWordsMaxItems} mots ou expressions à éviter` }
+    }
+    const tooLong = items.find(w => w.length > PERSONALIZATION_LIMITS.bannedWordMaxLength)
+    if (tooLong) {
+      return { ok: false, error: `Chaque expression à éviter est limitée à ${PERSONALIZATION_LIMITS.bannedWordMaxLength} caractères` }
+    }
+    bannedWords = items.join(', ')
+  }
+
+  return { ok: true, value: { customInstructions, signaturePhrase, bannedWords } }
+}
+
+/** Valide la consigne ponctuelle ("Personnaliser ce post") envoyée à n'importe laquelle des routes de génération. */
+export function validateOneTimeInstructions(input: unknown): ValidationResult<string | null> {
+  const value = normalizeText(input)
+  if (value && value.length > PERSONALIZATION_LIMITS.oneTimeInstructions) {
+    return { ok: false, error: `La consigne ponctuelle est limitée à ${PERSONALIZATION_LIMITS.oneTimeInstructions} caractères` }
+  }
+  return { ok: true, value }
+}
+
 export function buildPersonalizationPrefix(
   club: ClubPersonalization,
   overrideInstructions?: string | null

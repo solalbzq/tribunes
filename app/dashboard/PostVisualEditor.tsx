@@ -60,6 +60,10 @@ const SAMPLE_CONTEXT: Record<PostVisualKind, Partial<PostVisualContext>> = {
     badge: '🗳️ VOTRE AVIS', heading: 'Quel a été votre meilleur souvenir de la saison ?',
     options: ['La montée en division', 'Le derby gagné', "L'esprit d'équipe"],
   },
+  customPost: {
+    badge: '🎉 VIE DU CLUB', heading: 'Buvette du tournoi ce week-end',
+    paragraph: "Venez nombreux ce week-end pour la buvette et la restauration du tournoi, au profit de l'école de sport.",
+  },
 }
 
 function newElement(type: PostVisualElementType, secondary: string): PostVisualElement {

@@ -80,6 +80,7 @@ export default function ContentTab({ club }: { club: Club }) {
   const [generatedPhoto, setGeneratedPhoto] = useState<File | null>(null)
   const [personalizing, setPersonalizing] = useState(false)
   const [visualOnlyFormat, setVisualOnlyFormat] = useState<VisualFormat>('post')
+  const [bannedWordsWarning, setBannedWordsWarning] = useState<Record<string, string[]> | null>(null)
 
   function handleSectionChange(next: Section) {
     // Un ancien préremplissage ne doit jamais réapparaître silencieusement
@@ -121,6 +122,7 @@ export default function ContentTab({ club }: { club: Club }) {
           .map(post => [post.platform, post.id])
       ) as PostIds
       setGeneratedPostIds(postIds)
+      setBannedWordsWarning(data.bannedWordsWarning ?? null)
     } finally {
       setPersonalizing(false)
     }
@@ -187,12 +189,13 @@ export default function ContentTab({ club }: { club: Club }) {
           <GenerateForm
             club={club}
             initialValues={prefill?.target === 'match' ? prefill.values : undefined}
-            onSuccess={(posts, match, photo, postIds, matchId) => {
+            onSuccess={(posts, match, photo, postIds, matchId, warning) => {
               setGeneratedPosts(posts)
               setGeneratedPostIds(postIds)
               setGeneratedMatch(match)
               setGeneratedMatchId(matchId)
               setGeneratedPhoto(photo)
+              setBannedWordsWarning(warning)
             }}
             onVisualOnly={(match, photo) => {
               setGeneratedMatch(match)
@@ -224,6 +227,7 @@ export default function ContentTab({ club }: { club: Club }) {
           photoFile={generatedPhoto}
           onPersonalize={personalizeMatch}
           personalizing={personalizing}
+          bannedWordsWarning={bannedWordsWarning}
           onReset={() => {
             setGeneratedPosts(null)
             setGeneratedPostIds(null)
@@ -231,6 +235,7 @@ export default function ContentTab({ club }: { club: Club }) {
             setGeneratedMatchId(null)
             setGeneratedPhoto(null)
             setPrefill(null)
+            setBannedWordsWarning(null)
           }}
         />
       )}

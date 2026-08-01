@@ -144,6 +144,7 @@ export default function TennisProgrammeSection({ club }: { club: Club }) {
   const [genError, setGenError] = useState<string | null>(null)
   const [posts, setPosts] = useState<Posts | null>(null)
   const [postIds, setPostIds] = useState<PostIds | null>(null)
+  const [bannedWordsWarning, setBannedWordsWarning] = useState<Record<string, string[]> | null>(null)
 
   async function generateCaptions() {
     setGenerating(true); setGenError(null)
@@ -162,6 +163,7 @@ export default function TennisProgrammeSection({ club }: { club: Club }) {
       if (!res.ok) throw new Error(data.error ?? 'Échec de la génération')
       setPosts(data.posts)
       setPostIds(data.postIds ?? null)
+      setBannedWordsWarning(data.bannedWordsWarning ?? null)
     } catch (err) {
       setGenError((err as Error).message)
     } finally {
@@ -175,7 +177,8 @@ export default function TennisProgrammeSection({ club }: { club: Club }) {
         posts={posts}
         postIds={postIds}
         title="Vos légendes de programme sont prêtes"
-        onReset={() => { setPosts(null); setPostIds(null) }}
+        onReset={() => { setPosts(null); setPostIds(null); setBannedWordsWarning(null) }}
+        bannedWordsWarning={bannedWordsWarning}
       />
     )
   }

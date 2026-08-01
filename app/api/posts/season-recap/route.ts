@@ -7,8 +7,9 @@ import { splitPlatformPosts } from '@/lib/prompts/splitPlatforms'
 import { logAiUsage } from '@/lib/usage'
 import { checkAiQuota, quotaExceededResponse } from '@/lib/quota'
 import { resolveInitialStatus, runAutomationSideEffects } from '@/lib/automation'
-import { buildPersonalizationPrefix } from '@/lib/personalization'
+import { buildPersonalizationPrefix, validateOneTimeInstructions } from '@/lib/personalization'
 import { deletePostsForRegenerate } from '@/lib/services/postGeneration'
+import { checkBannedWordsAcrossPlatforms } from '@/lib/bannedWords'
 
 const PLATFORMS = ['instagram', 'facebook', 'whatsapp'] as const
 type Platform = typeof PLATFORMS[number]
@@ -65,8 +66,11 @@ export async function POST(req: Request) {
   const quota = await checkAiQuota(club)
   if (!quota.allowed) return quotaExceededResponse(quota)
 
+  const oneTimeInstructions = validateOneTimeInstructions(customInstructions)
+  if (!oneTimeInstructions.ok) return NextResponse.json({ error: oneTimeInstructions.error }, { status: 400 })
+
   const voice = tone || club.contentTone
-  const prompt = buildPersonalizationPrefix(club, customInstructions)
+  const prompt = buildPersonalizationPrefix(club, oneTimeInstructions.value)
     + seasonRecapPromptAll(club.sport, club.name, periodLabel, wins, draws, losses, rankingNote || undefined, voice)
 
   const completion = await openai.chat.completions.create({
@@ -82,6 +86,7 @@ export async function POST(req: Request) {
   for (const platform of requested) posts[platform] = all[platform]
 
   const initialStatus = await resolveInitialStatus(club)
+  const bannedWords = checkBannedWordsAcrossPlatforms(posts, club.bannedWords)
 
   let recap
   if (existingRecapId && regenerate) {
@@ -125,8 +130,11 @@ export async function POST(req: Request) {
     })
   }
 
-  await runAutomationSideEffects(club, recap.posts)
+  await runAutomationSideEffects(club, recap.posts, { forceReview: bannedWords.hasViolation })
   const postIds = Object.fromEntries(recap.posts.map(p => [p.platform, p.id]))
 
-  return NextResponse.json({ recapId: recap.id, posts, postIds, record: { wins, draws, losses } })
+  return NextResponse.json({
+    recapId: recap.id, posts, postIds, record: { wins, draws, losses },
+    bannedWordsWarning: bannedWords.hasViolation ? bannedWords.violationsByPlatform : null,
+  })
 }

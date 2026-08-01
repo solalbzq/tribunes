@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { CLUB_VOICES } from '@/lib/voice'
 import { resolvePlanForClub } from '@/lib/org'
 import { sanitizeFooterElements } from '@/lib/visualLayout'
+import { validateClubPersonalizationInput } from '@/lib/personalization'
 
 // Sanitisation "bandeau premium" : neutralise toute personnalisation du footer
 // (masquage, remplacement par le nom du club) envoyée par un club au plan
@@ -45,6 +46,9 @@ export async function POST(req: Request) {
   } = await req.json()
   if (!name || !sport) return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
 
+  const personalization = validateClubPersonalizationInput({ customInstructions, signaturePhrase, bannedWords })
+  if (!personalization.ok) return NextResponse.json({ error: personalization.error }, { status: 400 })
+
   const existing = await prisma.club.findUnique({ where: { userId: user.id }, select: { id: true, orgId: true } })
   const { plan } = await resolvePlanForClub({ orgId: existing?.orgId ?? null, userId: user.id })
   const isPremium = plan !== 'FREE'
@@ -58,9 +62,9 @@ export async function POST(req: Request) {
     ...(postVisualConfigs !== undefined ? { postVisualConfigs: sanitizePostVisualConfigsPayload(postVisualConfigs, isPremium) as object } : {}),
     ...(tenupUrl !== undefined ? { tenupUrl: tenupUrl || null } : {}),
     ...(contentTone !== undefined && CLUB_VOICES.includes(contentTone) ? { contentTone } : {}),
-    ...(customInstructions !== undefined ? { customInstructions: customInstructions || null } : {}),
-    ...(signaturePhrase !== undefined ? { signaturePhrase: signaturePhrase || null } : {}),
-    ...(bannedWords !== undefined ? { bannedWords: bannedWords || null } : {}),
+    ...(customInstructions !== undefined ? { customInstructions: personalization.value.customInstructions } : {}),
+    ...(signaturePhrase !== undefined ? { signaturePhrase: personalization.value.signaturePhrase } : {}),
+    ...(bannedWords !== undefined ? { bannedWords: personalization.value.bannedWords } : {}),
   }
 
   const club = await prisma.club.upsert({

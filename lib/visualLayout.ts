@@ -597,6 +597,7 @@ export function postVisualCanvasSizeFor(format: VisualFormat): { w: number; h: n
 export type PostVisualKind =
   | 'tournament' | 'schedule' | 'seasonRecap'
   | 'matchAnnouncement' | 'playerSpotlight' | 'clubAnnouncement' | 'engagementPoll'
+  | 'customPost'
 
 export type PostVisualElementType =
   | 'logo' | 'footer' | 'heading' | 'subheading' | 'paragraph' | 'badge'
@@ -651,6 +652,11 @@ export const POST_VISUAL_CORE_ELEMENTS: Record<PostVisualKind, PostVisualElement
   playerSpotlight: ['badge', 'photo', 'heading', 'paragraph', 'footer'],
   clubAnnouncement: ['badge', 'logo', 'heading', 'paragraph', 'footer'],
   engagementPoll: ['badge', 'logo', 'heading', 'optionsList', 'footer'],
+  // Publication libre (CUSTOM_POST) : même structure que "Annonce du club" par
+  // défaut — hérite de son style tant qu'aucune variante propre n'est
+  // enregistrée sous la clé 'customPost' de Club.postVisualConfigs (cf.
+  // resolveCustomPostVisualKind ci-dessous).
+  customPost: ['badge', 'logo', 'heading', 'paragraph', 'footer'],
 }
 
 export const POST_VISUAL_LABELS: Record<PostVisualElementType, string> = {
@@ -714,6 +720,14 @@ const POST_VISUAL_DEFAULTS: Record<PostVisualKind, PostVisualElement[]> = {
     el('optionsList', { x: 90, y: 560, w: PW - 180, h: 460 }),
     el('footer', { x: 0, y: PH - 80, w: PW, h: 80 }),
   ],
+  // Identique à clubAnnouncement par défaut (cf. POST_VISUAL_CORE_ELEMENTS.customPost).
+  customPost: [
+    el('badge', { x: 320, y: 88, w: 440, h: 60 }),
+    el('logo', { x: 475, y: 200, w: 130, h: 130 }),
+    el('heading', { x: 0, y: 370, w: PW, h: 110 }),
+    el('paragraph', { x: 0, y: 500, w: PW, h: 190 }),
+    el('footer', { x: 0, y: PH - 80, w: PW, h: 80 }),
+  ],
 }
 
 function listKindStoryDefaults(): PostVisualElement[] {
@@ -766,6 +780,14 @@ const POST_VISUAL_STORY_DEFAULTS: Record<PostVisualKind, PostVisualElement[]> = 
     el('optionsList', { x: 90, y: 620, w: SPW - 180, h: 700 }),
     el('footer', { x: 0, y: SPH - 90, w: SPW, h: 90 }),
   ],
+  // Identique à clubAnnouncement par défaut (cf. POST_VISUAL_CORE_ELEMENTS.customPost).
+  customPost: [
+    el('badge', { x: 300, y: 120, w: 480, h: 64 }),
+    el('logo', { x: 465, y: 260, w: 150, h: 150 }),
+    el('heading', { x: 0, y: 460, w: SPW, h: 130 }),
+    el('paragraph', { x: 0, y: 610, w: SPW, h: 260 }),
+    el('footer', { x: 0, y: SPH - 90, w: SPW, h: 90 }),
+  ],
 }
 
 export function defaultPostVisualElements(kind: PostVisualKind, format: VisualFormat = 'post'): PostVisualElement[] {
@@ -803,6 +825,30 @@ export function parsePostVisualConfig(raw: unknown, kind: PostVisualKind, format
   const saved = (entry as { elements?: PostVisualElement[] }).elements
   if (!saved || !Array.isArray(saved)) return { elements: defaults }
   return { elements: mergePostVisualElements(saved, defaults) }
+}
+
+/**
+ * Publication libre (CUSTOM_POST) : contrairement aux 6 autres types
+ * génériques, elle n'a pas de style propre par défaut — elle hérite de
+ * "Annonce du club" tant que le club n'a pas explicitement enregistré une
+ * variante sous la clé 'customPost'. Détermine quelle clé de
+ * `Club.postVisualConfigs` résoudre, pour que l'interface puisse afficher
+ * la source réelle du style utilisé ("Personnalisé" vs "Annonce du club").
+ */
+export function hasCustomPostVisualOverride(raw: unknown): boolean {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return false
+  const entry = (raw as Record<string, unknown>).customPost
+  if (!entry || typeof entry !== 'object') return false
+  if ('post' in entry || 'story' in entry) {
+    const sub = entry as Record<string, { elements?: unknown } | undefined>
+    return Array.isArray(sub.post?.elements) || Array.isArray(sub.story?.elements)
+  }
+  return Array.isArray((entry as { elements?: unknown }).elements)
+}
+
+/** Clé à résoudre pour le rendu visuel d'une publication libre — 'customPost' si personnalisé, sinon 'clubAnnouncement'. */
+export function resolveCustomPostVisualKind(raw: unknown): Extract<PostVisualKind, 'customPost' | 'clubAnnouncement'> {
+  return hasCustomPostVisualOverride(raw) ? 'customPost' : 'clubAnnouncement'
 }
 
 /** Découpe un texte en lignes tenant dans `maxWidth`, jusqu'à `maxLines`. */

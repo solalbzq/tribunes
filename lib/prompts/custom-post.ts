@@ -8,7 +8,14 @@ export type CustomPostData = {
   keyInformation: string[]
   callToAction: string | null
   targetAudience: string | null
-  tone: string | null
+  /**
+   * Ambiance/angle éditorial décrit en langage libre (ex: extrait par
+   * l'assistant conversationnel depuis "je veux une annonce fun et
+   * décontractée"). Toujours traité comme une DONNÉE encadrée dans le prompt,
+   * jamais comme le réglage de voix STANDARD/FUN/SOBER — celui-ci est un
+   * paramètre distinct (voir `voice` ci-dessous / `ClubVoice`).
+   */
+  desiredMood: string | null
   desiredPlatforms: string[]
   suggestedCategory: string | null
 }
@@ -50,7 +57,7 @@ Informations clés à inclure telles quelles, sans en ajouter d'autres :
 """${keyInfoBlock}"""
 ${data.callToAction ? `Appel à l'action à inclure : """${data.callToAction}"""` : ''}
 ${data.targetAudience ? `Public visé : """${data.targetAudience}"""` : ''}
-${data.tone ? `Ton souhaité par le club : """${data.tone}"""` : ''}
+${data.desiredMood ? `Ambiance souhaitée par le club pour cette publication : """${data.desiredMood}"""` : ''}
 
 Vocabulaire ${sport}-spécifique à utiliser :
 ${getVocabHints(sport)}

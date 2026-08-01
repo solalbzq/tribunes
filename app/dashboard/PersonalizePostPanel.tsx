@@ -51,9 +51,11 @@ export default function PersonalizePostPanel({
           value={customInstructions}
           onChange={e => setCustomInstructions(e.target.value)}
           rows={3}
+          maxLength={300}
           className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#2563eb]/30"
           placeholder="Ex: mentionne le nom du sponsor du match, reste très court..."
         />
+        <p className="mt-1 text-right text-xs text-gray-400">{customInstructions.length}/300</p>
       </div>
 
       <button

@@ -51,21 +51,26 @@ export async function resolveInitialStatus(club: ClubForAutomation): Promise<'DR
  */
 export async function runAutomationSideEffects(
   club: ClubForAutomation,
-  posts: Array<{ id: string; platform: string; content: string; imageUrl: string | null }>
+  posts: Array<{ id: string; platform: string; content: string; imageUrl: string | null }>,
+  options: { forceReview?: boolean } = {}
 ): Promise<void> {
   const mode = await resolveEffectiveMode(club)
   if (mode === 'MANUAL') return
 
   const publishable = posts.filter(p => p.platform === 'facebook' || p.platform === 'instagram')
 
-  if (mode === 'FULL_AUTO') {
+  // Une expression interdite détectée dans le texte généré empêche toute
+  // publication automatique, même en mode FULL_AUTO : le post retombe sur le
+  // même traitement qu'AUTO_REVIEW (relecture humaine requise) plutôt que
+  // d'être bloqué silencieusement — cf. lib/bannedWords.ts.
+  if (mode === 'FULL_AUTO' && !options.forceReview) {
     for (const post of publishable) {
       await publishGeneratedPost({ clubId: club.id, generatedPostId: post.id })
     }
     return
   }
 
-  // mode === 'AUTO_REVIEW'
+  // mode === 'AUTO_REVIEW', ou FULL_AUTO rétrogradé par forceReview
   for (const post of publishable) {
     await notifyPendingReview(club, post)
   }

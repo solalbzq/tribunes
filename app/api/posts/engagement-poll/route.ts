@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { engagementPollPromptAll } from '@/lib/prompts/engagement-poll'
 import { generatePlatformPosts, toPostIds, deletePostsForRegenerate } from '@/lib/services/postGeneration'
 import { runAutomationSideEffects } from '@/lib/automation'
-import { buildPersonalizationPrefix } from '@/lib/personalization'
+import { buildPersonalizationPrefix, validateOneTimeInstructions } from '@/lib/personalization'
 
 const PLATFORMS = ['instagram', 'facebook', 'whatsapp'] as const
 type Platform = typeof PLATFORMS[number]
@@ -33,8 +33,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Question et 2 à 4 options requises' }, { status: 400 })
   }
 
+  const oneTimeInstructions = validateOneTimeInstructions(customInstructions)
+  if (!oneTimeInstructions.ok) return NextResponse.json({ error: oneTimeInstructions.error }, { status: 400 })
+
   const voice = tone || club.contentTone
-  const prompt = buildPersonalizationPrefix(club, customInstructions)
+  const prompt = buildPersonalizationPrefix(club, oneTimeInstructions.value)
     + engagementPollPromptAll(club.sport, club.name, question, cleanOptions, voice)
 
   const gen = await generatePlatformPosts({ club, platforms: platforms as Platform[], prompt, route: 'posts/engagement-poll' })
@@ -78,11 +81,12 @@ export async function POST(req: Request) {
     })
   }
 
-  await runAutomationSideEffects(club, poll.posts)
+  await runAutomationSideEffects(club, poll.posts, { forceReview: gen.bannedWords.hasViolation })
 
   return NextResponse.json({
     pollId: poll.id,
     posts: gen.postsByPlatform,
     postIds: toPostIds(poll.posts),
+    bannedWordsWarning: gen.bannedWords.hasViolation ? gen.bannedWords.violationsByPlatform : null,
   })
 }

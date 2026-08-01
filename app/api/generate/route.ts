@@ -8,8 +8,9 @@ import { splitPlatformPosts } from '@/lib/prompts/splitPlatforms'
 import { logAiUsage } from '@/lib/usage'
 import { checkAiQuota, quotaExceededResponse } from '@/lib/quota'
 import { resolveInitialStatus, runAutomationSideEffects } from '@/lib/automation'
-import { buildPersonalizationPrefix } from '@/lib/personalization'
+import { buildPersonalizationPrefix, validateOneTimeInstructions } from '@/lib/personalization'
 import { deletePostsForRegenerate } from '@/lib/services/postGeneration'
+import { checkBannedWordsAcrossPlatforms } from '@/lib/bannedWords'
 
 export async function POST(req: Request) {
   const supabase = createClient()
@@ -26,6 +27,8 @@ export async function POST(req: Request) {
   if (!opponent || homeScore === undefined || awayScore === undefined) {
     return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
   }
+  const oneTimeInstructions = validateOneTimeInstructions(customInstructions)
+  if (!oneTimeInstructions.ok) return NextResponse.json({ error: oneTimeInstructions.error }, { status: 400 })
   const voice = tone || club.contentTone
 
   const clubScore = isHome ? homeScore : awayScore
@@ -52,7 +55,7 @@ export async function POST(req: Request) {
     ? `Joueur/joueuse du match à mettre en avant : ${mvpName}. Cite-le/la nommément et valorise sa performance dans au moins un des posts.`
     : ''
 
-  const prompt = buildPersonalizationPrefix(club, customInstructions) + `Tu es le responsable communication du club de ${club.sport} "${club.name}".
+  const prompt = buildPersonalizationPrefix(club, oneTimeInstructions.value) + `Tu es le responsable communication du club de ${club.sport} "${club.name}".
 Rédige des posts pour annoncer ce résultat :
 
 - Sport : ${club.sport} ${vocab.emoji}
@@ -93,6 +96,7 @@ Format exact attendu :
 
   const posts = splitPlatformPosts(completion.choices[0].message.content ?? '')
   const initialStatus = await resolveInitialStatus(club)
+  const bannedWords = checkBannedWordsAcrossPlatforms(posts, club.bannedWords)
 
   let match: Awaited<ReturnType<typeof prisma.matchResult.findUniqueOrThrow>> & { posts: Array<{ id: string; platform: string; content: string; imageUrl: string | null }> }
 
@@ -137,7 +141,10 @@ Format exact attendu :
     })
   }
 
-  await runAutomationSideEffects(club, match.posts)
+  await runAutomationSideEffects(club, match.posts, { forceReview: bannedWords.hasViolation })
 
-  return NextResponse.json({ match, posts })
+  return NextResponse.json({
+    match, posts,
+    bannedWordsWarning: bannedWords.hasViolation ? bannedWords.violationsByPlatform : null,
+  })
 }

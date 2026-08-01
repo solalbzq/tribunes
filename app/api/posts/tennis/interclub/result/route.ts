@@ -8,7 +8,8 @@ import { splitPlatformPosts } from '@/lib/prompts/splitPlatforms'
 import { logAiUsage } from '@/lib/usage'
 import { checkAiQuota, quotaExceededResponse } from '@/lib/quota'
 import { resolveInitialStatus, runAutomationSideEffects } from '@/lib/automation'
-import { buildPersonalizationPrefix } from '@/lib/personalization'
+import { buildPersonalizationPrefix, validateOneTimeInstructions } from '@/lib/personalization'
+import { checkBannedWordsAcrossPlatforms } from '@/lib/bannedWords'
 
 export async function POST(req: Request) {
   const supabase = createClient()
@@ -49,8 +50,11 @@ export async function POST(req: Request) {
   const scoreDetail = (match.scoreDetail ?? []) as ScoreDetail[] | PadelScoreDetail[]
   const voice = tone || club.contentTone
 
+  const oneTimeInstructions = validateOneTimeInstructions(customInstructions)
+  if (!oneTimeInstructions.ok) return NextResponse.json({ error: oneTimeInstructions.error }, { status: 400 })
+
   // Un seul appel IA pour les 3 plateformes.
-  const prompt = buildPersonalizationPrefix(club, customInstructions) + (isPadel
+  const prompt = buildPersonalizationPrefix(club, oneTimeInstructions.value) + (isPadel
     ? padelInterclubResultPromptAll(
         club.name, match.teamName ?? club.name, match.opponent, globalScore,
         match.division ?? '', match.round ?? '', homeAway, scoreDetail as PadelScoreDetail[], voice, mvpName || undefined
@@ -73,6 +77,7 @@ export async function POST(req: Request) {
   for (const platform of requested) posts[platform] = all[platform]
 
   const initialStatus = await resolveInitialStatus(club)
+  const bannedWords = checkBannedWordsAcrossPlatforms(posts, club.bannedWords)
 
   // Remplace les anciens posts de ce match pour éviter les doublons.
   await prisma.generatedPost.deleteMany({ where: { matchId: match.id, postType: 'INTERCLUB_RESULT' } })
@@ -89,7 +94,10 @@ export async function POST(req: Request) {
       })
     )
   )
-  await runAutomationSideEffects(club, created)
+  await runAutomationSideEffects(club, created, { forceReview: bannedWords.hasViolation })
 
-  return NextResponse.json({ posts, matchId: match.id })
+  return NextResponse.json({
+    posts, matchId: match.id,
+    bannedWordsWarning: bannedWords.hasViolation ? bannedWords.violationsByPlatform : null,
+  })
 }

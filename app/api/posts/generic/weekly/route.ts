@@ -7,8 +7,9 @@ import { splitPlatformPosts } from '@/lib/prompts/splitPlatforms'
 import { logAiUsage } from '@/lib/usage'
 import { checkAiQuota, quotaExceededResponse } from '@/lib/quota'
 import { resolveInitialStatus, runAutomationSideEffects } from '@/lib/automation'
-import { buildPersonalizationPrefix } from '@/lib/personalization'
+import { buildPersonalizationPrefix, validateOneTimeInstructions } from '@/lib/personalization'
 import { deletePostsForRegenerate } from '@/lib/services/postGeneration'
+import { checkBannedWordsAcrossPlatforms } from '@/lib/bannedWords'
 import type { Sport } from '@prisma/client'
 
 const SPORT_ENUM: Record<string, Sport> = {
@@ -48,6 +49,8 @@ export async function POST(req: Request) {
   if (!weekStartRaw || !Array.isArray(matchesRaw) || matchesRaw.length === 0) {
     return NextResponse.json({ error: 'weekStart et matches sont requis' }, { status: 400 })
   }
+  const oneTimeInstructions = validateOneTimeInstructions(customInstructions)
+  if (!oneTimeInstructions.ok) return NextResponse.json({ error: oneTimeInstructions.error }, { status: 400 })
   const voice = tone || club.contentTone
 
   const weekStart = new Date(weekStartRaw)
@@ -66,7 +69,7 @@ export async function POST(req: Request) {
   }))
 
   // Un seul appel IA pour les 3 plateformes (puis découpage).
-  const prompt = buildPersonalizationPrefix(club, customInstructions)
+  const prompt = buildPersonalizationPrefix(club, oneTimeInstructions.value)
     + weeklySchedulePromptAll(club.sport, club.name, weekStart, weekEnd, weeklyMatches, voice)
 
   const completion = await openai.chat.completions.create({
@@ -82,6 +85,7 @@ export async function POST(req: Request) {
   for (const platform of requested) posts[platform] = all[platform]
 
   const initialStatus = await resolveInitialStatus(club)
+  const bannedWords = checkBannedWordsAcrossPlatforms(posts, club.bannedWords)
 
   let weekly
   if (existingWeeklyId && regenerate) {
@@ -123,9 +127,12 @@ export async function POST(req: Request) {
     })
   }
 
-  await runAutomationSideEffects(club, weekly.posts)
+  await runAutomationSideEffects(club, weekly.posts, { forceReview: bannedWords.hasViolation })
 
   const postIds = Object.fromEntries(weekly.posts.map(p => [p.platform, p.id]))
 
-  return NextResponse.json({ weeklyScheduleId: weekly.id, posts, postIds, matches: weeklyMatches })
+  return NextResponse.json({
+    weeklyScheduleId: weekly.id, posts, postIds, matches: weeklyMatches,
+    bannedWordsWarning: bannedWords.hasViolation ? bannedWords.violationsByPlatform : null,
+  })
 }

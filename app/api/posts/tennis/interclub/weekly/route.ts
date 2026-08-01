@@ -8,7 +8,8 @@ import { splitPlatformPosts } from '@/lib/prompts/splitPlatforms'
 import { logAiUsage } from '@/lib/usage'
 import { checkAiQuota, quotaExceededResponse } from '@/lib/quota'
 import { resolveInitialStatus, runAutomationSideEffects } from '@/lib/automation'
-import { buildPersonalizationPrefix } from '@/lib/personalization'
+import { buildPersonalizationPrefix, validateOneTimeInstructions } from '@/lib/personalization'
+import { checkBannedWordsAcrossPlatforms } from '@/lib/bannedWords'
 
 export async function POST(req: Request) {
   const supabase = createClient()
@@ -23,6 +24,8 @@ export async function POST(req: Request) {
 
   const { weekStart: weekStartRaw, platforms = ['instagram', 'facebook', 'whatsapp'], tone, customInstructions } = await req.json()
   if (!weekStartRaw) return NextResponse.json({ error: 'weekStart manquant' }, { status: 400 })
+  const oneTimeInstructions = validateOneTimeInstructions(customInstructions)
+  if (!oneTimeInstructions.ok) return NextResponse.json({ error: oneTimeInstructions.error }, { status: 400 })
   const voice = tone || club.contentTone
 
   const weekStart = new Date(weekStartRaw)
@@ -57,7 +60,7 @@ export async function POST(req: Request) {
   }))
 
   // Un seul appel IA pour les 3 plateformes (puis découpage).
-  const prompt = buildPersonalizationPrefix(club, customInstructions) + (isPadel
+  const prompt = buildPersonalizationPrefix(club, oneTimeInstructions.value) + (isPadel
     ? padelWeeklySchedulePromptAll(club.name, weekStart, weekEnd, weeklyMatches, voice)
     : weeklySchedulePromptAll(club.name, weekStart, weekEnd, weeklyMatches, voice))
 
@@ -74,6 +77,7 @@ export async function POST(req: Request) {
   for (const platform of requested) posts[platform] = all[platform]
 
   const initialStatus = await resolveInitialStatus(club)
+  const bannedWords = checkBannedWordsAcrossPlatforms(posts, club.bannedWords)
 
   // Save WeeklySchedule + posts
   const weekly = await prisma.weeklySchedule.create({
@@ -95,7 +99,10 @@ export async function POST(req: Request) {
     include: { posts: true },
   })
 
-  await runAutomationSideEffects(club, weekly.posts)
+  await runAutomationSideEffects(club, weekly.posts, { forceReview: bannedWords.hasViolation })
 
-  return NextResponse.json({ weeklyScheduleId: weekly.id, posts, matches: weeklyMatches })
+  return NextResponse.json({
+    weeklyScheduleId: weekly.id, posts, matches: weeklyMatches,
+    bannedWordsWarning: bannedWords.hasViolation ? bannedWords.violationsByPlatform : null,
+  })
 }

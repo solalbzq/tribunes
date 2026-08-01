@@ -8,7 +8,8 @@ import { splitPlatformPosts } from '@/lib/prompts/splitPlatforms'
 import { logAiUsage } from '@/lib/usage'
 import { checkAiQuota, quotaExceededResponse } from '@/lib/quota'
 import { resolveInitialStatus, runAutomationSideEffects } from '@/lib/automation'
-import { buildPersonalizationPrefix } from '@/lib/personalization'
+import { buildPersonalizationPrefix, validateOneTimeInstructions } from '@/lib/personalization'
+import { checkBannedWordsAcrossPlatforms } from '@/lib/bannedWords'
 import type { TournamentMatch } from '@/lib/services/fft-pdf-parser'
 import type { ChatCompletion } from 'openai/resources/chat/completions'
 
@@ -69,11 +70,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Aucun match de votre club trouvé dans ce PDF' }, { status: 400 })
   }
 
+  const oneTimeInstructions = validateOneTimeInstructions(customInstructions)
+  if (!oneTimeInstructions.ok) return NextResponse.json({ error: oneTimeInstructions.error }, { status: 400 })
+
   const isPadel = schedule.sport === 'PADEL'
   const voice = tone || club.contentTone
 
   // Un seul appel IA pour les 3 plateformes.
-  const prompt = buildPersonalizationPrefix(club, customInstructions) + (isPadel
+  const prompt = buildPersonalizationPrefix(club, oneTimeInstructions.value) + (isPadel
     ? padelTournamentSchedulePromptAll(club.name, schedule.tournamentName, grade, schedule.matchDate, schedule.venue, clubMatches, voice)
     : tournamentSchedulePromptAll(club.name, schedule.tournamentName, schedule.matchDate, schedule.venue, clubMatches, voice))
 
@@ -86,6 +90,7 @@ export async function POST(req: Request) {
   for (const platform of requested) posts[platform] = all[platform]
 
   const initialStatus = await resolveInitialStatus(club)
+  const bannedWords = checkBannedWordsAcrossPlatforms(posts, club.bannedWords)
 
   // Remplace les anciens posts de cette programmation.
   await prisma.generatedPost.deleteMany({ where: { tournamentScheduleId: scheduleId, postType: 'TOURNAMENT_SCHEDULE' } })
@@ -102,7 +107,10 @@ export async function POST(req: Request) {
       })
     )
   )
-  await runAutomationSideEffects(club, created)
+  await runAutomationSideEffects(club, created, { forceReview: bannedWords.hasViolation })
 
-  return NextResponse.json({ posts, scheduleId })
+  return NextResponse.json({
+    posts, scheduleId,
+    bannedWordsWarning: bannedWords.hasViolation ? bannedWords.violationsByPlatform : null,
+  })
 }

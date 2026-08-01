@@ -5,7 +5,7 @@ import TextPostsPanel from './TextPostsPanel'
 import ToneSelector from './ToneSelector'
 import ClubAnnouncementVisualGenerator from './ClubAnnouncementVisualGenerator'
 import FormatToggle from './FormatToggle'
-import type { VisualFormat } from '@/lib/visualLayout'
+import { resolveCustomPostVisualKind, type VisualFormat } from '@/lib/visualLayout'
 import { FIELD } from './ui'
 import { Icon } from './icons'
 
@@ -18,6 +18,7 @@ type Club = {
   primaryColor: string
   secondaryColor: string
   logoUrl: string | null
+  postVisualConfigs?: unknown
 }
 
 const PLATFORMS: { key: keyof Posts; label: string }[] = [
@@ -37,7 +38,7 @@ export type CustomPostFormInitialValues = Partial<{
   keyInformation: string[]
   callToAction: string
   targetAudience: string
-  tone: string
+  desiredMood: string
   suggestedCategory: string
 }>
 
@@ -49,12 +50,13 @@ function initialKeyInfo(values?: string[]): string[] {
 /**
  * Publication libre (CUSTOM_POST) — pour toute communication de club qui ne
  * correspond à aucun type structuré existant (billetterie, jeu-concours,
- * événement caritatif...). Réutilise ClubAnnouncementVisualGenerator avec la
- * catégorie générique CLUB_LIFE plutôt que de créer un nouveau composant
- * visuel : c'est déjà le layout "badge + titre + texte" le plus générique du
- * dépôt, cohérent avec la stratégie de templates à deux niveaux (spécialisés
- * vs génériques) — un nouveau PostVisualKind dédié reste possible plus tard
- * si le besoin se confirme, pas nécessaire pour ce premier périmètre.
+ * événement caritatif...). Réutilise ClubAnnouncementVisualGenerator (layout
+ * "badge + titre + texte", catégorie générique CLUB_LIFE) plutôt qu'un nouveau
+ * composant visuel. A désormais sa propre clé `PostVisualKind` ('customPost',
+ * lib/visualLayout.ts) : hérite du style "Annonce du club" par défaut, mais
+ * peut recevoir sa propre variante dans `Club.postVisualConfigs.customPost`
+ * sans affecter l'autre type — resolveCustomPostVisualKind() détermine
+ * laquelle des deux résoudre, et la source réelle est affichée à l'utilisateur.
  */
 export default function CustomPostTab({ club, initialValues }: { club: Club; initialValues?: CustomPostFormInitialValues }) {
   const [objective, setObjective] = useState(initialValues?.objective ?? '')
@@ -62,7 +64,10 @@ export default function CustomPostTab({ club, initialValues }: { club: Club; ini
   const [keyInformation, setKeyInformation] = useState<string[]>(initialKeyInfo(initialValues?.keyInformation))
   const [callToAction, setCallToAction] = useState(initialValues?.callToAction ?? '')
   const [targetAudience, setTargetAudience] = useState(initialValues?.targetAudience ?? '')
-  const [tone, setTone] = useState(initialValues?.tone ?? '')
+  const [desiredMood, setDesiredMood] = useState(initialValues?.desiredMood ?? '')
+  // Override ponctuel de voix (Fun/Sobre) — distinct de `desiredMood`, qui est une
+  // ambiance libre injectée comme donnée dans le prompt, jamais comme réglage de voix.
+  const [tone, setTone] = useState('')
   const [platforms, setPlatforms] = useState<Set<keyof Posts>>(new Set(['instagram', 'facebook', 'whatsapp']))
   const [visualFormat, setVisualFormat] = useState<VisualFormat>('post')
   const [generating, setGenerating] = useState(false)
@@ -72,6 +77,7 @@ export default function CustomPostTab({ club, initialValues }: { club: Club; ini
   const [customPostId, setCustomPostId] = useState<string | null>(null)
   const [personalizing, setPersonalizing] = useState(false)
   const [angleLoading, setAngleLoading] = useState(false)
+  const [bannedWordsWarning, setBannedWordsWarning] = useState<Record<string, string[]> | null>(null)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
 
   async function getImageBlob(): Promise<Blob | null> {
@@ -115,6 +121,7 @@ export default function CustomPostTab({ club, initialValues }: { club: Club; ini
           keyInformation: filledKeyInfo,
           callToAction: callToAction || undefined,
           targetAudience: targetAudience || undefined,
+          desiredMood: desiredMood || undefined,
           tone: tone || undefined,
           desiredPlatforms: Array.from(platforms),
         }),
@@ -124,6 +131,7 @@ export default function CustomPostTab({ club, initialValues }: { club: Club; ini
       setPosts(data.posts)
       setPostIds(data.postIds ?? null)
       setCustomPostId(data.customPostId ?? null)
+      setBannedWordsWarning(data.bannedWordsWarning ?? null)
     } catch (err) {
       setError((err as Error).message)
     } finally {
@@ -141,6 +149,7 @@ export default function CustomPostTab({ club, initialValues }: { club: Club; ini
         keyInformation: filledKeyInfo,
         callToAction: callToAction || undefined,
         targetAudience: targetAudience || undefined,
+        desiredMood: desiredMood || undefined,
         desiredPlatforms: Array.from(platforms),
         id: customPostId, regenerate: true,
         tone: overrides.tone, customInstructions: overrides.customInstructions,
@@ -151,6 +160,7 @@ export default function CustomPostTab({ club, initialValues }: { club: Club; ini
     if (!res.ok) return
     setPosts(data.posts)
     setPostIds(data.postIds ?? null)
+    setBannedWordsWarning(data.bannedWordsWarning ?? null)
   }
 
   async function personalize(overrides: { tone?: string; customInstructions?: string }) {
@@ -186,16 +196,18 @@ export default function CustomPostTab({ club, initialValues }: { club: Club; ini
           posts={posts}
           postIds={postIds}
           title="Vos légendes sont prêtes"
-          onReset={() => { setPosts(null); setPostIds(null); setCustomPostId(null) }}
+          onReset={() => { setPosts(null); setPostIds(null); setCustomPostId(null); setBannedWordsWarning(null) }}
           getImageBlob={getImageBlob}
           onPersonalize={personalize}
           personalizing={personalizing}
+          bannedWordsWarning={bannedWordsWarning}
         />
       </div>
     )
   }
 
   const visualDescription = [objective, ...filledKeyInfo].filter(Boolean).join(' — ')
+  const visualKind = resolveCustomPostVisualKind(club.postVisualConfigs)
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-5xl">
@@ -252,6 +264,11 @@ export default function CustomPostTab({ club, initialValues }: { club: Club; ini
         </div>
 
         <div>
+          <label className="block text-xs text-gray-400 mb-1">Ambiance souhaitée (optionnel)</label>
+          <input value={desiredMood} onChange={e => setDesiredMood(e.target.value)} className={FIELD} maxLength={MAX_FIELD_LENGTH} placeholder="Ex : chaleureuse et festive" />
+        </div>
+
+        <div>
           <label className="block text-xs text-gray-400 mb-1">Réseaux concernés</label>
           <div className="flex gap-2">
             {PLATFORMS.map(p => (
@@ -288,12 +305,16 @@ export default function CustomPostTab({ club, initialValues }: { club: Club; ini
 
       <div className="space-y-3">
         <FormatToggle value={visualFormat} onChange={setVisualFormat} />
+        <p className="text-xs text-gray-400">
+          Style utilisé : <span className="font-semibold text-gray-500">{visualKind === 'customPost' ? 'Personnalisé (publication libre)' : 'Annonce du club (hérité)'}</span>
+        </p>
         <ClubAnnouncementVisualGenerator
           club={club}
           category="CLUB_LIFE"
           title={subject}
           description={visualDescription}
           format={visualFormat}
+          visualKind={visualKind}
           onCanvasReady={c => { canvasRef.current = c }}
         />
       </div>

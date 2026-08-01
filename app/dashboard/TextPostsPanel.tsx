@@ -27,6 +27,7 @@ export default function TextPostsPanel({
   getImageBlob,
   onPersonalize,
   personalizing,
+  bannedWordsWarning,
 }: {
   posts: Posts
   postIds?: PostIds | null
@@ -35,6 +36,8 @@ export default function TextPostsPanel({
   getImageBlob?: () => Promise<Blob | null>
   onPersonalize?: (overrides: { tone?: string; customInstructions?: string }) => Promise<void>
   personalizing?: boolean
+  /** Expressions interdites détectées par plateforme (lib/bannedWords.ts) — publication auto désactivée tant qu'elles subsistent. */
+  bannedWordsWarning?: Record<string, string[]> | null
 }) {
   const [copied, setCopied] = useState<string | null>(null)
   const [active, setActive] = useState<'instagram' | 'facebook' | 'whatsapp'>('instagram')
@@ -51,6 +54,20 @@ export default function TextPostsPanel({
         <PageHeader icon="check" title={title} tone="gold" />
         <GhostButton icon="arrowLeft" onClick={onReset}>Recommencer</GhostButton>
       </div>
+
+      {bannedWordsWarning && Object.keys(bannedWordsWarning).length > 0 && (
+        <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-800">
+          <p className="font-semibold">Expression à éviter détectée</p>
+          <p className="mt-1">
+            {Object.entries(bannedWordsWarning).map(([platform, words]) => (
+              <span key={platform} className="block">
+                {platform} : {words.join(', ')}
+              </span>
+            ))}
+          </p>
+          <p className="mt-1 text-xs text-amber-700">La publication automatique est désactivée pour ce contenu — modifiez ou régénérez le texte avant de le publier.</p>
+        </div>
+      )}
 
       <div className="flex flex-wrap gap-2">
         {PLATFORMS.map(p => (

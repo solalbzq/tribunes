@@ -4,7 +4,8 @@ import { prisma } from '@/lib/prisma'
 import { customPostPromptAll, type CustomPostData } from '@/lib/prompts/custom-post'
 import { generatePlatformPosts, toPostIds, deletePostsForRegenerate } from '@/lib/services/postGeneration'
 import { resolveInitialStatusUnconstrained, runAutomationSideEffectsUnconstrained } from '@/lib/automation'
-import { buildPersonalizationPrefix } from '@/lib/personalization'
+import { buildPersonalizationPrefix, validateOneTimeInstructions } from '@/lib/personalization'
+import { resolveVoiceOverride } from '@/lib/voice'
 
 const PLATFORMS = ['instagram', 'facebook', 'whatsapp'] as const
 type Platform = typeof PLATFORMS[number]
@@ -37,6 +38,7 @@ export async function POST(req: Request) {
     keyInformation,
     callToAction,
     targetAudience,
+    desiredMood,
     tone,
     desiredPlatforms,
     suggestedCategory,
@@ -59,9 +61,9 @@ export async function POST(req: Request) {
   const keyInformationArr = strArray(keyInformation)
   const callToActionStr = nullableStr(callToAction)
   const targetAudienceStr = nullableStr(targetAudience)
-  const toneStr = nullableStr(tone)
+  const desiredMoodStr = nullableStr(desiredMood)
 
-  const tooLong = [objectiveStr, subjectStr, ...keyInformationArr, callToActionStr, targetAudienceStr, toneStr]
+  const tooLong = [objectiveStr, subjectStr, ...keyInformationArr, callToActionStr, targetAudienceStr, desiredMoodStr]
     .some(v => (v?.length ?? 0) > MAX_FIELD_LENGTH)
   if (tooLong) {
     return NextResponse.json({ error: `Chaque champ est limité à ${MAX_FIELD_LENGTH} caractères` }, { status: 400 })
@@ -70,19 +72,30 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: `Maximum ${MAX_KEY_INFORMATION_ITEMS} informations clés` }, { status: 400 })
   }
 
+  const oneTimeInstructions = validateOneTimeInstructions(customInstructions)
+  if (!oneTimeInstructions.ok) return NextResponse.json({ error: oneTimeInstructions.error }, { status: 400 })
+
   const data: CustomPostData = {
     objective: objectiveStr,
     subject: subjectStr,
     keyInformation: keyInformationArr,
     callToAction: callToActionStr,
     targetAudience: targetAudienceStr,
-    tone: toneStr,
+    desiredMood: desiredMoodStr,
     desiredPlatforms: platforms,
     suggestedCategory: nullableStr(suggestedCategory),
   }
 
-  const prompt = buildPersonalizationPrefix(club, customInstructions)
-    + customPostPromptAll(club.sport, club.name, data, club.contentTone, Boolean(alternateAngle))
+  // Bug historique corrigé ici : `tone` (envoyé par ToneSelector / le panneau
+  // "Personnaliser ce post") est l'override ponctuel de voix, au même titre
+  // que pour les 11 autres routes de génération — il ne doit jamais être
+  // confondu avec `desiredMood`, qui est une donnée éditoriale libre propre
+  // à CUSTOM_POST. Avant cette correction, la voix résolue ignorait `tone`
+  // et retombait toujours sur club.contentTone, rendant le sélecteur de ton
+  // inopérant sur les publications libres.
+  const voice = resolveVoiceOverride(tone, club.contentTone)
+  const prompt = buildPersonalizationPrefix(club, oneTimeInstructions.value)
+    + customPostPromptAll(club.sport, club.name, data, voice, Boolean(alternateAngle))
 
   const gen = await generatePlatformPosts({ club, platforms, prompt, route: 'posts/custom-post' })
   if (!gen.ok) return gen.response
@@ -121,7 +134,7 @@ export async function POST(req: Request) {
         keyInformation: data.keyInformation,
         callToAction: data.callToAction,
         targetAudience: data.targetAudience,
-        tone: data.tone,
+        tone: data.desiredMood, // colonne DB historique "tone" ; conserve `desiredMood` (l'ambiance libre), plus la voix — pas de migration pour ce seul renommage
         desiredPlatforms: data.desiredPlatforms,
         suggestedCategory: data.suggestedCategory,
         posts: {
@@ -143,5 +156,6 @@ export async function POST(req: Request) {
     customPostId: customPost.id,
     posts: gen.postsByPlatform,
     postIds: toPostIds(customPost.posts),
+    bannedWordsWarning: gen.bannedWords.hasViolation ? gen.bannedWords.violationsByPlatform : null,
   })
 }

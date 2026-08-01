@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { clubAnnouncementPromptAll, type ClubAnnouncementCategory } from '@/lib/prompts/club-announcement'
 import { generatePlatformPosts, toPostIds, deletePostsForRegenerate } from '@/lib/services/postGeneration'
 import { runAutomationSideEffects } from '@/lib/automation'
-import { buildPersonalizationPrefix } from '@/lib/personalization'
+import { buildPersonalizationPrefix, validateOneTimeInstructions } from '@/lib/personalization'
 
 const PLATFORMS = ['instagram', 'facebook', 'whatsapp'] as const
 type Platform = typeof PLATFORMS[number]
@@ -34,8 +34,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Catégorie, titre et description requis' }, { status: 400 })
   }
 
+  const oneTimeInstructions = validateOneTimeInstructions(customInstructions)
+  if (!oneTimeInstructions.ok) return NextResponse.json({ error: oneTimeInstructions.error }, { status: 400 })
+
   const voice = tone || club.contentTone
-  const prompt = buildPersonalizationPrefix(club, customInstructions)
+  const prompt = buildPersonalizationPrefix(club, oneTimeInstructions.value)
     + clubAnnouncementPromptAll(club.sport, club.name, category, title, description, ctaText || undefined, voice)
 
   const gen = await generatePlatformPosts({ club, platforms: platforms as Platform[], prompt, route: 'posts/club-announcement' })
@@ -81,11 +84,12 @@ export async function POST(req: Request) {
     })
   }
 
-  await runAutomationSideEffects(club, announcement.posts)
+  await runAutomationSideEffects(club, announcement.posts, { forceReview: gen.bannedWords.hasViolation })
 
   return NextResponse.json({
     announcementId: announcement.id,
     posts: gen.postsByPlatform,
     postIds: toPostIds(announcement.posts),
+    bannedWordsWarning: gen.bannedWords.hasViolation ? gen.bannedWords.violationsByPlatform : null,
   })
 }

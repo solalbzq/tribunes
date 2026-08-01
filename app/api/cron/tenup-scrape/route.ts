@@ -9,6 +9,7 @@ import { tournamentSchedulePromptAll } from '@/lib/prompts/tennis-posts'
 import { padelTournamentSchedulePromptAll } from '@/lib/prompts/padel-posts'
 import { splitPlatformPosts } from '@/lib/prompts/splitPlatforms'
 import { buildPersonalizationPrefix } from '@/lib/personalization'
+import { checkBannedWordsAcrossPlatforms } from '@/lib/bannedWords'
 import type { Sport } from '@prisma/client'
 
 /**
@@ -93,6 +94,7 @@ export async function GET(req: Request) {
 
       const posts = splitPlatformPosts(completion.choices[0].message.content ?? '')
       const initialStatus = await resolveInitialStatus(club)
+      const bannedWords = checkBannedWordsAcrossPlatforms(posts, club.bannedWords)
 
       const weekly = await prisma.weeklySchedule.create({
         data: {
@@ -113,8 +115,8 @@ export async function GET(req: Request) {
         include: { posts: true },
       })
 
-      await runAutomationSideEffects(club, weekly.posts)
-      summary.push({ clubId: club.id, status: 'generated', matches: result.matches.length })
+      await runAutomationSideEffects(club, weekly.posts, { forceReview: bannedWords.hasViolation })
+      summary.push({ clubId: club.id, status: bannedWords.hasViolation ? 'generated_flagged' : 'generated', matches: result.matches.length })
     } catch (err) {
       if (err instanceof QueueItBlockedError) {
         summary.push({ clubId: club.id, status: 'blocked_by_queueit' })

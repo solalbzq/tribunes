@@ -45,6 +45,7 @@ export default function ProgrammeTab({ club }: { club: Club }) {
   const [tone, setTone] = useState('')
   const [weeklyScheduleId, setWeeklyScheduleId] = useState<string | null>(null)
   const [personalizing, setPersonalizing] = useState(false)
+  const [bannedWordsWarning, setBannedWordsWarning] = useState<Record<string, string[]> | null>(null)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
 
   async function getImageBlob(): Promise<Blob | null> {
@@ -93,6 +94,7 @@ export default function ProgrammeTab({ club }: { club: Club }) {
       setPosts(data.posts)
       setPostIds(data.postIds ?? null)
       setWeeklyScheduleId(data.weeklyScheduleId ?? null)
+      setBannedWordsWarning(data.bannedWordsWarning ?? null)
     } catch (err) {
       setError((err as Error).message)
     } finally {
@@ -126,6 +128,7 @@ export default function ProgrammeTab({ club }: { club: Club }) {
       if (!res.ok) return
       setPosts(data.posts)
       setPostIds(data.postIds ?? null)
+      setBannedWordsWarning(data.bannedWordsWarning ?? null)
     } finally {
       setPersonalizing(false)
     }
@@ -137,10 +140,11 @@ export default function ProgrammeTab({ club }: { club: Club }) {
         posts={posts}
         postIds={postIds}
         title="Vos légendes de programme sont prêtes"
-        onReset={() => { setPosts(null); setPostIds(null); setWeeklyScheduleId(null) }}
+        onReset={() => { setPosts(null); setPostIds(null); setWeeklyScheduleId(null); setBannedWordsWarning(null) }}
         getImageBlob={getImageBlob}
         onPersonalize={personalize}
         personalizing={personalizing}
+        bannedWordsWarning={bannedWordsWarning}
       />
     )
   }

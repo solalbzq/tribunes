@@ -90,10 +90,10 @@ Si intent = "CUSTOM" :
 { "intent": "CUSTOM", "confidence": number, "fields": {
   "objective": string | null, "subject": string | null,
   "keyInformation": string[], "callToAction": string | null,
-  "targetAudience": string | null, "tone": string | null,
+  "targetAudience": string | null, "desiredMood": string | null,
   "suggestedCategory": string | null
 } }
-(objective : ce que le club cherche à obtenir, en quelques mots, ex "vendre des billets". subject : le sujet concret, ex "match de gala du 12 septembre". keyInformation : uniquement les informations factuelles explicitement présentes dans le texte — dates, prix, lieux, contacts... —, jamais inventées, tableau vide si aucune. suggestedCategory : un court identifiant en minuscules avec underscores résumant le type de demande, par exemple "billetterie", "vente_equipement", "stage_vacances", "jeu_concours", "evenement_caritatif", "rappel_inscription", "fermeture_exceptionnelle", "anniversaire_club", "appel_supporters", ou "autre" si rien ne correspond.)
+(objective : ce que le club cherche à obtenir, en quelques mots, ex "vendre des billets". subject : le sujet concret, ex "match de gala du 12 septembre". keyInformation : uniquement les informations factuelles explicitement présentes dans le texte — dates, prix, lieux, contacts... —, jamais inventées, tableau vide si aucune. desiredMood : l'ambiance ou le ton décrit en langage libre si le texte en mentionne un (ex "convivial et festif", "sobre et institutionnel") — jamais une des valeurs STANDARD/FUN/SOBER, qui est un réglage distinct choisi manuellement par le club, null si rien n'est mentionné. suggestedCategory : un court identifiant en minuscules avec underscores résumant le type de demande, par exemple "billetterie", "vente_equipement", "stage_vacances", "jeu_concours", "evenement_caritatif", "rappel_inscription", "fermeture_exceptionnelle", "anniversaire_club", "appel_supporters", ou "autre" si rien ne correspond.)
 
 Si intent = "UNSUPPORTED" :
 { "intent": "UNSUPPORTED", "confidence": number, "fields": {} }
@@ -151,7 +151,7 @@ type CustomFields = {
   keyInformation: string[]
   callToAction: string | null
   targetAudience: string | null
-  tone: string | null
+  desiredMood: string | null
   suggestedCategory: string | null
 }
 
@@ -248,7 +248,7 @@ function validate(parsed: RawResult): IntentExtractionResult | null {
   if (parsed.intent === 'CUSTOM') {
     const fields: CustomFields = {
       objective: str(f.objective), subject: str(f.subject), keyInformation: strArray(f.keyInformation),
-      callToAction: str(f.callToAction), targetAudience: str(f.targetAudience), tone: str(f.tone),
+      callToAction: str(f.callToAction), targetAudience: str(f.targetAudience), desiredMood: str(f.desiredMood),
       suggestedCategory: str(f.suggestedCategory),
     }
     const missingFields = (['objective', 'subject'] as const).filter(k => fields[k] === null)

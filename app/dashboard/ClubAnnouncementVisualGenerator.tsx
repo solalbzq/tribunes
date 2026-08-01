@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   loadImage, textColor, parsePostVisualConfig, drawPostVisualElements, drawPostVisualBackground,
-  postVisualCanvasSizeFor, type PostVisualContext, type VisualFormat,
+  postVisualCanvasSizeFor, type PostVisualContext, type VisualFormat, type PostVisualKind,
 } from '@/lib/visualLayout'
 import type { ClubAnnouncementCategory } from '@/lib/prompts/club-announcement'
 
@@ -35,6 +35,7 @@ export default function ClubAnnouncementVisualGenerator({
   description,
   format = 'post',
   onCanvasReady,
+  visualKind = 'clubAnnouncement',
 }: {
   club: Club
   category: ClubAnnouncementCategory
@@ -42,6 +43,8 @@ export default function ClubAnnouncementVisualGenerator({
   description: string
   format?: VisualFormat
   onCanvasReady?: (canvas: HTMLCanvasElement) => void
+  /** 'customPost' pour une publication libre avec un style personnalisé propre — 'clubAnnouncement' sinon (hérité ou défaut). */
+  visualKind?: Extract<PostVisualKind, 'customPost' | 'clubAnnouncement'>
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [ready, setReady] = useState(false)
@@ -61,7 +64,7 @@ export default function ClubAnnouncementVisualGenerator({
       canvas.height = H
       setReady(false)
 
-      const { elements, background } = parsePostVisualConfig(club.postVisualConfigs, 'clubAnnouncement', format)
+      const { elements, background } = parsePostVisualConfig(club.postVisualConfigs, visualKind, format)
       let bgImg: HTMLImageElement | null = null
       if (background?.type === 'image' && background.imageUrl) {
         try { bgImg = await loadImage(background.imageUrl) } catch {}
@@ -94,7 +97,7 @@ export default function ClubAnnouncementVisualGenerator({
     }
     draw()
     return () => { cancelled = true }
-  }, [club, category, title, description, format, W, H])
+  }, [club, category, title, description, format, W, H, visualKind])
 
   function download() {
     const canvas = canvasRef.current

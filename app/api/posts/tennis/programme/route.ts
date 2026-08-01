@@ -8,7 +8,8 @@ import { splitPlatformPosts } from '@/lib/prompts/splitPlatforms'
 import { logAiUsage } from '@/lib/usage'
 import { checkAiQuota, quotaExceededResponse } from '@/lib/quota'
 import { resolveInitialStatus, runAutomationSideEffects } from '@/lib/automation'
-import { buildPersonalizationPrefix } from '@/lib/personalization'
+import { buildPersonalizationPrefix, validateOneTimeInstructions } from '@/lib/personalization'
+import { checkBannedWordsAcrossPlatforms } from '@/lib/bannedWords'
 import type { TournamentMatch } from '@/lib/services/fft-pdf-parser'
 import type { Sport } from '@prisma/client'
 
@@ -45,6 +46,8 @@ export async function POST(req: Request) {
   if (!Array.isArray(matchesRaw) || matchesRaw.length === 0) {
     return NextResponse.json({ error: 'matches requis' }, { status: 400 })
   }
+  const oneTimeInstructions = validateOneTimeInstructions(customInstructions)
+  if (!oneTimeInstructions.ok) return NextResponse.json({ error: oneTimeInstructions.error }, { status: 400 })
 
   const matchDate = matchDateRaw ? new Date(matchDateRaw) : new Date()
   const clubMatches = matchesRaw as TournamentMatch[]
@@ -64,7 +67,7 @@ export async function POST(req: Request) {
     },
   })
 
-  const prompt = buildPersonalizationPrefix(club, customInstructions) + (isPadel
+  const prompt = buildPersonalizationPrefix(club, oneTimeInstructions.value) + (isPadel
     ? padelTournamentSchedulePromptAll(club.name, label, '', matchDate, '', clubMatches, voice)
     : tournamentSchedulePromptAll(club.name, label, matchDate, '', clubMatches, voice))
 
@@ -81,6 +84,7 @@ export async function POST(req: Request) {
   for (const platform of requested) posts[platform] = all[platform]
 
   const initialStatus = await resolveInitialStatus(club)
+  const bannedWords = checkBannedWordsAcrossPlatforms(posts, club.bannedWords)
 
   const created = await prisma.$transaction(
     Object.entries(posts).map(([platform, content]) =>
@@ -95,8 +99,11 @@ export async function POST(req: Request) {
       })
     )
   )
-  await runAutomationSideEffects(club, created)
+  await runAutomationSideEffects(club, created, { forceReview: bannedWords.hasViolation })
   const postIds = Object.fromEntries(created.map(p => [p.platform, p.id]))
 
-  return NextResponse.json({ scheduleId: schedule.id, posts, postIds })
+  return NextResponse.json({
+    scheduleId: schedule.id, posts, postIds,
+    bannedWordsWarning: bannedWords.hasViolation ? bannedWords.violationsByPlatform : null,
+  })
 }

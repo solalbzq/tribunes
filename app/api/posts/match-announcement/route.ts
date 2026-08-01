@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { matchAnnouncementPromptAll } from '@/lib/prompts/match-announcement'
 import { generatePlatformPosts, toPostIds, deletePostsForRegenerate } from '@/lib/services/postGeneration'
 import { runAutomationSideEffects } from '@/lib/automation'
-import { buildPersonalizationPrefix } from '@/lib/personalization'
+import { buildPersonalizationPrefix, validateOneTimeInstructions } from '@/lib/personalization'
 
 const PLATFORMS = ['instagram', 'facebook', 'whatsapp'] as const
 type Platform = typeof PLATFORMS[number]
@@ -36,9 +36,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Adversaire et date requis' }, { status: 400 })
   }
 
+  const oneTimeInstructions = validateOneTimeInstructions(customInstructions)
+  if (!oneTimeInstructions.ok) return NextResponse.json({ error: oneTimeInstructions.error }, { status: 400 })
+
   const matchDate = new Date(matchDateRaw)
   const voice = tone || club.contentTone
-  const prompt = buildPersonalizationPrefix(club, customInstructions) + matchAnnouncementPromptAll(
+  const prompt = buildPersonalizationPrefix(club, oneTimeInstructions.value) + matchAnnouncementPromptAll(
     club.sport, club.name, opponent, matchDate, time || undefined, venue || undefined,
     competition || undefined, Boolean(isHome), note || undefined, voice
   )
@@ -89,11 +92,12 @@ export async function POST(req: Request) {
     })
   }
 
-  await runAutomationSideEffects(club, announcement.posts)
+  await runAutomationSideEffects(club, announcement.posts, { forceReview: gen.bannedWords.hasViolation })
 
   return NextResponse.json({
     announcementId: announcement.id,
     posts: gen.postsByPlatform,
     postIds: toPostIds(announcement.posts),
+    bannedWordsWarning: gen.bannedWords.hasViolation ? gen.bannedWords.violationsByPlatform : null,
   })
 }

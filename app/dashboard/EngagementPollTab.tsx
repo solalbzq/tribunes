@@ -41,6 +41,7 @@ export default function EngagementPollTab({ club, initialValues }: { club: Club;
   const [postIds, setPostIds] = useState<PostIds | null>(null)
   const [pollId, setPollId] = useState<string | null>(null)
   const [personalizing, setPersonalizing] = useState(false)
+  const [bannedWordsWarning, setBannedWordsWarning] = useState<Record<string, string[]> | null>(null)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
 
   async function getImageBlob(): Promise<Blob | null> {
@@ -83,6 +84,7 @@ export default function EngagementPollTab({ club, initialValues }: { club: Club;
       setPosts(data.posts)
       setPostIds(data.postIds ?? null)
       setPollId(data.pollId ?? null)
+      setBannedWordsWarning(data.bannedWordsWarning ?? null)
     } catch (err) {
       setError((err as Error).message)
     } finally {
@@ -107,6 +109,7 @@ export default function EngagementPollTab({ club, initialValues }: { club: Club;
       if (!res.ok) return
       setPosts(data.posts)
       setPostIds(data.postIds ?? null)
+      setBannedWordsWarning(data.bannedWordsWarning ?? null)
     } finally {
       setPersonalizing(false)
     }
@@ -118,10 +121,11 @@ export default function EngagementPollTab({ club, initialValues }: { club: Club;
         posts={posts}
         postIds={postIds}
         title="Vos légendes sont prêtes"
-        onReset={() => { setPosts(null); setPostIds(null); setPollId(null) }}
+        onReset={() => { setPosts(null); setPostIds(null); setPollId(null); setBannedWordsWarning(null) }}
         getImageBlob={getImageBlob}
         onPersonalize={personalize}
         personalizing={personalizing}
+        bannedWordsWarning={bannedWordsWarning}
       />
     )
   }

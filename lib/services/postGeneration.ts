@@ -7,6 +7,7 @@ import { logAiUsage } from '@/lib/usage'
 import { checkAiQuota, quotaExceededResponse } from '@/lib/quota'
 import { resolveInitialStatus } from '@/lib/automation'
 import { parentIdField } from '@/lib/postTypes'
+import { checkBannedWordsAcrossPlatforms, type BannedWordsCheck } from '@/lib/bannedWords'
 
 export type ClubForGeneration = {
   id: string
@@ -14,10 +15,11 @@ export type ClubForGeneration = {
   userId: string
   automationMode: string
   telegramChatId: string | null
+  bannedWords?: string | null
 }
 
 export type GenerationOutcome =
-  | { ok: true; postsByPlatform: Record<string, string>; initialStatus: 'DRAFT' | 'PENDING_REVIEW' }
+  | { ok: true; postsByPlatform: Record<string, string>; initialStatus: 'DRAFT' | 'PENDING_REVIEW'; bannedWords: BannedWordsCheck }
   | { ok: false; response: NextResponse }
 
 /**
@@ -51,7 +53,8 @@ export async function generatePlatformPosts(params: {
   for (const platform of platforms) postsByPlatform[platform] = all[platform as keyof PlatformPosts]
 
   const initialStatus = await resolveInitialStatus(club)
-  return { ok: true, postsByPlatform, initialStatus }
+  const bannedWords = checkBannedWordsAcrossPlatforms(postsByPlatform, club.bannedWords)
+  return { ok: true, postsByPlatform, initialStatus, bannedWords }
 }
 
 /** `postIds` renvoyé au frontend, à partir des GeneratedPost fraîchement créés. */

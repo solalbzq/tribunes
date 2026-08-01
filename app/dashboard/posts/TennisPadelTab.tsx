@@ -86,6 +86,7 @@ function MatchSection({ club, initialValues }: { club: Club; initialValues?: Mat
   const [generatedMatchId, setGeneratedMatchId] = useState<string | null>(null)
   const [generatedPhoto, setGeneratedPhoto] = useState<File | null>(null)
   const [personalizing, setPersonalizing] = useState(false)
+  const [bannedWordsWarning, setBannedWordsWarning] = useState<Record<string, string[]> | null>(null)
 
   async function personalizeMatch(overrides: { tone?: string; customInstructions?: string }) {
     if (!generatedMatch || !generatedMatchId) return
@@ -110,6 +111,7 @@ function MatchSection({ club, initialValues }: { club: Club; initialValues?: Mat
           .map(post => [post.platform, post.id])
       ) as PostIds
       setGeneratedPostIds(postIds)
+      setBannedWordsWarning(data.bannedWordsWarning ?? null)
     } finally {
       setPersonalizing(false)
     }
@@ -127,12 +129,13 @@ function MatchSection({ club, initialValues }: { club: Club; initialValues?: Mat
         <GenerateForm
           club={club}
           initialValues={initialValues}
-          onSuccess={(posts, match, photo, postIds, matchId) => {
+          onSuccess={(posts, match, photo, postIds, matchId, warning) => {
             setGeneratedPosts(posts)
             setGeneratedPostIds(postIds)
             setGeneratedMatch(match)
             setGeneratedMatchId(matchId)
             setGeneratedPhoto(photo)
+            setBannedWordsWarning(warning)
           }}
           onVisualOnly={(match, photo) => {
             setGeneratedMatch(match)
@@ -162,12 +165,14 @@ function MatchSection({ club, initialValues }: { club: Club; initialValues?: Mat
           photoFile={generatedPhoto}
           onPersonalize={personalizeMatch}
           personalizing={personalizing}
+          bannedWordsWarning={bannedWordsWarning}
           onReset={() => {
             setGeneratedPosts(null)
             setGeneratedPostIds(null)
             setGeneratedMatch(null)
             setGeneratedMatchId(null)
             setGeneratedPhoto(null)
+            setBannedWordsWarning(null)
           }}
         />
       )}
@@ -197,6 +202,7 @@ function TournamentSection({ club }: { club: Club }) {
   const [posts, setPosts] = useState<Record<string, string> | null>(null)
   const [showVisualOnly, setShowVisualOnly] = useState(false)
   const [error, setError] = useState<UiError>(null)
+  const [bannedWordsWarning, setBannedWordsWarning] = useState<Record<string, string[]> | null>(null)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   async function getImageBlob(): Promise<Blob | null> {
     const canvas = canvasRef.current
@@ -229,6 +235,7 @@ function TournamentSection({ club }: { club: Club }) {
     setGenerating(false)
     if (!res.ok) { setError(toUiError(data, 'Génération impossible')); return }
     setPosts(data.posts)
+    setBannedWordsWarning(data.bannedWordsWarning ?? null)
   }
 
   function togglePlatform(p: Platform) {
@@ -376,6 +383,17 @@ function TournamentSection({ club }: { club: Club }) {
         </div>
       )}
 
+      {bannedWordsWarning && Object.keys(bannedWordsWarning).length > 0 && (
+        <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-800">
+          <p className="font-semibold">Expression à éviter détectée</p>
+          <p className="mt-1">
+            {Object.entries(bannedWordsWarning).map(([platform, words]) => (
+              <span key={platform} className="block">{platform} : {words.join(', ')}</span>
+            ))}
+          </p>
+          <p className="mt-1 text-xs text-amber-700">La publication automatique est désactivée pour ce contenu.</p>
+        </div>
+      )}
       {posts && <PostDisplay posts={posts} />}
       {(showVisualOnly || posts) && parseResult && parseResult.clubMatches.length > 0 && (
         <>
