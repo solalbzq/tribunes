@@ -5,8 +5,24 @@ import {
   validateOneTimeInstructions,
   validateTypeInstructions,
   resolvePersonalization,
+  isValidHexColor,
   PERSONALIZATION_LIMITS,
 } from './personalization'
+
+describe('isValidHexColor', () => {
+  it('accepts strict #rrggbb values', () => {
+    expect(isValidHexColor('#1a1a2e')).toBe(true)
+    expect(isValidHexColor('#FFFFFF')).toBe(true)
+  })
+
+  it('rejects malformed, short, or non-color values', () => {
+    expect(isValidHexColor('#fff')).toBe(false)
+    expect(isValidHexColor('javascript:alert(1)')).toBe(false)
+    expect(isValidHexColor('')).toBe(false)
+    expect(isValidHexColor(undefined)).toBe(false)
+    expect(isValidHexColor(123456)).toBe(false)
+  })
+})
 
 describe('validateClubPersonalizationInput', () => {
   it('trims and accepts valid values', () => {

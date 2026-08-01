@@ -38,6 +38,11 @@ export const PERSONALIZATION_LIMITS = {
 
 type ValidationResult<T> = { ok: true; value: T } | { ok: false; error: string }
 
+/** `#rrggbb` strict — utilisé pour valider une couleur de marque avant écriture (saisie manuelle ou restauration d'historique). */
+export function isValidHexColor(value: unknown): value is string {
+  return typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value)
+}
+
 function normalizeText(value: unknown): string | null {
   if (typeof value !== 'string') return null
   const trimmed = value.trim()

@@ -5,10 +5,15 @@ import { useRouter } from 'next/navigation'
 import VisualEditor from './VisualEditor'
 import TennisVisualEditor from './TennisVisualEditor'
 import PostVisualEditor from './PostVisualEditor'
+import IdentityOverview from './IdentityOverview'
+import IdentityTypeStyles, { type VisualTarget } from './IdentityTypeStyles'
+import IdentityHistory from './IdentityHistory'
 import type { VisualConfig, VisualFormat, PostVisualConfig, PostVisualKind } from '@/lib/visualLayout'
 import { parsePostVisualConfig } from '@/lib/visualLayout'
 import type { TennisVisualConfig } from './posts/TennisVisualGenerator'
 import { getStoredVisualConfig, pruneProfile, type StoredVisualConfig } from '@/lib/clubProfile'
+import { detectDominantColors, contrastRatio } from '@/lib/colorDetection'
+import { BRAND_COLOR_PRESETS } from '@/lib/brandPresets'
 import { PageHeader, Segmented, Field, INPUT } from './ui'
 import { Icon } from './icons'
 import { LogoMark } from '@/components/Logo'
@@ -30,6 +35,8 @@ type Club = {
   bannedWords?: string | null
 }
 
+type Section = 'overview' | 'brand' | 'tone' | 'types' | 'previews' | 'history'
+
 const POST_VISUAL_TYPES: { key: PostVisualKind; label: string }[] = [
   { key: 'tournament', label: 'Tournoi' },
   { key: 'schedule', label: 'Programme' },
@@ -38,16 +45,10 @@ const POST_VISUAL_TYPES: { key: PostVisualKind; label: string }[] = [
   { key: 'playerSpotlight', label: "Joueur à l'honneur" },
   { key: 'clubAnnouncement', label: 'Annonce du club' },
   { key: 'engagementPoll', label: 'Sondage' },
+  { key: 'customPost', label: 'Publication libre' },
 ]
 
-const PRESETS = [
-  { label: 'Bleu nuit / Rouge', primary: '#111827', secondary: '#2563eb' },
-  { label: 'Marine / Or', primary: '#0a1628', secondary: '#f5a623' },
-  { label: 'Vert foret / Blanc', primary: '#1a3d2b', secondary: '#ffffff' },
-  { label: 'Bordeaux / Beige', primary: '#6b1a2a', secondary: '#f5e6d3' },
-  { label: 'Noir / Cyan', primary: '#0d0d0d', secondary: '#00d4ff' },
-  { label: 'Violet / Lime', primary: '#2d1b69', secondary: '#a8ff3e' },
-]
+const MIN_CONTRAST = 2.2
 
 export default function PersonnalisationView({ club }: { club: Club }) {
   const router = useRouter()
@@ -55,7 +56,9 @@ export default function PersonnalisationView({ club }: { club: Club }) {
   const isTennisPadel = club.sport === 'Tennis' || club.sport === 'Padel'
   const isPremium = club.plan !== 'FREE'
 
-  const [artTab, setArtTab] = useState<'identity' | 'result' | 'tennis' | PostVisualKind>('identity')
+  const [section, setSection] = useState<Section>('overview')
+  const [visualTarget, setVisualTarget] = useState<VisualTarget | null>(null)
+
   const [primary, setPrimary] = useState(club.primaryColor)
   const [secondary, setSecondary] = useState(club.secondaryColor)
   const [logoUrl, setLogoUrl] = useState<string | null>(club.logoUrl)
@@ -69,6 +72,10 @@ export default function PersonnalisationView({ club }: { club: Club }) {
   const [savedIdentity, setSavedIdentity] = useState(false)
   const [identityError, setIdentityError] = useState<string | null>(null)
   const [logoError, setLogoError] = useState<string | null>(null)
+  const [detecting, setDetecting] = useState(false)
+  const [detectError, setDetectError] = useState<string | null>(null)
+
+  const currentClub: Club = { ...club, logoUrl, primaryColor: primary, secondaryColor: secondary, contentTone, customInstructions, signaturePhrase, bannedWords }
 
   function buildVisualConfigPayload(format?: VisualFormat, cfg?: VisualConfig): StoredVisualConfig {
     const stored = getStoredVisualConfig(club.visualConfig)
@@ -125,7 +132,9 @@ export default function PersonnalisationView({ club }: { club: Club }) {
     const file = e.target.files?.[0]
     if (!file) return
     setLogoError(null)
-    setLogoPreview(URL.createObjectURL(file))
+    setDetectError(null)
+    const blobUrl = URL.createObjectURL(file)
+    setLogoPreview(blobUrl)
     setUploading(true)
     const fd = new FormData()
     fd.append('logo', file)
@@ -139,6 +148,20 @@ export default function PersonnalisationView({ club }: { club: Club }) {
     }
     setUploading(false)
     router.refresh()
+
+    // Détection déterministe depuis le blob local (même origine, jamais bloquée
+    // par le CORS contrairement à une relecture depuis l'URL de stockage distante).
+    if (res.ok) {
+      setDetecting(true)
+      const detected = await detectDominantColors(blobUrl)
+      setDetecting(false)
+      if (detected) {
+        setPrimary(detected.primary)
+        setSecondary(detected.secondary)
+      } else {
+        setDetectError('Détection automatique indisponible pour cette image — ajustez les couleurs manuellement ci-dessous.')
+      }
+    }
   }
 
   async function handleSaveIdentity() {
@@ -162,33 +185,78 @@ export default function PersonnalisationView({ club }: { club: Club }) {
     await saveClubBase({ visualConfig: buildVisualConfigPayload(), tennisVisualConfig: cfg })
   }
 
+  const contrast = contrastRatio(primary, secondary)
+
+  if (visualTarget) {
+    return (
+      <div className="max-w-7xl space-y-6">
+        <button
+          onClick={() => setVisualTarget(null)}
+          className="inline-flex items-center gap-1.5 text-sm font-semibold text-muted hover:text-ink transition"
+        >
+          <Icon name="arrowLeft" className="h-4 w-4" /> Retour aux styles par type
+        </button>
+
+        {visualTarget === 'result' && (
+          <VisualEditor
+            club={{ ...currentClub, visualConfig: buildVisualConfigPayload() }}
+            isPremium={isPremium}
+            onSave={handleSaveLayout}
+          />
+        )}
+        {visualTarget === 'tennis' && (
+          <TennisVisualEditor
+            club={{ name: club.name, sport: club.sport, primaryColor: primary, secondaryColor: secondary, logoUrl: logoPreview }}
+            initialConfig={club.tennisVisualConfig as TennisVisualConfig | null | undefined}
+            onSave={handleSaveTennisConfig}
+          />
+        )}
+        {POST_VISUAL_TYPES.some(t => t.key === visualTarget) && (
+          <PostVisualEditor
+            kind={visualTarget as PostVisualKind}
+            club={{ id: club.id, name: club.name, sport: club.sport, primaryColor: primary, secondaryColor: secondary, logoUrl: logoPreview }}
+            savedConfig={club.postVisualConfigs}
+            isPremium={isPremium}
+            onSave={handleSavePostVisual}
+          />
+        )}
+      </div>
+    )
+  }
+
   return (
     <div className="max-w-7xl space-y-6">
       <PageHeader
         icon="sliders"
-        title="Personnalisation"
-        subtitle="L'identité visuelle et les réglages qui s'appliquent à tous vos posts."
+        title="Identité du club"
+        subtitle="Configurez une fois votre identité — elle s'applique automatiquement à toutes vos publications."
       />
 
       <Segmented
-        value={artTab}
-        onChange={setArtTab}
+        value={section}
+        onChange={setSection}
         items={[
-          { key: 'identity', label: 'Identité visuelle', icon: 'palette' },
-          { key: 'result', label: 'Visuel résultat', icon: 'image' },
-          ...(isTennisPadel ? [{ key: 'tennis' as const, label: `Visuels ${club.sport}`, icon: 'trophy' as const }] : []),
-          ...POST_VISUAL_TYPES.map(t => ({ key: t.key, label: t.label, icon: 'image' as const })),
+          { key: 'overview', label: "Vue d'ensemble", icon: 'palette' },
+          { key: 'brand', label: 'Logo et couleurs', icon: 'image' },
+          { key: 'tone', label: 'Ton et vocabulaire', icon: 'sparkles' },
+          { key: 'types', label: 'Styles par type', icon: 'sliders' },
+          { key: 'previews', label: 'Aperçus', icon: 'target' },
+          { key: 'history', label: 'Historique', icon: 'clock' },
         ]}
       />
 
-      {artTab === 'identity' && (
+      {section === 'overview' && (
+        <IdentityOverview club={currentClub} onNavigate={setSection} />
+      )}
+
+      {section === 'brand' && (
         <div className="grid grid-cols-1 xl:grid-cols-[1.1fr_0.9fr] gap-6">
           <div className="space-y-6">
             <div className="bg-white rounded-card border border-line shadow-card p-6 space-y-5">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand">Direction artistique</p>
-                <h3 className="text-xl font-extrabold text-[#111827] mt-2">Logo, couleurs et ambiance</h3>
-                <p className="text-sm text-gray-500 mt-1">Configure les grands marqueurs visuels du club. Ils serviront dans tous les visuels générés.</p>
+                <h3 className="text-xl font-extrabold text-[#111827] mt-2">Logo et couleurs</h3>
+                <p className="text-sm text-gray-500 mt-1">Servent de base à tous les visuels générés.</p>
               </div>
 
               <div className="bg-gray-50 rounded-2xl p-5">
@@ -216,6 +284,8 @@ export default function PersonnalisationView({ club }: { club: Club }) {
                     <p className="text-xs text-gray-400 mt-1">PNG, JPG ou WEBP - max 5 Mo</p>
                     {logoError && <p className="text-xs text-red-500 mt-1">{logoError}</p>}
                     {logoUrl && !uploading && !logoError && <p className="text-xs text-[#22c55e] mt-1">✓ Logo sauvegarde</p>}
+                    {detecting && <p className="text-xs text-muted mt-1">Détection des couleurs...</p>}
+                    {detectError && <p className="text-xs text-amber-600 mt-1">{detectError}</p>}
                   </div>
                 </div>
                 <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={handleLogoChange} />
@@ -226,7 +296,7 @@ export default function PersonnalisationView({ club }: { club: Club }) {
                 <div>
                   <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Palettes predefinies</p>
                   <div className="grid grid-cols-3 gap-2">
-                    {PRESETS.map(preset => (
+                    {BRAND_COLOR_PRESETS.map(preset => (
                       <button
                         key={preset.label}
                         onClick={() => { setPrimary(preset.primary); setSecondary(preset.secondary) }}
@@ -258,54 +328,11 @@ export default function PersonnalisationView({ club }: { club: Club }) {
                     </div>
                   </Field>
                 </div>
-              </div>
-
-              <div className="bg-gray-50 rounded-2xl p-5 space-y-3">
-                <h4 className="font-bold text-[#111827]">Personnalité des posts</h4>
-                <p className="text-sm text-gray-500">Le ton par défaut de vos légendes IA — modifiable ponctuellement pour un post donné depuis l&apos;écran de génération.</p>
-                <select value={contentTone} onChange={e => setContentTone(e.target.value)} className={INPUT}>
-                  <option value="STANDARD">Standard</option>
-                  <option value="FUN">Fun et décontractée</option>
-                  <option value="SOBER">Sobre et factuelle</option>
-                </select>
-              </div>
-
-              <div className="bg-gray-50 rounded-2xl p-5 space-y-4">
-                <div>
-                  <h4 className="font-bold text-[#111827]">Consignes IA</h4>
-                  <p className="text-sm text-gray-500">Appliquées à toutes les légendes générées, quel que soit le type de post.</p>
-                </div>
-                <Field label="Consignes personnalisées (optionnel)">
-                  <textarea
-                    value={customInstructions}
-                    onChange={e => setCustomInstructions(e.target.value)}
-                    rows={3}
-                    maxLength={1000}
-                    className={`${INPUT} resize-none`}
-                    placeholder="Ex: n'utilise jamais d'emoji, mentionne toujours notre sponsor principal..."
-                  />
-                  <p className="mt-1 text-right text-xs text-gray-400">{customInstructions.length}/1000</p>
-                </Field>
-                <Field label="Mots à éviter (optionnel)">
-                  <input
-                    type="text"
-                    value={bannedWords}
-                    onChange={e => setBannedWords(e.target.value)}
-                    className={INPUT}
-                    placeholder="Ex: déception, échec, faible affluence"
-                  />
-                  <p className="mt-1 text-xs text-gray-400">Séparez par des virgules — 30 expressions maximum, 50 caractères chacune.</p>
-                </Field>
-                <Field label="Phrase de signature (optionnel)">
-                  <input
-                    type="text"
-                    value={signaturePhrase}
-                    onChange={e => setSignaturePhrase(e.target.value)}
-                    maxLength={200}
-                    className={INPUT}
-                    placeholder="Ex: Allez les Rouge et Blanc !"
-                  />
-                </Field>
+                {contrast < MIN_CONTRAST && (
+                  <p className="text-xs text-amber-600 bg-amber-50 rounded-lg px-3 py-2">
+                    ⚠ Ces deux couleurs sont assez proches — le texte ou les badges pourraient manquer de lisibilité sur vos visuels.
+                  </p>
+                )}
               </div>
 
               {identityError && <p className="text-xs text-red-500">{identityError}</p>}
@@ -319,81 +346,142 @@ export default function PersonnalisationView({ club }: { club: Club }) {
             </div>
           </div>
 
-          <div className="space-y-4">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Apercu live de ta DA</p>
-            <div className="rounded-3xl overflow-hidden shadow-lg" style={{ background: primary }}>
-              <div className="px-6 pt-6 pb-4 flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: secondary, opacity: 0.8 }}>{club.sport}</p>
-                  <p className="text-xl font-extrabold mt-0.5" style={{ color: textColor(primary) }}>{club.name}</p>
-                </div>
-                <div className="w-14 h-14 rounded-xl flex items-center justify-center overflow-hidden" style={{ background: `${secondary}22`, border: `2px solid ${secondary}44` }}>
-                  {logoPreview ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={logoPreview} alt="logo" className="w-full h-full object-contain p-1" />
-                  ) : (
-                    <LogoMark size={22} />
-                  )}
-                </div>
-              </div>
-
-              <div className="mx-4 mb-4 rounded-xl p-4" style={{ background: 'rgba(255,255,255,0.08)' }}>
-                <p className="text-xs font-semibold text-center mb-2" style={{ color: secondary }}>RESULTAT DU MATCH</p>
-                <div className="flex items-center justify-center gap-4">
-                  <div className="text-center">
-                    <p className="text-xs opacity-60" style={{ color: textColor(primary) }}>Nous</p>
-                    <p className="text-4xl font-black" style={{ color: textColor(primary) }}>3</p>
-                  </div>
-                  <div className="px-3 py-1 rounded-full text-xs font-bold" style={{ background: secondary, color: textColor(secondary) }}>VICTOIRE</div>
-                  <div className="text-center">
-                    <p className="text-xs opacity-60" style={{ color: textColor(primary) }}>Eux</p>
-                    <p className="text-4xl font-black" style={{ color: textColor(primary) }}>1</p>
-                  </div>
-                </div>
-                <p className="text-xs text-center mt-2 opacity-50" style={{ color: textColor(primary) }}>vs Adversaire · Championnat</p>
-              </div>
-
-              <div className="px-6 py-3 flex items-center justify-between" style={{ background: secondary, color: textColor(secondary) }}>
-                <p className="text-xs font-bold">tribunes.app</p>
-                <p className="text-xs opacity-70">#{club.name.toLowerCase().replace(/\s/g, '')} #{club.sport.toLowerCase()}</p>
-              </div>
-            </div>
-            <p className="text-xs text-gray-400 text-center">Les visuels utiliseront cette base graphique pour les resultats, annonces et futurs templates.</p>
-          </div>
+          <BrandPreview club={club} primary={primary} secondary={secondary} logoPreview={logoPreview} />
         </div>
       )}
 
-      {artTab === 'result' && (
-        <VisualEditor
-          club={{
-            ...club,
-            primaryColor: primary,
-            secondaryColor: secondary,
-            logoUrl: logoPreview,
-            visualConfig: buildVisualConfigPayload(),
-          }}
-          isPremium={isPremium}
-          onSave={handleSaveLayout}
-        />
+      {section === 'tone' && (
+        <div className="max-w-2xl bg-white rounded-card border border-line shadow-card p-6 space-y-5">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand">Identité éditoriale</p>
+            <h3 className="text-xl font-extrabold text-[#111827] mt-2">Ton et vocabulaire</h3>
+            <p className="text-sm text-gray-500 mt-1">S&apos;appliquent à toutes les légendes générées, quel que soit le type de post.</p>
+          </div>
+
+          <div className="bg-gray-50 rounded-2xl p-5 space-y-3">
+            <h4 className="font-bold text-[#111827]">Ton par défaut</h4>
+            <p className="text-sm text-gray-500">Modifiable ponctuellement pour un post donné depuis l&apos;écran de génération.</p>
+            <select value={contentTone} onChange={e => setContentTone(e.target.value)} className={INPUT}>
+              <option value="STANDARD">Standard</option>
+              <option value="FUN">Fun et décontractée</option>
+              <option value="SOBER">Sobre et factuelle</option>
+            </select>
+          </div>
+
+          <div className="bg-gray-50 rounded-2xl p-5 space-y-4">
+            <div>
+              <h4 className="font-bold text-[#111827]">Consignes et vocabulaire</h4>
+            </div>
+            <Field label="Consignes personnalisées (optionnel)">
+              <textarea
+                value={customInstructions}
+                onChange={e => setCustomInstructions(e.target.value)}
+                rows={3}
+                maxLength={1000}
+                className={`${INPUT} resize-none`}
+                placeholder="Ex: n'utilise jamais d'emoji, mentionne toujours notre sponsor principal..."
+              />
+              <p className="mt-1 text-right text-xs text-gray-400">{customInstructions.length}/1000</p>
+            </Field>
+            <Field label="Mots à éviter (optionnel)">
+              <input
+                type="text"
+                value={bannedWords}
+                onChange={e => setBannedWords(e.target.value)}
+                className={INPUT}
+                placeholder="Ex: déception, échec, faible affluence"
+              />
+              <p className="mt-1 text-xs text-gray-400">Séparez par des virgules — 30 expressions maximum, 50 caractères chacune.</p>
+            </Field>
+            <Field label="Phrase de signature (optionnel)">
+              <input
+                type="text"
+                value={signaturePhrase}
+                onChange={e => setSignaturePhrase(e.target.value)}
+                maxLength={200}
+                className={INPUT}
+                placeholder="Ex: Allez les Rouge et Blanc !"
+              />
+            </Field>
+          </div>
+
+          {identityError && <p className="text-xs text-red-500">{identityError}</p>}
+          <button
+            onClick={handleSaveIdentity}
+            disabled={savingIdentity}
+            className={`w-full py-3 rounded-xl font-bold text-sm transition ${savedIdentity ? 'bg-[#22c55e] text-white' : 'bg-[#111827] text-white hover:bg-[#1f2937]'} disabled:opacity-60`}
+          >
+            {savedIdentity ? '✓ Personnalisation sauvegardee' : savingIdentity ? 'Sauvegarde...' : 'Sauvegarder'}
+          </button>
+        </div>
       )}
 
-      {artTab === 'tennis' && isTennisPadel && (
-        <TennisVisualEditor
-          club={{ name: club.name, sport: club.sport, primaryColor: primary, secondaryColor: secondary, logoUrl: logoPreview }}
-          initialConfig={club.tennisVisualConfig as TennisVisualConfig | null | undefined}
-          onSave={handleSaveTennisConfig}
-        />
+      {section === 'types' && (
+        <IdentityTypeStyles isTennisPadel={isTennisPadel} onNavigateVisual={setVisualTarget} />
       )}
 
-      {POST_VISUAL_TYPES.some(t => t.key === artTab) && (
-        <PostVisualEditor
-          kind={artTab as PostVisualKind}
-          club={{ id: club.id, name: club.name, sport: club.sport, primaryColor: primary, secondaryColor: secondary, logoUrl: logoPreview }}
-          savedConfig={club.postVisualConfigs}
-          isPremium={isPremium}
-          onSave={handleSavePostVisual}
-        />
+      {section === 'previews' && (
+        <div className="max-w-md space-y-3">
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Apercu live de ta DA</p>
+          <BrandPreview club={club} primary={primary} secondary={secondary} logoPreview={logoPreview} />
+        </div>
       )}
+
+      {section === 'history' && (
+        <IdentityHistory onRestored={() => router.refresh()} />
+      )}
+    </div>
+  )
+}
+
+function BrandPreview({
+  club, primary, secondary, logoPreview,
+}: {
+  club: { name: string; sport: string }
+  primary: string
+  secondary: string
+  logoPreview: string | null
+}) {
+  return (
+    <div className="space-y-4">
+      <div className="rounded-3xl overflow-hidden shadow-lg" style={{ background: primary }}>
+        <div className="px-6 pt-6 pb-4 flex items-center justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: secondary, opacity: 0.8 }}>{club.sport}</p>
+            <p className="text-xl font-extrabold mt-0.5" style={{ color: textColor(primary) }}>{club.name}</p>
+          </div>
+          <div className="w-14 h-14 rounded-xl flex items-center justify-center overflow-hidden" style={{ background: `${secondary}22`, border: `2px solid ${secondary}44` }}>
+            {logoPreview ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={logoPreview} alt="logo" className="w-full h-full object-contain p-1" />
+            ) : (
+              <LogoMark size={22} />
+            )}
+          </div>
+        </div>
+
+        <div className="mx-4 mb-4 rounded-xl p-4" style={{ background: 'rgba(255,255,255,0.08)' }}>
+          <p className="text-xs font-semibold text-center mb-2" style={{ color: secondary }}>RESULTAT DU MATCH</p>
+          <div className="flex items-center justify-center gap-4">
+            <div className="text-center">
+              <p className="text-xs opacity-60" style={{ color: textColor(primary) }}>Nous</p>
+              <p className="text-4xl font-black" style={{ color: textColor(primary) }}>3</p>
+            </div>
+            <div className="px-3 py-1 rounded-full text-xs font-bold" style={{ background: secondary, color: textColor(secondary) }}>VICTOIRE</div>
+            <div className="text-center">
+              <p className="text-xs opacity-60" style={{ color: textColor(primary) }}>Eux</p>
+              <p className="text-4xl font-black" style={{ color: textColor(primary) }}>1</p>
+            </div>
+          </div>
+          <p className="text-xs text-center mt-2 opacity-50" style={{ color: textColor(primary) }}>vs Adversaire · Championnat</p>
+        </div>
+
+        <div className="px-6 py-3 flex items-center justify-between" style={{ background: secondary, color: textColor(secondary) }}>
+          <p className="text-xs font-bold">tribunes.app</p>
+          <p className="text-xs opacity-70">#{club.name.toLowerCase().replace(/\s/g, '')} #{club.sport.toLowerCase()}</p>
+        </div>
+      </div>
+      <p className="text-xs text-gray-400 text-center">Aperçu déterministe — pas d&apos;appel IA. Les vrais visuels utilisent cette même base graphique.</p>
     </div>
   )
 }

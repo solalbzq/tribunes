@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { CLUB_VOICES } from '@/lib/voice'
 import { resolvePlanForClub } from '@/lib/org'
 import { sanitizeFooterElements } from '@/lib/visualLayout'
-import { validateClubPersonalizationInput } from '@/lib/personalization'
+import { validateClubPersonalizationInput, isValidHexColor } from '@/lib/personalization'
 import { recordPersonalizationHistory } from '@/lib/services/personalizationHistory'
 
 // Sanitisation "bandeau premium" : neutralise toute personnalisation du footer
@@ -46,6 +46,13 @@ export async function POST(req: Request) {
     tenupUrl, contentTone, customInstructions, signaturePhrase, bannedWords,
   } = await req.json()
   if (!name || !sport) return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
+
+  if (primaryColor !== undefined && !isValidHexColor(primaryColor)) {
+    return NextResponse.json({ error: 'Couleur principale invalide (format #rrggbb attendu)' }, { status: 400 })
+  }
+  if (secondaryColor !== undefined && !isValidHexColor(secondaryColor)) {
+    return NextResponse.json({ error: "Couleur d'accentuation invalide (format #rrggbb attendu)" }, { status: 400 })
+  }
 
   const personalization = validateClubPersonalizationInput({ customInstructions, signaturePhrase, bannedWords })
   if (!personalization.ok) return NextResponse.json({ error: personalization.error }, { status: 400 })
