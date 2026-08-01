@@ -76,8 +76,8 @@ export async function POST(req: Request) {
   const posts: Record<string, string> = {}
   for (const platform of requested) posts[platform] = all[platform]
 
-  const initialStatus = await resolveInitialStatus(club)
   const bannedWords = checkBannedWordsAcrossPlatforms(posts, club.bannedWords)
+  const initialStatus = await resolveInitialStatus(club, { forceReview: bannedWords.hasViolation })
 
   // Save WeeklySchedule + posts
   const weekly = await prisma.weeklySchedule.create({

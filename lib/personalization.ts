@@ -28,6 +28,9 @@ export const PERSONALIZATION_LIMITS = {
   typeInstructions: 500,
   bannedWordsMaxItems: 30,
   bannedWordMaxLength: 50,
+  // Sous cette longueur, un "mot interdit" (ex: une lettre, un article) matcherait
+  // quasiment tout texte généré une fois normalisé — cf. lib/bannedWords.ts.
+  bannedWordMinLength: 2,
 } as const
 
 type ValidationResult<T> = { ok: true; value: T } | { ok: false; error: string }
@@ -68,6 +71,10 @@ export function validateClubPersonalizationInput(input: {
     const tooLong = items.find(w => w.length > PERSONALIZATION_LIMITS.bannedWordMaxLength)
     if (tooLong) {
       return { ok: false, error: `Chaque expression à éviter est limitée à ${PERSONALIZATION_LIMITS.bannedWordMaxLength} caractères` }
+    }
+    const tooShort = items.find(w => w.length < PERSONALIZATION_LIMITS.bannedWordMinLength)
+    if (tooShort) {
+      return { ok: false, error: `Chaque expression à éviter doit contenir au moins ${PERSONALIZATION_LIMITS.bannedWordMinLength} caractères` }
     }
     bannedWords = items.join(', ')
   }

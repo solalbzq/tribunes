@@ -95,8 +95,8 @@ Format exact attendu :
   await logAiUsage(club.id, completion, 'gpt-4o', { route: 'generate' })
 
   const posts = splitPlatformPosts(completion.choices[0].message.content ?? '')
-  const initialStatus = await resolveInitialStatus(club)
   const bannedWords = checkBannedWordsAcrossPlatforms(posts, club.bannedWords)
+  const initialStatus = await resolveInitialStatus(club, { forceReview: bannedWords.hasViolation })
 
   let match: Awaited<ReturnType<typeof prisma.matchResult.findUniqueOrThrow>> & { posts: Array<{ id: string; platform: string; content: string; imageUrl: string | null }> }
 

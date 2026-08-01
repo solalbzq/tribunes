@@ -31,8 +31,20 @@ export async function resolveEffectiveMode(club: ClubForAutomation): Promise<Aut
   return allowed ? (club.automationMode as AutomationMode) : 'MANUAL'
 }
 
-/** Statut initial à utiliser à la création d'un GeneratedPost, selon le mode effectif du club. */
-export async function resolveInitialStatus(club: ClubForAutomation): Promise<'DRAFT' | 'PENDING_REVIEW'> {
+/**
+ * Statut initial à utiliser à la création d'un GeneratedPost, selon le mode
+ * effectif du club. `forceReview` (mot interdit détecté, cf. lib/bannedWords.ts)
+ * force PENDING_REVIEW même en mode FULL_AUTO/MANUAL : le statut en base doit
+ * refléter fidèlement que ce post attend une décision, pas juste le
+ * comportement d'automatisation appliqué à côté par runAutomationSideEffects —
+ * sinon un post FULL_AUTO signalé reste un DRAFT ordinaire, indiscernable des
+ * brouillons habituels pour un club qui ne consulte jamais son dashboard.
+ */
+export async function resolveInitialStatus(
+  club: ClubForAutomation,
+  options: { forceReview?: boolean } = {}
+): Promise<'DRAFT' | 'PENDING_REVIEW'> {
+  if (options.forceReview) return 'PENDING_REVIEW'
   const mode = await resolveEffectiveMode(club)
   return mode === 'AUTO_REVIEW' ? 'PENDING_REVIEW' : 'DRAFT'
 }

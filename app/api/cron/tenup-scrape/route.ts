@@ -93,8 +93,8 @@ export async function GET(req: Request) {
       await logAiUsage(club.id, completion, 'gpt-4o', { route: 'cron/tenup-scrape' })
 
       const posts = splitPlatformPosts(completion.choices[0].message.content ?? '')
-      const initialStatus = await resolveInitialStatus(club)
       const bannedWords = checkBannedWordsAcrossPlatforms(posts, club.bannedWords)
+      const initialStatus = await resolveInitialStatus(club, { forceReview: bannedWords.hasViolation })
 
       const weekly = await prisma.weeklySchedule.create({
         data: {

@@ -52,8 +52,8 @@ export async function generatePlatformPosts(params: {
   const postsByPlatform: Record<string, string> = {}
   for (const platform of platforms) postsByPlatform[platform] = all[platform as keyof PlatformPosts]
 
-  const initialStatus = await resolveInitialStatus(club)
   const bannedWords = checkBannedWordsAcrossPlatforms(postsByPlatform, club.bannedWords)
+  const initialStatus = await resolveInitialStatus(club, { forceReview: bannedWords.hasViolation })
   return { ok: true, postsByPlatform, initialStatus, bannedWords }
 }
 

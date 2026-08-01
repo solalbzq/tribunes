@@ -53,6 +53,11 @@ describe('validateClubPersonalizationInput', () => {
     })
     expect(result.ok).toBe(false)
   })
+
+  it('rejects a single-character banned expression (would match almost any generated text)', () => {
+    const result = validateClubPersonalizationInput({ bannedWords: 'déception, a' })
+    expect(result.ok).toBe(false)
+  })
 })
 
 describe('validateOneTimeInstructions', () => {
