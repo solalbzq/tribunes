@@ -8,7 +8,8 @@ import { splitPlatformPosts } from '@/lib/prompts/splitPlatforms'
 import { logAiUsage } from '@/lib/usage'
 import { checkAiQuota, quotaExceededResponse } from '@/lib/quota'
 import { resolveInitialStatus, runAutomationSideEffects } from '@/lib/automation'
-import { buildPersonalizationPrefix, validateOneTimeInstructions } from '@/lib/personalization'
+import { validateOneTimeInstructions, resolvePersonalization } from '@/lib/personalization'
+import { getPersonalizationOverride } from '@/lib/services/personalizationOverride'
 import { checkBannedWordsAcrossPlatforms } from '@/lib/bannedWords'
 
 export async function POST(req: Request) {
@@ -26,7 +27,11 @@ export async function POST(req: Request) {
   if (!weekStartRaw) return NextResponse.json({ error: 'weekStart manquant' }, { status: 400 })
   const oneTimeInstructions = validateOneTimeInstructions(customInstructions)
   if (!oneTimeInstructions.ok) return NextResponse.json({ error: oneTimeInstructions.error }, { status: 400 })
-  const voice = tone || club.contentTone
+  const typeOverride = await getPersonalizationOverride(club.id, 'WEEKLY_SCHEDULE')
+  const { voice, prefix } = resolvePersonalization({
+    club, postType: 'WEEKLY_SCHEDULE', typeOverride,
+    requestOverride: { voiceOverride: tone, oneTimeInstructions: oneTimeInstructions.value },
+  })
 
   const weekStart = new Date(weekStartRaw)
   const weekEnd = new Date(weekStart)
@@ -60,7 +65,7 @@ export async function POST(req: Request) {
   }))
 
   // Un seul appel IA pour les 3 plateformes (puis découpage).
-  const prompt = buildPersonalizationPrefix(club, oneTimeInstructions.value) + (isPadel
+  const prompt = prefix + (isPadel
     ? padelWeeklySchedulePromptAll(club.name, weekStart, weekEnd, weeklyMatches, voice)
     : weeklySchedulePromptAll(club.name, weekStart, weekEnd, weeklyMatches, voice))
 

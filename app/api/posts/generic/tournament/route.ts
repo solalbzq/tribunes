@@ -7,7 +7,8 @@ import { splitPlatformPosts } from '@/lib/prompts/splitPlatforms'
 import { logAiUsage } from '@/lib/usage'
 import { checkAiQuota, quotaExceededResponse } from '@/lib/quota'
 import { resolveInitialStatus, runAutomationSideEffects } from '@/lib/automation'
-import { buildPersonalizationPrefix, validateOneTimeInstructions } from '@/lib/personalization'
+import { validateOneTimeInstructions, resolvePersonalization } from '@/lib/personalization'
+import { getPersonalizationOverride } from '@/lib/services/personalizationOverride'
 import { deletePostsForRegenerate } from '@/lib/services/postGeneration'
 import { checkBannedWordsAcrossPlatforms } from '@/lib/bannedWords'
 import type { Sport } from '@prisma/client'
@@ -60,7 +61,11 @@ export async function POST(req: Request) {
   }
   const oneTimeInstructions = validateOneTimeInstructions(customInstructions)
   if (!oneTimeInstructions.ok) return NextResponse.json({ error: oneTimeInstructions.error }, { status: 400 })
-  const voice = tone || club.contentTone
+  const typeOverride = await getPersonalizationOverride(club.id, 'TOURNAMENT_SCHEDULE')
+  const { voice, prefix } = resolvePersonalization({
+    club, postType: 'TOURNAMENT_SCHEDULE', typeOverride,
+    requestOverride: { voiceOverride: tone, oneTimeInstructions: oneTimeInstructions.value },
+  })
 
   const matchDate = new Date(matchDateRaw)
   const clubMatches: GenericTournamentMatch[] = matchesRaw.map((m: GenericTournamentMatch) => ({
@@ -89,7 +94,7 @@ export async function POST(req: Request) {
     })
   }
 
-  const prompt = buildPersonalizationPrefix(club, oneTimeInstructions.value)
+  const prompt = prefix
     + tournamentSchedulePromptAll(club.sport, club.name, tournamentName, matchDate, venue, clubMatches, voice)
 
   const completion = await openai.chat.completions.create({

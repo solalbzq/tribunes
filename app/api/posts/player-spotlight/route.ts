@@ -4,7 +4,8 @@ import { prisma } from '@/lib/prisma'
 import { playerSpotlightPromptAll } from '@/lib/prompts/player-spotlight'
 import { generatePlatformPosts, toPostIds, deletePostsForRegenerate } from '@/lib/services/postGeneration'
 import { runAutomationSideEffects } from '@/lib/automation'
-import { buildPersonalizationPrefix, validateOneTimeInstructions } from '@/lib/personalization'
+import { validateOneTimeInstructions, resolvePersonalization } from '@/lib/personalization'
+import { getPersonalizationOverride } from '@/lib/services/personalizationOverride'
 
 const PLATFORMS = ['instagram', 'facebook', 'whatsapp'] as const
 type Platform = typeof PLATFORMS[number]
@@ -35,8 +36,12 @@ export async function POST(req: Request) {
   const oneTimeInstructions = validateOneTimeInstructions(customInstructions)
   if (!oneTimeInstructions.ok) return NextResponse.json({ error: oneTimeInstructions.error }, { status: 400 })
 
-  const voice = tone || club.contentTone
-  const prompt = buildPersonalizationPrefix(club, oneTimeInstructions.value)
+  const typeOverride = await getPersonalizationOverride(club.id, 'PLAYER_SPOTLIGHT')
+  const { voice, prefix } = resolvePersonalization({
+    club, postType: 'PLAYER_SPOTLIGHT', typeOverride,
+    requestOverride: { voiceOverride: tone, oneTimeInstructions: oneTimeInstructions.value },
+  })
+  const prompt = prefix
     + playerSpotlightPromptAll(club.sport, club.name, playerName, achievement, periodLabel || undefined, voice)
 
   const gen = await generatePlatformPosts({ club, platforms: platforms as Platform[], prompt, route: 'posts/player-spotlight' })

@@ -7,7 +7,8 @@ import { splitPlatformPosts } from '@/lib/prompts/splitPlatforms'
 import { logAiUsage } from '@/lib/usage'
 import { checkAiQuota, quotaExceededResponse } from '@/lib/quota'
 import { resolveInitialStatus, runAutomationSideEffects } from '@/lib/automation'
-import { buildPersonalizationPrefix, validateOneTimeInstructions } from '@/lib/personalization'
+import { validateOneTimeInstructions, resolvePersonalization } from '@/lib/personalization'
+import { getPersonalizationOverride } from '@/lib/services/personalizationOverride'
 import { deletePostsForRegenerate } from '@/lib/services/postGeneration'
 import { checkBannedWordsAcrossPlatforms } from '@/lib/bannedWords'
 import type { Sport } from '@prisma/client'
@@ -51,7 +52,11 @@ export async function POST(req: Request) {
   }
   const oneTimeInstructions = validateOneTimeInstructions(customInstructions)
   if (!oneTimeInstructions.ok) return NextResponse.json({ error: oneTimeInstructions.error }, { status: 400 })
-  const voice = tone || club.contentTone
+  const typeOverride = await getPersonalizationOverride(club.id, 'WEEKLY_SCHEDULE')
+  const { voice, prefix } = resolvePersonalization({
+    club, postType: 'WEEKLY_SCHEDULE', typeOverride,
+    requestOverride: { voiceOverride: tone, oneTimeInstructions: oneTimeInstructions.value },
+  })
 
   const weekStart = new Date(weekStartRaw)
   const weekEnd = weekEndRaw ? new Date(weekEndRaw) : new Date(weekStart)
@@ -69,7 +74,7 @@ export async function POST(req: Request) {
   }))
 
   // Un seul appel IA pour les 3 plateformes (puis découpage).
-  const prompt = buildPersonalizationPrefix(club, oneTimeInstructions.value)
+  const prompt = prefix
     + weeklySchedulePromptAll(club.sport, club.name, weekStart, weekEnd, weeklyMatches, voice)
 
   const completion = await openai.chat.completions.create({

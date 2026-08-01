@@ -3,6 +3,8 @@ import {
   buildPersonalizationPrefix,
   validateClubPersonalizationInput,
   validateOneTimeInstructions,
+  validateTypeInstructions,
+  resolvePersonalization,
   PERSONALIZATION_LIMITS,
 } from './personalization'
 
@@ -92,5 +94,95 @@ describe('buildPersonalizationPrefix', () => {
     const overrideIdx = prefix.indexOf('pour ce post uniquement')
     expect(clubIdx).toBeGreaterThanOrEqual(0)
     expect(overrideIdx).toBeGreaterThan(clubIdx)
+  })
+})
+
+describe('validateTypeInstructions', () => {
+  it('accepts and trims a valid value', () => {
+    expect(validateTypeInstructions('  reste factuel  ')).toEqual({ ok: true, value: 'reste factuel' })
+  })
+
+  it('rejects a value beyond the 500-character limit', () => {
+    const result = validateTypeInstructions('a'.repeat(PERSONALIZATION_LIMITS.typeInstructions + 1))
+    expect(result.ok).toBe(false)
+  })
+})
+
+describe('resolvePersonalization — priorités', () => {
+  const club = {
+    contentTone: 'STANDARD',
+    customInstructions: 'mentionne toujours le sponsor',
+    signaturePhrase: 'Allez les rouges !',
+    bannedWords: 'échec',
+  }
+
+  it('falls back to Tribunes/club defaults when nothing is overridden', () => {
+    const result = resolvePersonalization({ club, postType: 'CLUB_ANNOUNCEMENT' })
+    expect(result.voice).toBe('STANDARD')
+    expect(result.signaturePhrase).toBe('Allez les rouges !')
+    expect(result.prefix).toContain('mentionne toujours le sponsor')
+  })
+
+  it('a type override wins over the club identity, but not over a one-time request override', () => {
+    const result = resolvePersonalization({
+      club,
+      postType: 'CUSTOM_POST',
+      typeOverride: { voiceOverride: 'SOBER', signaturePhrase: 'Signature libre', customInstructions: 'ton neutre' },
+    })
+    expect(result.voice).toBe('SOBER')
+    expect(result.signaturePhrase).toBe('Signature libre')
+    expect(result.prefix).toContain('ton neutre')
+  })
+
+  it('a one-time request override wins over both the type override and the club identity (voice)', () => {
+    const result = resolvePersonalization({
+      club,
+      postType: 'CUSTOM_POST',
+      typeOverride: { voiceOverride: 'SOBER' },
+      requestOverride: { voiceOverride: 'FUN' },
+    })
+    expect(result.voice).toBe('FUN')
+  })
+
+  it('stacks type-level and one-time instructions on top of the club-level ones', () => {
+    const result = resolvePersonalization({
+      club,
+      postType: 'CUSTOM_POST',
+      typeOverride: { customInstructions: 'consigne du type' },
+      requestOverride: { oneTimeInstructions: 'consigne ponctuelle' },
+    })
+    const clubIdx = result.prefix.indexOf('mentionne toujours le sponsor')
+    const typeIdx = result.prefix.indexOf('consigne du type')
+    const requestIdx = result.prefix.indexOf('consigne ponctuelle')
+    expect(clubIdx).toBeGreaterThanOrEqual(0)
+    expect(typeIdx).toBeGreaterThan(clubIdx)
+    expect(requestIdx).toBeGreaterThan(typeIdx)
+  })
+
+  it('an invalid/free-text voice override never leaks through — falls back to the next level', () => {
+    const result = resolvePersonalization({
+      club,
+      postType: 'CUSTOM_POST',
+      requestOverride: { voiceOverride: 'convivial et festif' },
+    })
+    expect(result.voice).toBe('STANDARD')
+  })
+
+  it('banned words always come from the club, never overridable by type or request', () => {
+    const result = resolvePersonalization({
+      club,
+      postType: 'CUSTOM_POST',
+      typeOverride: { customInstructions: 'peu importe' },
+    })
+    expect(result.prefix).toContain('échec')
+  })
+
+  it('signature falls back to the club when the type override does not define one', () => {
+    const result = resolvePersonalization({
+      club,
+      postType: 'CUSTOM_POST',
+      typeOverride: { customInstructions: 'sans signature propre' },
+    })
+    expect(result.signaturePhrase).toBe('Allez les rouges !')
   })
 })

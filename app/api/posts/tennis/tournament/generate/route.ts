@@ -8,7 +8,8 @@ import { splitPlatformPosts } from '@/lib/prompts/splitPlatforms'
 import { logAiUsage } from '@/lib/usage'
 import { checkAiQuota, quotaExceededResponse } from '@/lib/quota'
 import { resolveInitialStatus, runAutomationSideEffects } from '@/lib/automation'
-import { buildPersonalizationPrefix, validateOneTimeInstructions } from '@/lib/personalization'
+import { validateOneTimeInstructions, resolvePersonalization } from '@/lib/personalization'
+import { getPersonalizationOverride } from '@/lib/services/personalizationOverride'
 import { checkBannedWordsAcrossPlatforms } from '@/lib/bannedWords'
 import type { TournamentMatch } from '@/lib/services/fft-pdf-parser'
 import type { ChatCompletion } from 'openai/resources/chat/completions'
@@ -74,10 +75,14 @@ export async function POST(req: Request) {
   if (!oneTimeInstructions.ok) return NextResponse.json({ error: oneTimeInstructions.error }, { status: 400 })
 
   const isPadel = schedule.sport === 'PADEL'
-  const voice = tone || club.contentTone
+  const typeOverride = await getPersonalizationOverride(club.id, 'TOURNAMENT_SCHEDULE')
+  const { voice, prefix } = resolvePersonalization({
+    club, postType: 'TOURNAMENT_SCHEDULE', typeOverride,
+    requestOverride: { voiceOverride: tone, oneTimeInstructions: oneTimeInstructions.value },
+  })
 
   // Un seul appel IA pour les 3 plateformes.
-  const prompt = buildPersonalizationPrefix(club, oneTimeInstructions.value) + (isPadel
+  const prompt = prefix + (isPadel
     ? padelTournamentSchedulePromptAll(club.name, schedule.tournamentName, grade, schedule.matchDate, schedule.venue, clubMatches, voice)
     : tournamentSchedulePromptAll(club.name, schedule.tournamentName, schedule.matchDate, schedule.venue, clubMatches, voice))
 

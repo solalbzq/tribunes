@@ -8,7 +8,8 @@ import { splitPlatformPosts } from '@/lib/prompts/splitPlatforms'
 import { logAiUsage } from '@/lib/usage'
 import { checkAiQuota, quotaExceededResponse } from '@/lib/quota'
 import { resolveInitialStatus, runAutomationSideEffects } from '@/lib/automation'
-import { buildPersonalizationPrefix, validateOneTimeInstructions } from '@/lib/personalization'
+import { validateOneTimeInstructions, resolvePersonalization } from '@/lib/personalization'
+import { getPersonalizationOverride } from '@/lib/services/personalizationOverride'
 import { checkBannedWordsAcrossPlatforms } from '@/lib/bannedWords'
 
 export async function POST(req: Request) {
@@ -48,13 +49,18 @@ export async function POST(req: Request) {
   const globalScore = match.globalScore ?? `${match.homeScore}-${match.awayScore}`
   const homeAway = (match.homeAway ?? 'DOMICILE') as 'DOMICILE' | 'EXTERIEUR'
   const scoreDetail = (match.scoreDetail ?? []) as ScoreDetail[] | PadelScoreDetail[]
-  const voice = tone || club.contentTone
 
   const oneTimeInstructions = validateOneTimeInstructions(customInstructions)
   if (!oneTimeInstructions.ok) return NextResponse.json({ error: oneTimeInstructions.error }, { status: 400 })
 
+  const typeOverride = await getPersonalizationOverride(club.id, 'INTERCLUB_RESULT')
+  const { voice, prefix } = resolvePersonalization({
+    club, postType: 'INTERCLUB_RESULT', typeOverride,
+    requestOverride: { voiceOverride: tone, oneTimeInstructions: oneTimeInstructions.value },
+  })
+
   // Un seul appel IA pour les 3 plateformes.
-  const prompt = buildPersonalizationPrefix(club, oneTimeInstructions.value) + (isPadel
+  const prompt = prefix + (isPadel
     ? padelInterclubResultPromptAll(
         club.name, match.teamName ?? club.name, match.opponent, globalScore,
         match.division ?? '', match.round ?? '', homeAway, scoreDetail as PadelScoreDetail[], voice, mvpName || undefined

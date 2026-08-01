@@ -8,7 +8,8 @@ import { splitPlatformPosts } from '@/lib/prompts/splitPlatforms'
 import { logAiUsage } from '@/lib/usage'
 import { checkAiQuota, quotaExceededResponse } from '@/lib/quota'
 import { resolveInitialStatus, runAutomationSideEffects } from '@/lib/automation'
-import { buildPersonalizationPrefix, validateOneTimeInstructions } from '@/lib/personalization'
+import { validateOneTimeInstructions, resolvePersonalization } from '@/lib/personalization'
+import { getPersonalizationOverride } from '@/lib/services/personalizationOverride'
 import { checkBannedWordsAcrossPlatforms } from '@/lib/bannedWords'
 import type { TournamentMatch } from '@/lib/services/fft-pdf-parser'
 import type { Sport } from '@prisma/client'
@@ -53,7 +54,11 @@ export async function POST(req: Request) {
   const clubMatches = matchesRaw as TournamentMatch[]
   const isPadel = club.sport === 'Padel'
   const sportEnum: Sport = isPadel ? 'PADEL' : 'TENNIS'
-  const voice = tone || club.contentTone
+  const typeOverride = await getPersonalizationOverride(club.id, 'WEEKLY_SCHEDULE')
+  const { voice, prefix } = resolvePersonalization({
+    club, postType: 'WEEKLY_SCHEDULE', typeOverride,
+    requestOverride: { voiceOverride: tone, oneTimeInstructions: oneTimeInstructions.value },
+  })
 
   const schedule = await prisma.tournamentSchedule.create({
     data: {
@@ -67,7 +72,7 @@ export async function POST(req: Request) {
     },
   })
 
-  const prompt = buildPersonalizationPrefix(club, oneTimeInstructions.value) + (isPadel
+  const prompt = prefix + (isPadel
     ? padelTournamentSchedulePromptAll(club.name, label, '', matchDate, '', clubMatches, voice)
     : tournamentSchedulePromptAll(club.name, label, matchDate, '', clubMatches, voice))
 

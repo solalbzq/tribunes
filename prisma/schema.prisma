@@ -62,7 +62,7 @@ model Club {
   logoUrl             String?
   visualConfig        Json?
   tennisVisualConfig  Json?
-  postVisualConfigs   Json? // { [PostVisualKind]: VisualConfig } — visuels des 7 types hors Résultat/Tennis
+  postVisualConfigs   Json? // { [PostVisualKind]: VisualConfig } — visuels des 8 types hors Résultat/Tennis
   tenupUrl            String?
   suspended           Boolean              @default(false)
   automationMode      String               @default("MANUAL") // MANUAL | AUTO_REVIEW | FULL_AUTO
@@ -85,6 +85,46 @@ model Club {
   clubAnnouncements   ClubAnnouncement[]
   engagementPolls     EngagementPoll[]
   customPosts         CustomPost[]
+  personalizationOverrides ClubPersonalizationOverride[]
+  personalizationHistory   ClubPersonalizationHistory[]
+}
+
+// Override de personnalisation par type de publication (postType, aligné sur
+// lib/postTypes.ts — colonne libre, pas d'enum, même convention que
+// GeneratedPost.postType). Une ligne par (club, type) : absence de ligne =
+// héritage complet de l'identité générale du club, pas de duplication.
+// `voiceOverride` doit être une valeur de ClubVoice (lib/voice.ts) ou null —
+// validé applicativement, pas en base (même convention que Club.contentTone).
+model ClubPersonalizationOverride {
+  id                 String   @id @default(cuid())
+  clubId             String
+  club               Club     @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  postType           String
+  voiceOverride      String?
+  customInstructions String?  @db.Text
+  signaturePhrase    String?
+  visualConfig       Json?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@unique([clubId, postType])
+  @@index([clubId])
+}
+
+// Historique append-only des sauvegardes de l'identité générale du club
+// (Personnalisation) — jamais modifié ni supprimé après création, sauf purge
+// applicative au-delà de la politique de rétention (cf. lib/personalizationHistory.ts).
+// Sert de filet de sécurité pour l'onboarding rejouable (Lot 4) : restaurer un
+// snapshot précédent sans système de branches/brouillons.
+model ClubPersonalizationHistory {
+  id        String   @id @default(cuid())
+  clubId    String
+  club      Club     @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  userId    String? // auteur de la modification, si distinct du propriétaire du club (organisation multi-membres)
+  snapshot  Json // { contentTone, customInstructions, signaturePhrase, bannedWords, primaryColor, secondaryColor, logoUrl }
+  createdAt DateTime @default(now())
+
+  @@index([clubId, createdAt])
 }
 
 model SocialConnection {

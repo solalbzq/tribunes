@@ -7,7 +7,8 @@ import { splitPlatformPosts } from '@/lib/prompts/splitPlatforms'
 import { logAiUsage } from '@/lib/usage'
 import { checkAiQuota, quotaExceededResponse } from '@/lib/quota'
 import { resolveInitialStatus, runAutomationSideEffects } from '@/lib/automation'
-import { buildPersonalizationPrefix, validateOneTimeInstructions } from '@/lib/personalization'
+import { validateOneTimeInstructions, resolvePersonalization } from '@/lib/personalization'
+import { getPersonalizationOverride } from '@/lib/services/personalizationOverride'
 import { deletePostsForRegenerate } from '@/lib/services/postGeneration'
 import { checkBannedWordsAcrossPlatforms } from '@/lib/bannedWords'
 
@@ -69,8 +70,12 @@ export async function POST(req: Request) {
   const oneTimeInstructions = validateOneTimeInstructions(customInstructions)
   if (!oneTimeInstructions.ok) return NextResponse.json({ error: oneTimeInstructions.error }, { status: 400 })
 
-  const voice = tone || club.contentTone
-  const prompt = buildPersonalizationPrefix(club, oneTimeInstructions.value)
+  const typeOverride = await getPersonalizationOverride(club.id, 'SEASON_RECAP')
+  const { voice, prefix } = resolvePersonalization({
+    club, postType: 'SEASON_RECAP', typeOverride,
+    requestOverride: { voiceOverride: tone, oneTimeInstructions: oneTimeInstructions.value },
+  })
+  const prompt = prefix
     + seasonRecapPromptAll(club.sport, club.name, periodLabel, wins, draws, losses, rankingNote || undefined, voice)
 
   const completion = await openai.chat.completions.create({

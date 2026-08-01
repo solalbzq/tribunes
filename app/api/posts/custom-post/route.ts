@@ -4,8 +4,8 @@ import { prisma } from '@/lib/prisma'
 import { customPostPromptAll, type CustomPostData } from '@/lib/prompts/custom-post'
 import { generatePlatformPosts, toPostIds, deletePostsForRegenerate } from '@/lib/services/postGeneration'
 import { resolveInitialStatusUnconstrained, runAutomationSideEffectsUnconstrained } from '@/lib/automation'
-import { buildPersonalizationPrefix, validateOneTimeInstructions } from '@/lib/personalization'
-import { resolveVoiceOverride } from '@/lib/voice'
+import { validateOneTimeInstructions, resolvePersonalization } from '@/lib/personalization'
+import { getPersonalizationOverride } from '@/lib/services/personalizationOverride'
 
 const PLATFORMS = ['instagram', 'facebook', 'whatsapp'] as const
 type Platform = typeof PLATFORMS[number]
@@ -86,15 +86,18 @@ export async function POST(req: Request) {
     suggestedCategory: nullableStr(suggestedCategory),
   }
 
-  // Bug historique corrigé ici : `tone` (envoyé par ToneSelector / le panneau
-  // "Personnaliser ce post") est l'override ponctuel de voix, au même titre
-  // que pour les 11 autres routes de génération — il ne doit jamais être
-  // confondu avec `desiredMood`, qui est une donnée éditoriale libre propre
-  // à CUSTOM_POST. Avant cette correction, la voix résolue ignorait `tone`
-  // et retombait toujours sur club.contentTone, rendant le sélecteur de ton
-  // inopérant sur les publications libres.
-  const voice = resolveVoiceOverride(tone, club.contentTone)
-  const prompt = buildPersonalizationPrefix(club, oneTimeInstructions.value)
+  // Bug historique corrigé au Lot 1 : `tone` (envoyé par ToneSelector / le
+  // panneau "Personnaliser ce post") est l'override ponctuel de voix, au même
+  // titre que pour les 12 autres routes de génération — il ne doit jamais
+  // être confondu avec `desiredMood`, qui est une donnée éditoriale libre
+  // propre à CUSTOM_POST. resolvePersonalization centralise cette résolution
+  // (Lot 2), avec support d'un override par type ('CUSTOM_POST').
+  const typeOverride = await getPersonalizationOverride(club.id, 'CUSTOM_POST')
+  const { voice, prefix } = resolvePersonalization({
+    club, postType: 'CUSTOM_POST', typeOverride,
+    requestOverride: { voiceOverride: tone, oneTimeInstructions: oneTimeInstructions.value },
+  })
+  const prompt = prefix
     + customPostPromptAll(club.sport, club.name, data, voice, Boolean(alternateAngle))
 
   const gen = await generatePlatformPosts({ club, platforms, prompt, route: 'posts/custom-post' })

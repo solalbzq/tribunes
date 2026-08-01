@@ -8,7 +8,8 @@ import { splitPlatformPosts } from '@/lib/prompts/splitPlatforms'
 import { logAiUsage } from '@/lib/usage'
 import { checkAiQuota, quotaExceededResponse } from '@/lib/quota'
 import { resolveInitialStatus, runAutomationSideEffects } from '@/lib/automation'
-import { buildPersonalizationPrefix, validateOneTimeInstructions } from '@/lib/personalization'
+import { validateOneTimeInstructions, resolvePersonalization } from '@/lib/personalization'
+import { getPersonalizationOverride } from '@/lib/services/personalizationOverride'
 import { deletePostsForRegenerate } from '@/lib/services/postGeneration'
 import { checkBannedWordsAcrossPlatforms } from '@/lib/bannedWords'
 
@@ -29,7 +30,11 @@ export async function POST(req: Request) {
   }
   const oneTimeInstructions = validateOneTimeInstructions(customInstructions)
   if (!oneTimeInstructions.ok) return NextResponse.json({ error: oneTimeInstructions.error }, { status: 400 })
-  const voice = tone || club.contentTone
+  const typeOverride = await getPersonalizationOverride(club.id, 'MATCH_RESULT')
+  const { voice, prefix } = resolvePersonalization({
+    club, postType: 'MATCH_RESULT', typeOverride,
+    requestOverride: { voiceOverride: tone, oneTimeInstructions: oneTimeInstructions.value },
+  })
 
   const clubScore = isHome ? homeScore : awayScore
   const opponentScore = isHome ? awayScore : homeScore
@@ -55,7 +60,7 @@ export async function POST(req: Request) {
     ? `Joueur/joueuse du match à mettre en avant : ${mvpName}. Cite-le/la nommément et valorise sa performance dans au moins un des posts.`
     : ''
 
-  const prompt = buildPersonalizationPrefix(club, oneTimeInstructions.value) + `Tu es le responsable communication du club de ${club.sport} "${club.name}".
+  const prompt = prefix + `Tu es le responsable communication du club de ${club.sport} "${club.name}".
 Rédige des posts pour annoncer ce résultat :
 
 - Sport : ${club.sport} ${vocab.emoji}

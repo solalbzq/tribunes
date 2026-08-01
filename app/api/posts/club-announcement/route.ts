@@ -4,7 +4,8 @@ import { prisma } from '@/lib/prisma'
 import { clubAnnouncementPromptAll, type ClubAnnouncementCategory } from '@/lib/prompts/club-announcement'
 import { generatePlatformPosts, toPostIds, deletePostsForRegenerate } from '@/lib/services/postGeneration'
 import { runAutomationSideEffects } from '@/lib/automation'
-import { buildPersonalizationPrefix, validateOneTimeInstructions } from '@/lib/personalization'
+import { validateOneTimeInstructions, resolvePersonalization } from '@/lib/personalization'
+import { getPersonalizationOverride } from '@/lib/services/personalizationOverride'
 
 const PLATFORMS = ['instagram', 'facebook', 'whatsapp'] as const
 type Platform = typeof PLATFORMS[number]
@@ -37,8 +38,12 @@ export async function POST(req: Request) {
   const oneTimeInstructions = validateOneTimeInstructions(customInstructions)
   if (!oneTimeInstructions.ok) return NextResponse.json({ error: oneTimeInstructions.error }, { status: 400 })
 
-  const voice = tone || club.contentTone
-  const prompt = buildPersonalizationPrefix(club, oneTimeInstructions.value)
+  const typeOverride = await getPersonalizationOverride(club.id, 'CLUB_ANNOUNCEMENT')
+  const { voice, prefix } = resolvePersonalization({
+    club, postType: 'CLUB_ANNOUNCEMENT', typeOverride,
+    requestOverride: { voiceOverride: tone, oneTimeInstructions: oneTimeInstructions.value },
+  })
+  const prompt = prefix
     + clubAnnouncementPromptAll(club.sport, club.name, category, title, description, ctaText || undefined, voice)
 
   const gen = await generatePlatformPosts({ club, platforms: platforms as Platform[], prompt, route: 'posts/club-announcement' })

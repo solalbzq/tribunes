@@ -4,7 +4,8 @@ import { prisma } from '@/lib/prisma'
 import { engagementPollPromptAll } from '@/lib/prompts/engagement-poll'
 import { generatePlatformPosts, toPostIds, deletePostsForRegenerate } from '@/lib/services/postGeneration'
 import { runAutomationSideEffects } from '@/lib/automation'
-import { buildPersonalizationPrefix, validateOneTimeInstructions } from '@/lib/personalization'
+import { validateOneTimeInstructions, resolvePersonalization } from '@/lib/personalization'
+import { getPersonalizationOverride } from '@/lib/services/personalizationOverride'
 
 const PLATFORMS = ['instagram', 'facebook', 'whatsapp'] as const
 type Platform = typeof PLATFORMS[number]
@@ -36,8 +37,12 @@ export async function POST(req: Request) {
   const oneTimeInstructions = validateOneTimeInstructions(customInstructions)
   if (!oneTimeInstructions.ok) return NextResponse.json({ error: oneTimeInstructions.error }, { status: 400 })
 
-  const voice = tone || club.contentTone
-  const prompt = buildPersonalizationPrefix(club, oneTimeInstructions.value)
+  const typeOverride = await getPersonalizationOverride(club.id, 'ENGAGEMENT_POLL')
+  const { voice, prefix } = resolvePersonalization({
+    club, postType: 'ENGAGEMENT_POLL', typeOverride,
+    requestOverride: { voiceOverride: tone, oneTimeInstructions: oneTimeInstructions.value },
+  })
+  const prompt = prefix
     + engagementPollPromptAll(club.sport, club.name, question, cleanOptions, voice)
 
   const gen = await generatePlatformPosts({ club, platforms: platforms as Platform[], prompt, route: 'posts/engagement-poll' })

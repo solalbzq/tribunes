@@ -5,6 +5,7 @@ import { CLUB_VOICES } from '@/lib/voice'
 import { resolvePlanForClub } from '@/lib/org'
 import { sanitizeFooterElements } from '@/lib/visualLayout'
 import { validateClubPersonalizationInput } from '@/lib/personalization'
+import { recordPersonalizationHistory } from '@/lib/services/personalizationHistory'
 
 // Sanitisation "bandeau premium" : neutralise toute personnalisation du footer
 // (masquage, remplacement par le nom du club) envoyée par un club au plan
@@ -49,7 +50,13 @@ export async function POST(req: Request) {
   const personalization = validateClubPersonalizationInput({ customInstructions, signaturePhrase, bannedWords })
   if (!personalization.ok) return NextResponse.json({ error: personalization.error }, { status: 400 })
 
-  const existing = await prisma.club.findUnique({ where: { userId: user.id }, select: { id: true, orgId: true } })
+  const existing = await prisma.club.findUnique({
+    where: { userId: user.id },
+    select: {
+      id: true, orgId: true, contentTone: true, customInstructions: true,
+      signaturePhrase: true, bannedWords: true, primaryColor: true, secondaryColor: true, logoUrl: true,
+    },
+  })
   const { plan } = await resolvePlanForClub({ orgId: existing?.orgId ?? null, userId: user.id })
   const isPremium = plan !== 'FREE'
 
@@ -72,6 +79,29 @@ export async function POST(req: Request) {
     update: data,
     create: { userId: user.id, ...data },
   })
+
+  // Snapshot d'historique uniquement si l'identité générale a réellement changé —
+  // évite de spammer l'historique à chaque sauvegarde d'un réglage visuel par
+  // type (qui passe par cette même route avec les champs d'identité inchangés).
+  const identityChanged = !existing
+    || existing.contentTone !== club.contentTone
+    || existing.customInstructions !== club.customInstructions
+    || existing.signaturePhrase !== club.signaturePhrase
+    || existing.bannedWords !== club.bannedWords
+    || existing.primaryColor !== club.primaryColor
+    || existing.secondaryColor !== club.secondaryColor
+    || existing.logoUrl !== club.logoUrl
+  if (identityChanged) {
+    await recordPersonalizationHistory(club.id, user.id, {
+      contentTone: club.contentTone,
+      customInstructions: club.customInstructions,
+      signaturePhrase: club.signaturePhrase,
+      bannedWords: club.bannedWords,
+      primaryColor: club.primaryColor,
+      secondaryColor: club.secondaryColor,
+      logoUrl: club.logoUrl,
+    })
+  }
 
   return NextResponse.json(club)
 }

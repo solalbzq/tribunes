@@ -4,7 +4,8 @@ import { prisma } from '@/lib/prisma'
 import { matchAnnouncementPromptAll } from '@/lib/prompts/match-announcement'
 import { generatePlatformPosts, toPostIds, deletePostsForRegenerate } from '@/lib/services/postGeneration'
 import { runAutomationSideEffects } from '@/lib/automation'
-import { buildPersonalizationPrefix, validateOneTimeInstructions } from '@/lib/personalization'
+import { validateOneTimeInstructions, resolvePersonalization } from '@/lib/personalization'
+import { getPersonalizationOverride } from '@/lib/services/personalizationOverride'
 
 const PLATFORMS = ['instagram', 'facebook', 'whatsapp'] as const
 type Platform = typeof PLATFORMS[number]
@@ -40,8 +41,12 @@ export async function POST(req: Request) {
   if (!oneTimeInstructions.ok) return NextResponse.json({ error: oneTimeInstructions.error }, { status: 400 })
 
   const matchDate = new Date(matchDateRaw)
-  const voice = tone || club.contentTone
-  const prompt = buildPersonalizationPrefix(club, oneTimeInstructions.value) + matchAnnouncementPromptAll(
+  const typeOverride = await getPersonalizationOverride(club.id, 'MATCH_ANNOUNCEMENT')
+  const { voice, prefix } = resolvePersonalization({
+    club, postType: 'MATCH_ANNOUNCEMENT', typeOverride,
+    requestOverride: { voiceOverride: tone, oneTimeInstructions: oneTimeInstructions.value },
+  })
+  const prompt = prefix + matchAnnouncementPromptAll(
     club.sport, club.name, opponent, matchDate, time || undefined, venue || undefined,
     competition || undefined, Boolean(isHome), note || undefined, voice
   )
