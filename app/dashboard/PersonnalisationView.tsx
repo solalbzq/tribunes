@@ -9,6 +9,7 @@ import IdentityOverview from './IdentityOverview'
 import IdentityTypeStyles, { type VisualTarget } from './IdentityTypeStyles'
 import IdentityHistory from './IdentityHistory'
 import IdentityReferences from './IdentityReferences'
+import IdentityPreviews from './IdentityPreviews'
 import OnboardingWizard from './OnboardingWizard'
 import type { VisualConfig, VisualFormat, PostVisualConfig, PostVisualKind } from '@/lib/visualLayout'
 import { parsePostVisualConfig } from '@/lib/visualLayout'
@@ -472,10 +473,7 @@ export default function PersonnalisationView({ club }: { club: Club }) {
       )}
 
       {section === 'previews' && (
-        <div className="max-w-md space-y-3">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Apercu live de ta DA</p>
-          <BrandPreview club={club} primary={primary} secondary={secondary} logoPreview={logoPreview} />
-        </div>
+        <IdentityPreviews club={currentClub} onNavigate={setSection} />
       )}
 
       {section === 'history' && (
