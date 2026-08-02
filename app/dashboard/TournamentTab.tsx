@@ -144,6 +144,7 @@ export default function TournamentTab({ club }: { club: Club }) {
         onPersonalize={personalize}
         personalizing={personalizing}
         bannedWordsWarning={bannedWordsWarning}
+        postType="TOURNAMENT_SCHEDULE"
       />
     )
   }

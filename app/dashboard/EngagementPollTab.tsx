@@ -126,6 +126,7 @@ export default function EngagementPollTab({ club, initialValues }: { club: Club;
         onPersonalize={personalize}
         personalizing={personalizing}
         bannedWordsWarning={bannedWordsWarning}
+        postType="ENGAGEMENT_POLL"
       />
     )
   }

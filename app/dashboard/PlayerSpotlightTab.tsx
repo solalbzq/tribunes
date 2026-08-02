@@ -121,6 +121,7 @@ export default function PlayerSpotlightTab({ club, initialValues }: { club: Club
         onPersonalize={personalize}
         personalizing={personalizing}
         bannedWordsWarning={bannedWordsWarning}
+        postType="PLAYER_SPOTLIGHT"
       />
     )
   }

@@ -70,22 +70,34 @@ export default function IdentityOverview({
                   Relancer la personnalisation rapide
                 </button>
                 <button
+                  onClick={() => { setMenuOpen(false); onNavigate('brand') }}
+                  className="w-full text-left px-4 py-2 text-sm text-ink hover:bg-subtle transition"
+                >
+                  Relancer la personnalisation complète
+                </button>
+                <button
+                  onClick={() => { setMenuOpen(false); onNavigate('tone') }}
+                  className="w-full text-left px-4 py-2 text-sm text-ink hover:bg-subtle transition"
+                >
+                  Modifier seulement le ton
+                </button>
+                <button
+                  onClick={() => { setMenuOpen(false); onNavigate('types') }}
+                  className="w-full text-left px-4 py-2 text-sm text-ink hover:bg-subtle transition"
+                >
+                  Modifier seulement les visuels
+                </button>
+                <button
                   onClick={() => { setMenuOpen(false); onNavigate('references') }}
                   className="w-full text-left px-4 py-2 text-sm text-ink hover:bg-subtle transition"
                 >
-                  Ajouter des références ou une charte
+                  Ajouter des références ou réanalyser une charte
                 </button>
                 <button
                   onClick={() => { setMenuOpen(false); onNavigate('history') }}
                   className="w-full text-left px-4 py-2 text-sm text-ink hover:bg-subtle transition"
                 >
                   Voir l&apos;historique
-                </button>
-                <button
-                  onClick={() => { setMenuOpen(false); onNavigate('types') }}
-                  className="w-full text-left px-4 py-2 text-sm text-ink hover:bg-subtle transition"
-                >
-                  Revoir les styles par type
                 </button>
               </div>
             )}

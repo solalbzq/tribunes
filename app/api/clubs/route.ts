@@ -6,6 +6,7 @@ import { resolvePlanForClub } from '@/lib/org'
 import { sanitizeFooterElements } from '@/lib/visualLayout'
 import { validateClubPersonalizationInput, isValidHexColor } from '@/lib/personalization'
 import { recordPersonalizationHistory } from '@/lib/services/personalizationHistory'
+import { logPersonalizationSignal } from '@/lib/services/personalizationSignals'
 
 // Sanitisation "bandeau premium" : neutralise toute personnalisation du footer
 // (masquage, remplacement par le nom du club) envoyée par un club au plan
@@ -108,6 +109,16 @@ export async function POST(req: Request) {
       secondaryColor: club.secondaryColor,
       logoUrl: club.logoUrl,
     })
+  }
+
+  // Signaux légers (compteur agrégé, jamais le texte avant/après) — préparent
+  // une future suggestion "vous modifiez souvent ce réglage" (Lot 8), sans
+  // jamais modifier automatiquement le Brand Kit.
+  if (existing && existing.contentTone !== club.contentTone) {
+    await logPersonalizationSignal(club.id, 'tone_changed')
+  }
+  if (existing && (existing.primaryColor !== club.primaryColor || existing.secondaryColor !== club.secondaryColor)) {
+    await logPersonalizationSignal(club.id, 'color_changed')
   }
 
   return NextResponse.json(club)

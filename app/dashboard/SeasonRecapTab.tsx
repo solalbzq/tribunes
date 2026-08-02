@@ -139,6 +139,7 @@ export default function SeasonRecapTab({ club, initialValues }: { club: Club; in
           onPersonalize={personalize}
           personalizing={personalizing}
           bannedWordsWarning={bannedWordsWarning}
+          postType="SEASON_RECAP"
         />
       </div>
     )

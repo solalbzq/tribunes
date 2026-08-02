@@ -145,6 +145,7 @@ export default function ProgrammeTab({ club }: { club: Club }) {
         onPersonalize={personalize}
         personalizing={personalizing}
         bannedWordsWarning={bannedWordsWarning}
+        postType="WEEKLY_SCHEDULE"
       />
     )
   }

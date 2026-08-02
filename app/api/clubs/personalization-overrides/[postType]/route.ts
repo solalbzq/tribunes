@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { CLUB_VOICES } from '@/lib/voice'
 import { POST_TYPES } from '@/lib/postTypes'
 import { validateTypeInstructions, PERSONALIZATION_LIMITS } from '@/lib/personalization'
+import { logPersonalizationSignal } from '@/lib/services/personalizationSignals'
 
 function isKnownPostType(value: string): value is keyof typeof POST_TYPES {
   return value in POST_TYPES
@@ -48,6 +49,8 @@ export async function PUT(req: Request, { params }: { params: { postType: string
     create: { clubId: club.id, postType: params.postType, ...data },
   })
 
+  await logPersonalizationSignal(club.id, 'type_override_saved', { postType: params.postType })
+
   return NextResponse.json({ override })
 }
 
@@ -58,6 +61,8 @@ export async function DELETE(req: Request, { params }: { params: { postType: str
   if (!isKnownPostType(params.postType)) return NextResponse.json({ error: 'Type de publication inconnu' }, { status: 400 })
 
   await prisma.clubPersonalizationOverride.deleteMany({ where: { clubId: club.id, postType: params.postType } })
+
+  await logPersonalizationSignal(club.id, 'type_override_reverted', { postType: params.postType })
 
   return NextResponse.json({ ok: true })
 }

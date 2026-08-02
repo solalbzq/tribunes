@@ -4,6 +4,7 @@ import { useState } from 'react'
 import PublishPanel from './PublishPanel'
 import PersonalizePostPanel from './PersonalizePostPanel'
 import { PageHeader, GhostButton } from './ui'
+import type { PostType } from '@/lib/postTypes'
 
 type Posts = { instagram: string; facebook: string; whatsapp: string }
 type PostIds = Partial<Record<keyof Posts, string>>
@@ -28,6 +29,7 @@ export default function TextPostsPanel({
   onPersonalize,
   personalizing,
   bannedWordsWarning,
+  postType,
 }: {
   posts: Posts
   postIds?: PostIds | null
@@ -38,6 +40,8 @@ export default function TextPostsPanel({
   personalizing?: boolean
   /** Expressions interdites détectées par plateforme (lib/bannedWords.ts) — publication auto désactivée tant qu'elles subsistent. */
   bannedWordsWarning?: Record<string, string[]> | null
+  /** Active "Enregistrer ces réglages pour ce type" dans le panneau de personnalisation ponctuelle. */
+  postType?: PostType
 }) {
   const [copied, setCopied] = useState<string | null>(null)
   const [active, setActive] = useState<'instagram' | 'facebook' | 'whatsapp'>('instagram')
@@ -108,7 +112,7 @@ export default function TextPostsPanel({
       )}
 
       {onPersonalize && (
-        <PersonalizePostPanel onRegenerate={onPersonalize} regenerating={personalizing} />
+        <PersonalizePostPanel onRegenerate={onPersonalize} regenerating={personalizing} postType={postType} />
       )}
 
       <PublishPanel posts={posts} postIds={postIds} getImageBlob={getImageBlob ?? (async () => null)} />

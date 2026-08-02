@@ -122,6 +122,7 @@ export default function MatchAnnouncementTab({ club, initialValues }: { club: Cl
         onPersonalize={personalize}
         personalizing={personalizing}
         bannedWordsWarning={bannedWordsWarning}
+        postType="MATCH_ANNOUNCEMENT"
       />
     )
   }

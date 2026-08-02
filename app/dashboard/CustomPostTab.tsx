@@ -201,6 +201,7 @@ export default function CustomPostTab({ club, initialValues }: { club: Club; ini
           onPersonalize={personalize}
           personalizing={personalizing}
           bannedWordsWarning={bannedWordsWarning}
+          postType="CUSTOM_POST"
         />
       </div>
     )

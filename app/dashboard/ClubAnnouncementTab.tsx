@@ -120,6 +120,7 @@ export default function ClubAnnouncementTab({ club, initialValues }: { club: Clu
         onPersonalize={personalize}
         personalizing={personalizing}
         bannedWordsWarning={bannedWordsWarning}
+        postType="CLUB_ANNOUNCEMENT"
       />
     )
   }

@@ -138,7 +138,7 @@ export default function PostsResult({
       ))}
 
       {active !== 'visual' && onPersonalize && (
-        <PersonalizePostPanel onRegenerate={onPersonalize} regenerating={personalizing} />
+        <PersonalizePostPanel onRegenerate={onPersonalize} regenerating={personalizing} postType="MATCH_RESULT" />
       )}
 
       {/* Publication directe */}
