@@ -24,7 +24,6 @@ type Club = {
 const PLATFORMS: { key: keyof Posts; label: string }[] = [
   { key: 'instagram', label: 'Instagram' },
   { key: 'facebook', label: 'Facebook' },
-  { key: 'whatsapp', label: 'WhatsApp' },
 ]
 
 const MAX_KEY_INFO = 6
@@ -68,7 +67,7 @@ export default function CustomPostTab({ club, initialValues }: { club: Club; ini
   // Override ponctuel de voix (Fun/Sobre) — distinct de `desiredMood`, qui est une
   // ambiance libre injectée comme donnée dans le prompt, jamais comme réglage de voix.
   const [tone, setTone] = useState('')
-  const [platforms, setPlatforms] = useState<Set<keyof Posts>>(new Set(['instagram', 'facebook', 'whatsapp']))
+  const [platforms, setPlatforms] = useState<Set<keyof Posts>>(new Set(['instagram', 'facebook']))
   const [visualFormat, setVisualFormat] = useState<VisualFormat>('post')
   const [generating, setGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)

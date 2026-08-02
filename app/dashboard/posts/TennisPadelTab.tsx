@@ -44,7 +44,6 @@ type PostIds = Partial<Record<'instagram' | 'facebook' | 'whatsapp', string>>
 const PLATFORMS: { key: Platform; label: string; emoji: string }[] = [
   { key: 'instagram', label: 'Instagram', emoji: '' },
   { key: 'facebook',  label: 'Facebook',  emoji: '' },
-  { key: 'whatsapp',  label: 'WhatsApp',  emoji: '' },
 ]
 
 function PostDisplay({ posts }: { posts: Record<string, string> }) {
@@ -188,7 +187,7 @@ function TournamentSection({ club }: { club: Club }) {
   const [file, setFile] = useState<File | null>(null)
   const [clubNameFilter, setClubNameFilter] = useState(club.name)
   const [grade, setGrade] = useState('P100')
-  const [platforms, setPlatforms] = useState<Platform[]>(['instagram', 'facebook', 'whatsapp'])
+  const [platforms, setPlatforms] = useState<Platform[]>(['instagram', 'facebook'])
   const [tone, setTone] = useState('')
   const [parsing, setParsing] = useState(false)
   const [generating, setGenerating] = useState(false)

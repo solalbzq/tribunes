@@ -12,7 +12,6 @@ type PostIds = Partial<Record<keyof Posts, string>>
 const PLATFORMS = [
   { key: 'instagram' as const, label: 'Instagram', color: '#E1306C' },
   { key: 'facebook' as const, label: 'Facebook', color: '#1877F2' },
-  { key: 'whatsapp' as const, label: 'WhatsApp', color: '#25D366' },
 ]
 
 /**

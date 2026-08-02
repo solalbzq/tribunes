@@ -30,7 +30,6 @@ type MatchData = {
 const PLATFORMS = [
   { key: 'instagram' as const, label: 'Instagram', icon: '', color: '#E1306C' },
   { key: 'facebook' as const, label: 'Facebook', icon: '', color: '#1877F2' },
-  { key: 'whatsapp' as const, label: 'WhatsApp', icon: '', color: '#25D366' },
   { key: 'visual' as const, label: 'Visuel', icon: '', color: '#111827' },
 ]
 

@@ -367,14 +367,14 @@ function HomeView({
 
       <Card>
         <CardHeader
-          title="A faire aujourd'hui"
+          title="À faire aujourd'hui"
           subtitle="Les prochaines actions utiles pour la communication du club"
         />
         {todayActions.length === 0 ? (
           <EmptyState
             icon="check"
             title="Tout est en place"
-            text="Votre club est configure et aucune action urgente n'attend une publication."
+            text="Votre club est configuré et aucune action urgente n'attend une publication."
             cta={
               <button
                 onClick={() => onNavigate("content")}
@@ -418,19 +418,19 @@ function HomeView({
       <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatTile
           icon="fileText"
-          label="Publications creees"
+          label="Publications créées"
           value={String(totalPosts)}
           tone="brand"
         />
         <StatTile
           icon="calendar"
-          label="Evenements couverts"
+          label="Événements couverts"
           value={String(coveredEvents)}
           tone="ink"
         />
         <StatTile
           icon="clock"
-          label="Temps economise"
+          label="Temps économisé"
           value={formatSavedTime(estimatedMinutesSaved)}
           tone="success"
           helper="Estimation moyenne"
@@ -439,12 +439,12 @@ function HomeView({
           icon="sparkles"
           label={
             scheduledPosts > 0
-              ? "Publications publiees"
+              ? "Publications publiées"
               : "Publications en attente"
           }
           value={String(scheduledPosts > 0 ? scheduledPosts : pendingPosts)}
           tone={scheduledPosts > 0 ? "gold" : "brand"}
-          helper={scheduledPosts > 0 ? "Deja envoyees" : "Pretes a relire"}
+          helper={scheduledPosts > 0 ? "Déjà envoyées" : "Prêtes à relire"}
         />
       </section>
 
@@ -452,7 +452,7 @@ function HomeView({
         <Card>
           <CardHeader
             title="Activité récente"
-            subtitle="Les derniers contenus prepares par Tribunes"
+            subtitle="Les derniers contenus préparés par Tribunes"
             action={
               club.matches.length > 0 ? (
                 <button
@@ -490,7 +490,7 @@ function HomeView({
         <Card>
           <CardHeader
             title="Réseaux sociaux"
-            subtitle="Etat actuel de vos connexions"
+            subtitle="État actuel de vos connexions"
             action={
               <button
                 onClick={() => onNavigate("reseaux")}
@@ -529,7 +529,7 @@ function HomeView({
       <Card>
         <CardHeader
           title="Historique"
-          subtitle="Retrouvez toutes les publications et rencontres deja traitees"
+          subtitle="Retrouvez toutes les publications et rencontres déjà traitées"
           action={
             club.matches.length > 0 ? (
               <button
@@ -545,17 +545,17 @@ function HomeView({
           <HistoryMiniStat
             label="Publications"
             value={String(totalPosts)}
-            helper="Generees au total"
+            helper="Générées au total"
           />
           <HistoryMiniStat
-            label="Dernier evenement"
+            label="Dernier événement"
             value={recent[0] ? formatShortDate(recent[0].date) : "-"}
             helper={recent[0]?.competition ?? "Aucun historique"}
           />
           <HistoryMiniStat
             label="Dernier statut"
             value={recent[0] ? getMatchStatusLabel(recent[0]) : "-"}
-            helper="Sur vos contenus recents"
+            helper="Sur vos contenus récents"
           />
         </div>
       </Card>
@@ -626,7 +626,7 @@ function HistoryView({
       <Card>
         <CardHeader
           title="Rencontres et publications"
-          subtitle={`${sorted.length} evenement${sorted.length > 1 ? "s" : ""} dans l'historique`}
+          subtitle={`${sorted.length} événement${sorted.length > 1 ? "s" : ""} dans l'historique`}
         />
         <div className="space-y-3">
           {sorted.map((match) => (
@@ -934,7 +934,7 @@ function DraftEditorCard({ draft }: { draft: Draft }) {
       const data = await res.json();
       setContent(data.content);
       setSavedContent(data.content);
-      setMessage("Brouillon mis a jour.");
+      setMessage("Brouillon mis à jour.");
     } catch {
       setMessage("Impossible d'enregistrer ce brouillon.");
     } finally {
@@ -1025,7 +1025,7 @@ function DraftEditorCard({ draft }: { draft: Draft }) {
             {describeDraftContext(draft)}
           </p>
           <p className="text-xs text-muted">
-            Cree le {formatDateTime(draft.createdAt)}
+            Créé le {formatDateTime(draft.createdAt)}
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
@@ -1065,15 +1065,15 @@ function DraftEditorCard({ draft }: { draft: Draft }) {
       />
 
       <div className="mt-3 flex flex-col gap-2 text-xs text-muted sm:flex-row sm:items-center sm:justify-between">
-        <span>{content.length} caracteres</span>
+        <span>{content.length} caractères</span>
         <span
           className={
-            message === "Brouillon mis a jour."
+            message === "Brouillon mis à jour."
               ? "text-emerald-700"
               : "text-muted"
           }
         >
-          {message ?? (dirty ? "Modifications non enregistrees" : "")}
+          {message ?? (dirty ? "Modifications non enregistrées" : "")}
         </span>
       </div>
     </div>
@@ -1090,7 +1090,7 @@ function HistoryMatchCard({
   hasDraft: boolean;
 }) {
   const { us, them } = score(match);
-  const result = us > them ? "Victoire" : us < them ? "Defaite" : "Nul";
+  const result = us > them ? "Victoire" : us < them ? "Défaite" : "Nul";
   const status = getMatchStatusLabel(match);
 
   return (
@@ -1191,7 +1191,6 @@ function formatPlatform(platform: string) {
   const labels: Record<string, string> = {
     facebook: "Facebook",
     instagram: "Instagram",
-    linkedin: "LinkedIn",
     whatsapp: "WhatsApp",
   };
 
@@ -1202,10 +1201,10 @@ function formatPostStatus(status: string) {
   const labels: Record<string, string> = {
     DRAFT: "Brouillon",
     PENDING_REVIEW: "En attente de validation",
-    PUBLISHED: "Publie",
+    PUBLISHED: "Publié",
     PARTIAL: "Partiel",
-    FAILED: "Echec",
-    REJECTED: "Rejete",
+    FAILED: "Échec",
+    REJECTED: "Rejeté",
   };
 
   return labels[status] ?? status;
@@ -1244,7 +1243,7 @@ function formatDateTime(date: string) {
 
 function resultTone(result: string) {
   if (result === "Victoire") return "bg-emerald-50 text-emerald-700";
-  if (result === "Defaite") return "bg-brand-soft text-brand";
+  if (result === "Défaite") return "bg-brand-soft text-brand";
   return "bg-subtle text-muted";
 }
 
@@ -1257,7 +1256,7 @@ function getMatchStatusLabel(match: NonNullable<Club>["matches"][number]) {
     return "Brouillon";
   }
 
-  return "A créer";
+  return "À créer";
 }
 
 function buildTodayActions({
@@ -1301,7 +1300,7 @@ function buildTodayActions({
     actions.push({
       kind: "draft",
       label: `Finaliser ${getResultLabel(lastDraft)}`,
-      description: `Un brouillon est deja pret pour ${formatDate(lastDraft.date).toLowerCase()}.`,
+      description: `Un brouillon est déjà prêt pour ${formatDate(lastDraft.date).toLowerCase()}.`,
       icon: "fileText",
       onClick: () => onNavigate("history"),
       tone: { bg: "bg-emerald-50", fg: "text-emerald-700" },
@@ -1311,8 +1310,8 @@ function buildTodayActions({
   if (nextUnpublished) {
     actions.push({
       kind: "generate",
-      label: `Generer ${getResultLabel(nextUnpublished)}`,
-      description: `${nextUnpublished.competition ?? "Cette rencontre"} n'a pas encore de publication associee.`,
+      label: `Générer ${getResultLabel(nextUnpublished)}`,
+      description: `${nextUnpublished.competition ?? "Cette rencontre"} n'a pas encore de publication associée.`,
       icon: "sparkles",
       onClick: () => onNavigate("content"),
       tone: { bg: "bg-brand-soft", fg: "text-brand" },
@@ -1336,7 +1335,7 @@ function buildTodayActions({
       kind: "branding",
       label: "Ajouter les couleurs du club",
       description:
-        "Personnalisez l'identite visuelle pour gagner du temps sur chaque publication.",
+        "Personnalisez l'identité visuelle pour gagner du temps sur chaque publication.",
       icon: "palette",
       onClick: () => onNavigate("settings"),
       tone: { bg: "bg-violet-50", fg: "text-violet-700" },
@@ -1348,7 +1347,7 @@ function buildTodayActions({
 
 function getResultLabel(match: NonNullable<Club>["matches"][number]) {
   return new Date(match.date).getTime() <= Date.now()
-    ? `le resultat contre ${match.opponent}`
+    ? `le résultat contre ${match.opponent}`
     : `l'annonce du match contre ${match.opponent}`;
 }
 
@@ -1360,18 +1359,13 @@ function buildConnectionItems(connections: SocialConnection[] | null) {
   return [
     {
       label: "Facebook",
-      helper: "Page reliee a Tribunes",
+      helper: "Page reliée à Tribunes",
       connected: providers.has("facebook"),
     },
     {
       label: "Instagram",
-      helper: "Compte professionnel relie",
+      helper: "Compte professionnel relié",
       connected: providers.has("instagram"),
-    },
-    {
-      label: "LinkedIn",
-      helper: "Connexion non activee",
-      connected: providers.has("linkedin"),
     },
     {
       label: "Meta Business Suite",

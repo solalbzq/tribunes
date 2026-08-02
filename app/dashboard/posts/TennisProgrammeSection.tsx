@@ -271,7 +271,7 @@ export default function TennisProgrammeSection({ club }: { club: Club }) {
           <div className="space-y-4">
             {!club.tenupUrl ? (
               <p className="text-sm text-amber-700 bg-amber-50 rounded-xl p-4">
-                ⚠️ Aucun lien Ten'Up configuré. Ajoute l'URL Ten'Up de ton club dans <b>Mon clubGestion du club</b> pour activer la récupération automatique.
+                ⚠️ Aucun lien Ten'Up configuré. Ajoute l'URL Ten'Up de ton club dans <b>Mon club</b> pour activer la récupération automatique.
               </p>
             ) : (
               <>

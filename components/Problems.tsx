@@ -13,7 +13,7 @@ const problems = [
   },
   {
     icon: '03',
-    title: 'Vos posts ne ressemblent pas à grand chose',
+    title: 'Vos posts ne ressemblent pas à grand-chose',
     description:
       "Un screenshot de tableau Excel ou un texte brut sans visuel. C'est dommage pour l'image du club.",
   },

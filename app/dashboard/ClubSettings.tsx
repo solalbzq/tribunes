@@ -84,7 +84,7 @@ export default function ClubSettings({ club }: { club: Club }) {
           </div>
 
           <Field label="Ville">
-            <input type="text" value={profile.city} onChange={e => setProfileField('city', e.target.value)} className={INPUT} placeholder="Ex: Nimes" />
+            <input type="text" value={profile.city} onChange={e => setProfileField('city', e.target.value)} className={INPUT} placeholder="Ex: Nîmes" />
           </Field>
 
           <Field label="Histoire / pitch du club">
@@ -93,7 +93,7 @@ export default function ClubSettings({ club }: { club: Club }) {
               onChange={e => setProfileField('story', e.target.value)}
               rows={5}
               className={`${INPUT} resize-none`}
-              placeholder="Quelques lignes sur l'identite, l'ambiance et ce qui rend ton club unique..."
+              placeholder="Quelques lignes sur l'identité, l'ambiance et ce qui rend ton club unique..."
             />
           </Field>
 

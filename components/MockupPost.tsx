@@ -40,8 +40,6 @@ export function MockupPost() {
             <span>Instagram</span>
             <span>·</span>
             <span>Facebook</span>
-            <span>·</span>
-            <span>WhatsApp</span>
           </div>
           <div className="mt-5 flex justify-end">
             <span className="inline-flex rounded-full bg-[#eff4ff] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.05em] text-[#2563eb]">
