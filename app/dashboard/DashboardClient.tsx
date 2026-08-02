@@ -79,7 +79,58 @@ type Draft = {
     draws: number;
     losses: number;
   } | null;
+  matchAnnouncement: {
+    id: string;
+    opponent: string;
+    matchDate: string;
+    competition: string | null;
+    isHome: boolean;
+  } | null;
+  playerSpotlight: {
+    id: string;
+    playerName: string;
+    achievement: string;
+  } | null;
+  clubAnnouncement: {
+    id: string;
+    category: string;
+    title: string;
+  } | null;
+  engagementPoll: {
+    id: string;
+    question: string;
+  } | null;
+  customPost: {
+    id: string;
+    objective: string;
+    subject: string;
+    suggestedCategory: string | null;
+  } | null;
 };
+
+/** Post déjà traité (hors DRAFT/PENDING_REVIEW) affiché dans l'Historique, tous types hors match. */
+type HistoryPost = Omit<Draft, "content"> & { match: null; publishedAt: string | null };
+
+/** Élément affiché dans "Activité récente" (Accueil) — match ou tout autre type de post, triés ensemble par date. */
+type RecentItem =
+  | { kind: "match"; date: string; match: NonNullable<Club>["matches"][number] }
+  | { kind: "post"; date: string; post: HistoryPost };
+
+/** Identifiant unique du contenu source d'un post (quel que soit son type), pour dédupliquer les "événements couverts". */
+function parentKey(post: Draft | HistoryPost): string | null {
+  return (
+    post.match?.id ??
+    post.tournamentSchedule?.id ??
+    post.weeklySchedule?.id ??
+    post.seasonRecap?.id ??
+    post.matchAnnouncement?.id ??
+    post.playerSpotlight?.id ??
+    post.clubAnnouncement?.id ??
+    post.engagementPoll?.id ??
+    post.customPost?.id ??
+    null
+  );
+}
 
 type View =
   "home" | "content" | "history" | "reseaux" | "personnalisation" | "settings";
@@ -100,10 +151,12 @@ const NAV: {
 export default function DashboardClient({
   club,
   drafts,
+  historyPosts,
   userEmail,
 }: {
   club: Club;
   drafts: Draft[];
+  historyPosts: HistoryPost[];
   userEmail: string;
 }) {
   const router = useRouter();
@@ -252,6 +305,8 @@ export default function DashboardClient({
             <HomeView
               club={club}
               userEmail={userEmail}
+              drafts={drafts}
+              historyPosts={historyPosts}
               onNavigate={setView}
               initials={initials}
             />
@@ -259,7 +314,7 @@ export default function DashboardClient({
           {view === "content" && <ContentTab club={club} />}
           {view === "reseaux" && <SocialTab club={club} />}
           {view === "history" && (
-            <HistoryView club={club} drafts={drafts} onNavigate={setView} />
+            <HistoryView club={club} drafts={drafts} historyPosts={historyPosts} onNavigate={setView} />
           )}
           {view === "personnalisation" && <PersonnalisationView club={club} />}
           {view === "settings" && <ClubSettings club={club} />}
@@ -274,33 +329,59 @@ export default function DashboardClient({
 function HomeView({
   club,
   userEmail,
+  drafts,
+  historyPosts,
   onNavigate,
   initials,
 }: {
   club: NonNullable<Club>;
   userEmail: string;
+  drafts: Draft[];
+  historyPosts: HistoryPost[];
   onNavigate: (v: View) => void;
   initials: string;
 }) {
   const [connections, setConnections] = useState<SocialConnection[] | null>(
     null,
   );
-  const totalPosts = club.matches.reduce((acc, m) => acc + m.posts.length, 0);
-  const recent = [...club.matches]
+  const nonMatchDrafts = drafts.filter((d) => !d.match);
+  const matchPostStatuses = club.matches.flatMap((m) =>
+    m.posts.map((p) => p.status),
+  );
+  const allStatuses = [
+    ...matchPostStatuses,
+    ...nonMatchDrafts.map((d) => d.status),
+    ...historyPosts.map((p) => p.status),
+  ];
+  const totalPosts = allStatuses.length;
+  const estimatedMinutesSaved = totalPosts * 12;
+  const scheduledPosts = allStatuses.filter((s) => s === "PUBLISHED").length;
+  const pendingPosts = totalPosts - scheduledPosts;
+
+  const matchesWithPosts = club.matches.filter(
+    (m) => m.posts.length > 0,
+  ).length;
+  const nonMatchParentIds = new Set<string>();
+  for (const p of [...historyPosts, ...nonMatchDrafts]) {
+    const key = parentKey(p);
+    if (key) nonMatchParentIds.add(key);
+  }
+  const coveredEvents = matchesWithPosts + nonMatchParentIds.size;
+
+  const recentMatches: RecentItem[] = [...club.matches].map((m) => ({
+    kind: "match",
+    date: m.date,
+    match: m,
+  }));
+  const recentPosts: RecentItem[] = [...historyPosts].map((p) => ({
+    kind: "post",
+    date: p.publishedAt ?? p.createdAt,
+    post: p,
+  }));
+  const recent = [...recentMatches, ...recentPosts]
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
     .slice(0, 4);
-  const coveredEvents = club.matches.filter((m) => m.posts.length > 0).length;
-  const estimatedMinutesSaved = totalPosts * 12;
-  const scheduledPosts = club.matches.reduce(
-    (acc, match) =>
-      acc + match.posts.filter((post) => post.status === "PUBLISHED").length,
-    0,
-  );
-  const pendingPosts = club.matches.reduce(
-    (acc, match) =>
-      acc + match.posts.filter((post) => post.status !== "PUBLISHED").length,
-    0,
-  );
+  const hasActivity = club.matches.length > 0 || historyPosts.length > 0;
 
   useEffect(() => {
     let cancelled = false;
@@ -454,7 +535,7 @@ function HomeView({
             title="Activité récente"
             subtitle="Les derniers contenus préparés par Tribunes"
             action={
-              club.matches.length > 0 ? (
+              hasActivity ? (
                 <button
                   onClick={() => onNavigate("history")}
                   className="text-sm font-semibold text-brand hover:underline"
@@ -480,9 +561,13 @@ function HomeView({
             />
           ) : (
             <ul className="divide-y divide-line">
-              {recent.map((m) => (
-                <MatchRow key={m.id} club={club} match={m} />
-              ))}
+              {recent.map((item) =>
+                item.kind === "match" ? (
+                  <MatchRow key={`m-${item.match.id}`} club={club} match={item.match} />
+                ) : (
+                  <ActivityPostRow key={`p-${item.post.id}`} post={item.post} />
+                ),
+              )}
             </ul>
           )}
         </Card>
@@ -531,7 +616,7 @@ function HomeView({
           title="Historique"
           subtitle="Retrouvez toutes les publications et rencontres déjà traitées"
           action={
-            club.matches.length > 0 ? (
+            hasActivity ? (
               <button
                 onClick={() => onNavigate("history")}
                 className="text-sm font-semibold text-brand hover:underline"
@@ -550,19 +635,27 @@ function HomeView({
           <HistoryMiniStat
             label="Dernier événement"
             value={recent[0] ? formatShortDate(recent[0].date) : "-"}
-            helper={recent[0]?.competition ?? "Aucun historique"}
+            helper={
+              recent[0]
+                ? recent[0].kind === "match"
+                  ? (recent[0].match.competition ?? "Match amical")
+                  : describeDraftContext(recent[0].post)
+                : "Aucun historique"
+            }
           />
           <HistoryMiniStat
             label="Dernier statut"
-            value={recent[0] ? getMatchStatusLabel(recent[0]) : "-"}
+            value={
+              recent[0]
+                ? recent[0].kind === "match"
+                  ? getMatchStatusLabel(recent[0].match)
+                  : formatPostStatus(recent[0].post.status)
+                : "-"
+            }
             helper="Sur vos contenus récents"
           />
         </div>
       </Card>
-
-      <p className="text-center text-xs text-muted">
-        Connecté en tant que {userEmail}
-      </p>
     </div>
   );
 }
@@ -572,10 +665,12 @@ function HomeView({
 function HistoryView({
   club,
   drafts,
+  historyPosts,
   onNavigate,
 }: {
   club: NonNullable<Club>;
   drafts: Draft[];
+  historyPosts: HistoryPost[];
   onNavigate: (v: View) => void;
 }) {
   const sorted = [...club.matches].sort(
@@ -585,7 +680,7 @@ function HistoryView({
     drafts.map((draft) => draft.match?.id).filter(Boolean),
   );
 
-  if (club.matches.length === 0) {
+  if (club.matches.length === 0 && historyPosts.length === 0) {
     return (
       <div className="space-y-4">
         {drafts.length > 0 && <DraftsPanel drafts={drafts} />}
@@ -616,13 +711,14 @@ function HistoryView({
         </h1>
         <p className="text-sm text-muted">
           {club.matches.length} match{club.matches.length > 1 ? "s" : ""} ·{" "}
-          {club.matches.reduce((a, m) => a + m.posts.length, 0)} publication
-          {club.matches.reduce((a, m) => a + m.posts.length, 0) > 1 ? "s" : ""}
+          {club.matches.reduce((a, m) => a + m.posts.length, 0) + historyPosts.length} publication
+          {club.matches.reduce((a, m) => a + m.posts.length, 0) + historyPosts.length > 1 ? "s" : ""}
         </p>
       </div>
 
       {drafts.length > 0 && <DraftsPanel drafts={drafts} />}
 
+      {club.matches.length > 0 && (
       <Card>
         <CardHeader
           title="Rencontres et publications"
@@ -639,6 +735,49 @@ function HistoryView({
           ))}
         </div>
       </Card>
+      )}
+
+      {historyPosts.length > 0 && (
+      <Card>
+        <CardHeader
+          title="Autres publications"
+          subtitle={`${historyPosts.length} publication${historyPosts.length > 1 ? "s" : ""} (tournoi, programme, annonce, sondage...)`}
+        />
+        <div className="space-y-3">
+          {historyPosts.map((post) => (
+            <HistoryPostCard key={post.id} post={post} />
+          ))}
+        </div>
+      </Card>
+      )}
+    </div>
+  );
+}
+
+function HistoryPostCard({ post }: { post: HistoryPost }) {
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-card border border-line p-3">
+      <div className="min-w-0">
+        <p className="truncate text-sm font-semibold text-ink">
+          {describeDraftContext(post)}
+        </p>
+        <p className="text-xs text-muted">
+          {formatPlatform(post.platform)} · {formatDateTime(post.createdAt)}
+        </p>
+      </div>
+      <span
+        className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${
+          post.status === "PUBLISHED"
+            ? "bg-emerald-50 text-emerald-700"
+            : post.status === "PARTIAL"
+              ? "bg-amber-50 text-amber-700"
+              : post.status === "REJECTED"
+                ? "bg-subtle text-muted"
+                : "bg-red-50 text-red-600"
+        }`}
+      >
+        {formatPostStatus(post.status)}
+      </span>
     </div>
   );
 }
@@ -833,6 +972,30 @@ function MatchRow({
       <span className="shrink-0 text-xs text-muted">
         {match.posts.length} post{match.posts.length > 1 ? "s" : ""}
       </span>
+    </li>
+  );
+}
+
+/** Équivalent générique de MatchRow pour "Activité récente", tous les types de post hors match. */
+function ActivityPostRow({ post }: { post: HistoryPost }) {
+  return (
+    <li className="flex items-center justify-between gap-4 py-3.5 first:pt-0 last:pb-0">
+      <div className="min-w-0">
+        <p className="truncate text-[14px] font-semibold text-ink">
+          {describeDraftContext(post)}
+        </p>
+        <p className="mt-0.5 text-[12px] text-muted">
+          {formatDate(post.createdAt)}
+        </p>
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <span className="rounded-full bg-subtle px-2.5 py-1 text-[11px] font-semibold text-muted">
+            {formatPlatform(post.platform)}
+          </span>
+          <span className="rounded-full bg-brand-soft px-2.5 py-1 text-[11px] font-semibold text-brand">
+            {formatPostStatus(post.status)}
+          </span>
+        </div>
+      </div>
     </li>
   );
 }
@@ -1210,7 +1373,7 @@ function formatPostStatus(status: string) {
   return labels[status] ?? status;
 }
 
-function describeDraftContext(draft: Draft) {
+function describeDraftContext(draft: Draft | HistoryPost) {
   if (draft.match) {
     return `${draft.match.competition ?? "Match"} contre ${draft.match.opponent} · ${formatDate(draft.match.date)}`;
   }
@@ -1226,6 +1389,26 @@ function describeDraftContext(draft: Draft) {
   if (draft.seasonRecap) {
     const r = draft.seasonRecap;
     return `Bilan du ${formatShortDate(r.periodStart)} au ${formatShortDate(r.periodEnd)} · ${r.wins}V ${r.draws}N ${r.losses}D`;
+  }
+
+  if (draft.matchAnnouncement) {
+    return `Avant-match : ${draft.matchAnnouncement.competition ?? "Match"} contre ${draft.matchAnnouncement.opponent} · ${formatDate(draft.matchAnnouncement.matchDate)}`;
+  }
+
+  if (draft.playerSpotlight) {
+    return `Joueur à l'honneur : ${draft.playerSpotlight.playerName} · ${draft.playerSpotlight.achievement}`;
+  }
+
+  if (draft.clubAnnouncement) {
+    return `Annonce du club : ${draft.clubAnnouncement.title}`;
+  }
+
+  if (draft.engagementPoll) {
+    return `Sondage : ${draft.engagementPoll.question}`;
+  }
+
+  if (draft.customPost) {
+    return `Publication libre : ${draft.customPost.subject}`;
   }
 
   return "Brouillon Tribunes";
