@@ -119,7 +119,7 @@ export default function IdentityPreviews({ club, onNavigate }: { club: Club; onN
       <div>
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-bold text-ink">Aperçus</h3>
-          <p className="text-xs text-muted">Données d&apos;exemple stables — aucun appel IA, rendu avec le vrai moteur de templates.</p>
+          <p className="text-xs text-muted">Données d&apos;exemple stables, rendu avec le vrai moteur de templates.</p>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           <PreviewCard label="Résultat de match">

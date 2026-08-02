@@ -6,6 +6,7 @@ import { Icon } from './icons'
 import { Field, INPUT } from './ui'
 import { detectDominantColors, contrastRatio } from '@/lib/colorDetection'
 import { ONBOARDING_PRESETS, type OnboardingPreset } from '@/lib/brandOnboardingPresets'
+import { BRAND_COLOR_PRESETS } from '@/lib/brandPresets'
 import { questionnaireToInstructions, type QuestionnaireAnswers } from '@/lib/onboardingQuestionnaire'
 import { LogoMark } from '@/components/Logo'
 
@@ -32,7 +33,7 @@ function textColor(hex: string) {
   return (r * 299 + g * 587 + b * 114) / 1000 > 128 ? '#000000' : '#ffffff'
 }
 
-export default function OnboardingWizard({ club, onClose, onActivated }: { club: Club; onClose: () => void; onActivated: () => void }) {
+export default function OnboardingWizard({ club, onClose, onActivated, onOpenFullSetup }: { club: Club; onClose: () => void; onActivated: () => void; onOpenFullSetup: () => void }) {
   const router = useRouter()
   const fileRef = useRef<HTMLInputElement>(null)
   const [step, setStep] = useState<Step>('choice')
@@ -100,8 +101,6 @@ export default function OnboardingWizard({ club, onClose, onActivated }: { club:
 
   function applyPreset(p: OnboardingPreset) {
     setPreset(p)
-    setPrimary(p.primaryColor)
-    setSecondary(p.secondaryColor)
     setTone(p.contentTone)
     setPresetInstructions(p.instructions)
   }
@@ -166,20 +165,20 @@ export default function OnboardingWizard({ club, onClose, onActivated }: { club:
                   <p className="text-xs text-muted mt-1">5 minutes — logo, couleurs, ton et quelques questions.</p>
                 </button>
                 {/*
-                  "Complète" renvoie vers l'espace Identité du club existant (Lot 3)
-                  plutôt que de construire un second wizard multi-étapes : l'import de
-                  charte/références qui doit l'enrichir arrive au Lot 5, et un wizard
-                  "complet" construit maintenant devrait être entièrement refait à ce
-                  moment-là. Choix de scope assumé (cf. docs/brand-kit-plan.md §7),
-                  pas un renvoi "bientôt disponible" — la configuration manuelle
-                  complète est déjà pleinement fonctionnelle.
+                  "Complète" ferme le wizard et amène directement sur la section
+                  Références (Lot 5) : import de publications d'inspiration et de
+                  charte graphique, analysées par IA — le parcours "plus poussé"
+                  évoqué par rapport au wizard rapide. Le wizard est toujours monté
+                  dans l'onglet Personnalisation, donc un router.push vers cette même
+                  URL ne fait rien : on ferme le wizard et on force explicitement la
+                  section via onOpenFullSetup.
                 */}
                 <button
-                  onClick={() => { onClose(); router.push('/dashboard?tab=personnalisation') }}
+                  onClick={onOpenFullSetup}
                   className="rounded-2xl border border-line p-5 text-left hover:border-gray-300 transition"
                 >
                   <p className="font-bold text-ink">🎨 Complète</p>
-                  <p className="text-xs text-muted mt-1">Configurez chaque section vous-même dans Identité du club.</p>
+                  <p className="text-xs text-muted mt-1">Importez des publications d&apos;inspiration et votre charte graphique, analysées par IA.</p>
                 </button>
               </div>
             </div>
@@ -230,6 +229,24 @@ export default function OnboardingWizard({ club, onClose, onActivated }: { club:
               {contrast < 2.2 && (
                 <p className="text-xs text-amber-600 bg-amber-50 rounded-lg px-3 py-2">⚠ Ces couleurs sont assez proches, corrigez-les si besoin.</p>
               )}
+              <div>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Ou choisissez une palette prédéfinie</p>
+                <div className="grid grid-cols-3 gap-2">
+                  {BRAND_COLOR_PRESETS.map(p => (
+                    <button
+                      key={p.label}
+                      onClick={() => { setPrimary(p.primary); setSecondary(p.secondary) }}
+                      className={`rounded-xl overflow-hidden border-2 transition ${
+                        primary === p.primary && secondary === p.secondary ? 'border-[#2563eb]' : 'border-transparent hover:border-gray-200'
+                      }`}
+                      title={p.label}
+                    >
+                      <div className="h-6" style={{ background: p.primary }} />
+                      <div className="h-3" style={{ background: p.secondary }} />
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
 
@@ -242,20 +259,14 @@ export default function OnboardingWizard({ club, onClose, onActivated }: { club:
                   <button
                     key={p.key}
                     onClick={() => applyPreset(p)}
-                    className={`flex items-center gap-3 rounded-xl border-2 p-3 text-left transition ${preset?.key === p.key ? 'border-[#2563eb] bg-brand-soft/40' : 'border-line hover:border-gray-300'}`}
+                    className={`rounded-xl border-2 p-3 text-left transition ${preset?.key === p.key ? 'border-[#2563eb] bg-brand-soft/40' : 'border-line hover:border-gray-300'}`}
                   >
-                    <span className="flex gap-1 shrink-0">
-                      <span className="w-4 h-4 rounded-full border border-line" style={{ background: p.primaryColor }} />
-                      <span className="w-4 h-4 rounded-full border border-line" style={{ background: p.secondaryColor }} />
-                    </span>
-                    <span>
-                      <span className="block font-bold text-ink text-sm">{p.label}</span>
-                      <span className="block text-xs text-muted">{p.description}</span>
-                    </span>
+                    <span className="block font-bold text-ink text-sm">{p.label}</span>
+                    <span className="block text-xs text-muted">{p.description}</span>
                   </button>
                 ))}
               </div>
-              <p className="text-xs text-muted">Applique un ton, une palette et des consignes de départ — tout reste modifiable ensuite.</p>
+              <p className="text-xs text-muted">Détermine le ton et les consignes envoyées à l&apos;IA pour rédiger vos publications — n&apos;affecte pas vos couleurs, tout reste modifiable ensuite.</p>
             </div>
           )}
 
@@ -341,7 +352,7 @@ export default function OnboardingWizard({ club, onClose, onActivated }: { club:
                 <p className="text-xs font-semibold text-muted uppercase tracking-wide">Consignes qui seront appliquées</p>
                 <p className="text-sm text-ink">{buildFinalInstructions() || 'Aucune consigne particulière.'}</p>
               </div>
-              <p className="text-xs text-muted text-center">Aperçu déterministe, aucun appel IA.</p>
+              <p className="text-xs text-muted text-center">Cet aperçu se base sur vos réglages actuels.</p>
             </div>
           )}
 

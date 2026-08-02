@@ -255,6 +255,7 @@ export default function PersonnalisationView({ club }: { club: Club }) {
           club={currentClub}
           onClose={() => setShowWizard(false)}
           onActivated={() => setShowWizardBanner(false)}
+          onOpenFullSetup={() => { setShowWizard(false); setSection('references') }}
         />
       )}
 
@@ -331,7 +332,7 @@ export default function PersonnalisationView({ club }: { club: Club }) {
                     </button>
                     <p className="text-xs text-gray-400 mt-1">PNG, JPG ou WEBP - max 5 Mo</p>
                     {logoError && <p className="text-xs text-red-500 mt-1">{logoError}</p>}
-                    {logoUrl && !uploading && !logoError && <p className="text-xs text-[#22c55e] mt-1">✓ Logo sauvegarde</p>}
+                    {logoUrl && !uploading && !logoError && <p className="text-xs text-[#22c55e] mt-1">✓ Logo sauvegardé</p>}
                     {detecting && <p className="text-xs text-muted mt-1">Détection des couleurs...</p>}
                     {detectError && <p className="text-xs text-amber-600 mt-1">{detectError}</p>}
                   </div>
@@ -342,7 +343,7 @@ export default function PersonnalisationView({ club }: { club: Club }) {
               <div className="bg-gray-50 rounded-2xl p-5 space-y-5">
                 <h4 className="font-bold text-[#111827]">Palette visuelle</h4>
                 <div>
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Palettes predefinies</p>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Palettes prédéfinies</p>
                   <div className="grid grid-cols-3 gap-2">
                     {BRAND_COLOR_PRESETS.map(preset => (
                       <button
@@ -389,7 +390,7 @@ export default function PersonnalisationView({ club }: { club: Club }) {
                 disabled={savingIdentity}
                 className={`w-full py-3 rounded-xl font-bold text-sm transition ${savedIdentity ? 'bg-[#22c55e] text-white' : 'bg-[#111827] text-white hover:bg-[#1f2937]'} disabled:opacity-60`}
               >
-                {savedIdentity ? '✓ Personnalisation sauvegardee' : savingIdentity ? 'Sauvegarde...' : 'Sauvegarder'}
+                {savedIdentity ? '✓ Personnalisation sauvegardée' : savingIdentity ? 'Sauvegarde...' : 'Sauvegarder'}
               </button>
             </div>
           </div>
@@ -459,7 +460,7 @@ export default function PersonnalisationView({ club }: { club: Club }) {
             disabled={savingIdentity}
             className={`w-full py-3 rounded-xl font-bold text-sm transition ${savedIdentity ? 'bg-[#22c55e] text-white' : 'bg-[#111827] text-white hover:bg-[#1f2937]'} disabled:opacity-60`}
           >
-            {savedIdentity ? '✓ Personnalisation sauvegardee' : savingIdentity ? 'Sauvegarde...' : 'Sauvegarder'}
+            {savedIdentity ? '✓ Personnalisation sauvegardée' : savingIdentity ? 'Sauvegarde...' : 'Sauvegarder'}
           </button>
         </div>
       )}
@@ -510,7 +511,7 @@ function BrandPreview({
         </div>
 
         <div className="mx-4 mb-4 rounded-xl p-4" style={{ background: 'rgba(255,255,255,0.08)' }}>
-          <p className="text-xs font-semibold text-center mb-2" style={{ color: secondary }}>RESULTAT DU MATCH</p>
+          <p className="text-xs font-semibold text-center mb-2" style={{ color: secondary }}>RÉSULTAT DU MATCH</p>
           <div className="flex items-center justify-center gap-4">
             <div className="text-center">
               <p className="text-xs opacity-60" style={{ color: textColor(primary) }}>Nous</p>
@@ -530,7 +531,7 @@ function BrandPreview({
           <p className="text-xs opacity-70">#{club.name.toLowerCase().replace(/\s/g, '')} #{club.sport.toLowerCase()}</p>
         </div>
       </div>
-      <p className="text-xs text-gray-400 text-center">Aperçu déterministe — pas d&apos;appel IA. Les vrais visuels utilisent cette même base graphique.</p>
+      <p className="text-xs text-gray-400 text-center">Aperçu avec des données d&apos;exemple — vos vrais visuels utilisent cette même base graphique.</p>
     </div>
   )
 }

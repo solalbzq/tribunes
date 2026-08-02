@@ -73,7 +73,7 @@ export default function IdentityOverview({
                   onClick={() => { setMenuOpen(false); onNavigate('brand') }}
                   className="w-full text-left px-4 py-2 text-sm text-ink hover:bg-subtle transition"
                 >
-                  Relancer la personnalisation complète
+                  Modifier seulement le logo et les couleurs
                 </button>
                 <button
                   onClick={() => { setMenuOpen(false); onNavigate('tone') }}
