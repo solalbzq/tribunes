@@ -6,6 +6,8 @@ import { composeMatchResult } from '@/lib/designEngine/orchestrator'
 import { renderCompositionToPng } from '@/lib/designEngine/render/satoriRenderer'
 import type { DesignFamilyId } from '@/lib/designEngine/types'
 
+const DESIGN_FAMILIES: DesignFamilyId[] = ['minimal', 'editorial', 'bold', 'premium', 'dynamic']
+
 /**
  * Route strictement interne au prototype "Design Engine" (cf. docs/design-engine-plan.md).
  * Isolée du moteur de rendu actuel : ne réutilise ni lib/visualLayout.ts ni les
@@ -21,15 +23,17 @@ export async function GET(req: NextRequest) {
   if (!club) return NextResponse.json({ error: 'Club introuvable' }, { status: 404 })
 
   const url = new URL(req.url)
-  const matchId = url.searchParams.get('matchId')
+  const matchIdParam = url.searchParams.get('matchId')
   const family = (url.searchParams.get('family') ?? 'minimal') as DesignFamilyId
   const seed = url.searchParams.get('seed') ?? '0'
-  if (!matchId) return NextResponse.json({ error: 'matchId requis' }, { status: 400 })
-  if (family !== 'minimal' && family !== 'editorial') {
+  if (!matchIdParam) return NextResponse.json({ error: 'matchId requis' }, { status: 400 })
+  if (!DESIGN_FAMILIES.includes(family)) {
     return NextResponse.json({ error: 'family invalide' }, { status: 400 })
   }
 
-  const match = await prisma.matchResult.findFirst({ where: { id: matchId, clubId: club.id } })
+  const match = matchIdParam === 'latest'
+    ? await prisma.matchResult.findFirst({ where: { clubId: club.id }, orderBy: { date: 'desc' } })
+    : await prisma.matchResult.findFirst({ where: { id: matchIdParam, clubId: club.id } })
   if (!match) return NextResponse.json({ error: 'Match introuvable' }, { status: 404 })
 
   let logoDataUri: string | null = null
@@ -58,7 +62,7 @@ export async function GET(req: NextRequest) {
     },
     brandKit: resolveBrandKit(club),
     family,
-    seed: `${matchId}:${seed}`,
+    seed: `${match.id}:${seed}`,
     logoDataUri,
   })
 

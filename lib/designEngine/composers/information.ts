@@ -44,6 +44,8 @@ export function composeInformation(
     weight: 900,
     color: textOnAccent,
     lineHeight: 1,
+    // Dynamic assume un léger tilt sur le score — les autres familles restent bien droites.
+    rotation: family.id === 'dynamic' ? -3 : undefined,
   }
 
   const primary: CompositionNode[] = [

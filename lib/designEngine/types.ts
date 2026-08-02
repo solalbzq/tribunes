@@ -58,7 +58,7 @@ export type SignatureToken = {
   angle: number // degrés, variation subtile par club
 }
 
-export type DesignFamilyId = 'minimal' | 'editorial'
+export type DesignFamilyId = 'minimal' | 'editorial' | 'bold' | 'premium' | 'dynamic'
 
 /** Jeu de tokens partagé par tous les composers pour une famille — pas de code séparé par famille. */
 export type FamilyTokens = {
@@ -72,8 +72,8 @@ export type FamilyTokens = {
   gridVariants: GridVariantId[]
 }
 
-export type BackgroundVariantId = 'solid' | 'gradient-halo' | 'accent-block'
-export type GridVariantId = 'centered' | 'top-weighted' | 'bottom-weighted' | 'accent-split'
+export type BackgroundVariantId = 'solid' | 'gradient-halo' | 'accent-block' | 'flood' | 'diagonal-slash'
+export type GridVariantId = 'centered' | 'top-weighted' | 'bottom-weighted' | 'accent-split' | 'flood-center' | 'framed-center'
 
 /**
  * Arbre de composition — la sortie du Composition Engine. Vocabulaire volontairement
@@ -103,6 +103,7 @@ export type FrameNode = {
   height?: number
   background?: { color: string; opacity?: number }
   borderRadius?: number
+  border?: { color: string; width: number }
   absolute?: AbsoluteInset
   rotation?: number
   children: CompositionNode[]
@@ -118,6 +119,7 @@ export type TextNode = {
   letterSpacing?: number
   uppercase?: boolean
   lineHeight?: number
+  rotation?: number
 }
 
 export type ImageNode = {

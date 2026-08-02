@@ -52,7 +52,7 @@ export default async function DesignLabPage({ searchParams }: { searchParams: { 
             ))}
           </div>
 
-          {(['minimal', 'editorial'] as const).map(family => (
+          {(['minimal', 'editorial', 'bold', 'premium', 'dynamic'] as const).map(family => (
             <div key={family} className="space-y-3">
               <h2 className="text-sm font-bold uppercase tracking-wide text-muted">Famille — {family}</h2>
               <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">

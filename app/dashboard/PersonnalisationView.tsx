@@ -11,6 +11,7 @@ import IdentityHistory from './IdentityHistory'
 import IdentityReferences from './IdentityReferences'
 import IdentityPreviews from './IdentityPreviews'
 import OnboardingWizard from './OnboardingWizard'
+import DesignEngineBeta from './DesignEngineBeta'
 import type { VisualConfig, VisualFormat, PostVisualConfig, PostVisualKind } from '@/lib/visualLayout'
 import { parsePostVisualConfig } from '@/lib/visualLayout'
 import type { TennisVisualConfig } from './posts/TennisVisualGenerator'
@@ -36,9 +37,11 @@ type Club = {
   customInstructions?: string | null
   signaturePhrase?: string | null
   bannedWords?: string | null
+  visualEngine?: string
+  designFamily?: string | null
 }
 
-type Section = 'overview' | 'brand' | 'tone' | 'types' | 'references' | 'previews' | 'history'
+type Section = 'overview' | 'brand' | 'tone' | 'types' | 'references' | 'previews' | 'history' | 'engine'
 
 const POST_VISUAL_TYPES: { key: PostVisualKind; label: string }[] = [
   { key: 'tournament', label: 'Tournoi' },
@@ -291,6 +294,7 @@ export default function PersonnalisationView({ club }: { club: Club }) {
           { key: 'references', label: 'Références', icon: 'sparkles' },
           { key: 'previews', label: 'Aperçus', icon: 'target' },
           { key: 'history', label: 'Historique', icon: 'clock' },
+          { key: 'engine', label: 'Visuels (bêta)', icon: 'sparkles' },
         ]}
       />
 
@@ -479,6 +483,10 @@ export default function PersonnalisationView({ club }: { club: Club }) {
 
       {section === 'history' && (
         <IdentityHistory onRestored={() => router.refresh()} />
+      )}
+
+      {section === 'engine' && (
+        <DesignEngineBeta club={club} />
       )}
     </div>
   )

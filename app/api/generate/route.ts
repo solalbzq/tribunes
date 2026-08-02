@@ -12,6 +12,8 @@ import { validateOneTimeInstructions, resolvePersonalization } from '@/lib/perso
 import { getPersonalizationOverride } from '@/lib/services/personalizationOverride'
 import { deletePostsForRegenerate } from '@/lib/services/postGeneration'
 import { checkBannedWordsAcrossPlatforms } from '@/lib/bannedWords'
+import { generateMatchResultVisual } from '@/lib/designEngine/generateAndUpload'
+import type { DesignFamilyId } from '@/lib/designEngine/types'
 
 export async function POST(req: Request) {
   const supabase = createClient()
@@ -76,20 +78,16 @@ ${getVocabHints(club.sport)}
 ${vocab.keyStats ? `Tu peux aussi : ${vocab.keyStats}.` : ''}
 ${voiceInstruction ? `\n${voiceInstruction}\n` : ''}
 ${mvpInstruction ? `\n${mvpInstruction}\n` : ''}
-Génère exactement 3 posts, UN par plateforme, séparés par "---PLATFORM---" :
+Génère exactement 2 posts, UN par plateforme, séparés par "---PLATFORM---" :
 
 1. Instagram : dynamique, avec des emojis, 3-4 hashtags pertinents pour le ${club.sport}, ton célébration ou fair-play selon résultat, 80-120 mots
 2. Facebook : narratif et communautaire, chaleureux, sans hashtags, 100-150 mots
-3. WhatsApp : court et percutant, pour groupe de supporters, avec emojis, 30-50 mots
 
 Format exact attendu :
 [INSTAGRAM]
 (texte)
 ---PLATFORM---
 [FACEBOOK]
-(texte)
----PLATFORM---
-[WHATSAPP]
 (texte)`
 
   const completion = await openai.chat.completions.create({
@@ -142,6 +140,38 @@ Format exact attendu :
       },
       include: { posts: true },
     })
+  }
+
+  // Bêta opt-in (cf. docs/design-engine-plan.md) : rendu serveur du visuel, indépendant
+  // du canvas navigateur légataire — n'affecte que les clubs ayant explicitement choisi
+  // le nouveau moteur (défaut "legacy" pour tous, comportement inchangé sinon).
+  if (club.visualEngine === 'design-v1') {
+    try {
+      const imageUrl = await generateMatchResultVisual({
+        supabase,
+        club,
+        matchId: match.id,
+        content: {
+          clubName: club.name,
+          opponent: match.opponent,
+          homeScore: match.homeScore,
+          awayScore: match.awayScore,
+          isHome: match.isHome,
+          competition: match.competition,
+          date: match.date.toISOString(),
+        },
+        family: (club.designFamily as DesignFamilyId | null) ?? 'minimal',
+      })
+      await prisma.generatedPost.updateMany({
+        where: { id: { in: match.posts.map(p => p.id) } },
+        data: { imageUrl },
+      })
+      match.posts = match.posts.map(p => ({ ...p, imageUrl }))
+    } catch (err) {
+      // Non bloquant : le club garde son brouillon texte, régénérable sans visuel si le
+      // rendu échoue — jamais d'échec de génération de post pour une erreur de visuel.
+      console.error('[generate] Design Engine visual failed:', (err as Error).message)
+    }
   }
 
   await runAutomationSideEffects(club, match.posts, { forceReview: bannedWords.hasViolation })

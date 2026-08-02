@@ -90,8 +90,38 @@ export function composeGrid(
     return { variantId: 'top-weighted', root, zones: { logo: logoZone, hero: heroZone, meta: metaZone } }
   }
 
-  // Famille minimal : centered ou bottom-weighted, choix libre (les deux fonctionnent
-  // avec un fond solid ou gradient-halo — aucune contrainte de compatibilité ici).
+  if (family.id === 'premium') {
+    // Un cadre fin en retrait des bords — codes du luxe (invitation, catalogue) — entoure
+    // une composition centrée classique.
+    const logoZone = zone('logo-zone', { direction: 'row', align: 'center' })
+    const heroZone = zone('hero-zone', { direction: 'column', align: 'center', gap: 28 })
+    const metaZone = zone('meta-zone', { direction: 'column', align: 'center', gap: 16 })
+    const frame = zone('premium-frame', {
+      direction: 'column',
+      align: 'center',
+      justify: 'center',
+      gap: 44,
+      padding: margin,
+      grow: 1,
+      border: { color: ctx.brandKit.secondaryColor, width: 1 },
+      children: [logoZone, heroZone, metaZone],
+    })
+    const root: FrameNode = {
+      kind: 'frame',
+      role: 'root',
+      direction: 'column',
+      align: 'stretch',
+      justify: 'start',
+      gap: 0,
+      padding: 48,
+      grow: 1,
+      children: [frame],
+    }
+    return { variantId: 'framed-center', root, zones: { logo: logoZone, hero: heroZone, meta: metaZone } }
+  }
+
+  // Familles restantes (minimal, bold, dynamic) : centered ou bottom-weighted selon les
+  // variantes déclarées par la famille — aucune contrainte de compatibilité supplémentaire.
   const variantId = pick(rng, family.gridVariants)
   const logoZone = zone('logo-zone', { direction: 'row', align: 'center' })
   const heroZone = zone('hero-zone', { direction: 'column', align: 'center', gap: 24 })

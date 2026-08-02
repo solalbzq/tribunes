@@ -77,6 +77,11 @@ model Club {
   customInstructions  String?              @db.Text // consignes libres injectées dans tous les prompts IA
   signaturePhrase     String? // phrase de signature optionnelle ajoutée en fin de post
   bannedWords         String?              @db.Text // mots/expressions à éviter dans les légendes générées
+  // Bêta opt-in — moteur de génération des visuels (cf. lib/designEngine/,
+  // docs/design-engine-plan.md). "legacy" = comportement actuel inchangé pour tous les
+  // clubs par défaut. designFamily n'a d'effet que si visualEngine = "design-v1".
+  visualEngine        String               @default("legacy") // legacy | design-v1
+  designFamily        String? // minimal | editorial | bold | premium | dynamic
   createdAt           DateTime             @default(now())
   matches             MatchResult[]
   tournamentSchedules TournamentSchedule[]

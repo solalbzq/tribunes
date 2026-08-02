@@ -8,6 +8,9 @@ import { validateClubPersonalizationInput, isValidHexColor } from '@/lib/persona
 import { recordPersonalizationHistory } from '@/lib/services/personalizationHistory'
 import { logPersonalizationSignal } from '@/lib/services/personalizationSignals'
 
+const VISUAL_ENGINES = ['legacy', 'design-v1']
+const DESIGN_FAMILIES = ['minimal', 'editorial', 'bold', 'premium', 'dynamic']
+
 // Sanitisation "bandeau premium" : neutralise toute personnalisation du footer
 // (masquage, remplacement par le nom du club) envoyée par un club au plan
 // FREE, quel que soit ce que l'UI propose côté client — cf. lib/plans.ts
@@ -45,6 +48,7 @@ export async function POST(req: Request) {
   const {
     name, sport, primaryColor, secondaryColor, visualConfig, tennisVisualConfig, postVisualConfigs,
     tenupUrl, contentTone, customInstructions, signaturePhrase, bannedWords,
+    visualEngine, designFamily,
   } = await req.json()
   if (!name || !sport) return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
 
@@ -80,6 +84,10 @@ export async function POST(req: Request) {
     ...(customInstructions !== undefined ? { customInstructions: personalization.value.customInstructions } : {}),
     ...(signaturePhrase !== undefined ? { signaturePhrase: personalization.value.signaturePhrase } : {}),
     ...(bannedWords !== undefined ? { bannedWords: personalization.value.bannedWords } : {}),
+    // Bêta opt-in Design Engine (cf. docs/design-engine-plan.md) — jamais de valeur hors
+    // de la liste fermée, même envoyée par le client.
+    ...(visualEngine !== undefined && VISUAL_ENGINES.includes(visualEngine) ? { visualEngine } : {}),
+    ...(designFamily !== undefined && (designFamily === null || DESIGN_FAMILIES.includes(designFamily)) ? { designFamily } : {}),
   }
 
   const club = await prisma.club.upsert({
