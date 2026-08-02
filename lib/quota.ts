@@ -112,3 +112,32 @@ export function brandAssetAnalysisRateLimitedResponse() {
     { status: 429 }
   )
 }
+
+// Suggestions éditoriales (Lot 7) : même garde-fou anti-abus que l'analyse de
+// fichiers — pas un quota commercial, juste une limite de fréquence.
+const EDITORIAL_SUGGESTIONS_RATE_LIMIT = 10
+const EDITORIAL_SUGGESTIONS_WINDOW_MS = 60 * 60 * 1000
+
+export async function checkEditorialSuggestionsRateLimit(club: {
+  id: string
+  orgId: string | null
+  userId: string
+}): Promise<{ allowed: boolean; used: number; limit: number }> {
+  const { orgId } = await resolvePlanForClub(club)
+  const since = new Date(Date.now() - EDITORIAL_SUGGESTIONS_WINDOW_MS)
+  const used = await prisma.usageEvent.count({
+    where: {
+      kind: 'editorial_suggestions',
+      createdAt: { gte: since },
+      ...(orgId ? { club: { orgId } } : { clubId: club.id }),
+    },
+  })
+  return { allowed: used < EDITORIAL_SUGGESTIONS_RATE_LIMIT, used, limit: EDITORIAL_SUGGESTIONS_RATE_LIMIT }
+}
+
+export function editorialSuggestionsRateLimitedResponse() {
+  return NextResponse.json(
+    { error: "Trop de demandes de suggestions en peu de temps. Réessaie dans quelques minutes.", code: 'RATE_LIMITED' },
+    { status: 429 }
+  )
+}

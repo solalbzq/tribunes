@@ -11,6 +11,7 @@ import type { PlayerSpotlightFormInitialValues } from './PlayerSpotlightTab'
 import type { SeasonRecapFormInitialValues } from './SeasonRecapTab'
 import type { EngagementPollFormInitialValues } from './EngagementPollTab'
 import type { CustomPostFormInitialValues } from './CustomPostTab'
+import type { SuggestionTemplate as EditorialSuggestion } from '@/lib/services/editorialSuggestionsCatalog'
 
 type MatchResultFields = {
   opponent: string | null
@@ -156,6 +157,39 @@ export default function DescribeIntentTab({
   const [error, setError] = useState<UiError>(null)
   const [result, setResult] = useState<IntentExtractionResult | null>(null)
   const [selectedTarget, setSelectedTarget] = useState<Target | null>(null)
+  const [suggestions, setSuggestions] = useState<EditorialSuggestion[] | null>(null)
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false)
+  const [suggestionsError, setSuggestionsError] = useState<string | null>(null)
+
+  async function loadSuggestions() {
+    setSuggestionsLoading(true); setSuggestionsError(null)
+    try {
+      const res = await fetch('/api/suggestions/editorial', { method: 'POST' })
+      const data = await res.json().catch(() => null)
+      if (!res.ok) { setSuggestionsError(data?.error ?? 'Échec de la génération de suggestions'); return }
+      setSuggestions(data.suggestions ?? [])
+    } finally {
+      setSuggestionsLoading(false)
+    }
+  }
+
+  function applySuggestion(s: EditorialSuggestion) {
+    const sourceText = `Idée suggérée : ${s.label}`
+    if (s.target?.kind === 'clubAnnouncement') {
+      onApply('clubAnnouncement', {
+        category: s.target.category,
+        title: s.subject,
+        description: s.objective,
+      }, sourceText)
+      return
+    }
+    onApply('customPost', {
+      objective: s.objective,
+      subject: s.subject,
+      keyInformation: s.keyInformation.length ? s.keyInformation : undefined,
+      suggestedCategory: s.suggestedCategory,
+    }, sourceText)
+  }
 
   const detectedTarget: Target | null = result ? INTENT_TO_TARGET[result.intent] ?? null : null
   const targetChanged = selectedTarget !== null && detectedTarget !== null && selectedTarget !== detectedTarget
@@ -294,6 +328,39 @@ export default function DescribeIntentTab({
         <ChatBubble from="bot">
           Salut 👋 Décris-moi ce que tu veux publier — résultat, annonce, joueur à l&apos;honneur, bilan, sondage, ou toute autre communication du club (billetterie, recherche de bénévoles, événement...). Je prépare le formulaire, tu vérifies avant de générer.
         </ChatBubble>
+
+        {!loading && !result && (
+          <div className="rounded-2xl border border-line bg-white p-4 space-y-3">
+            {!suggestions ? (
+              <button
+                type="button"
+                onClick={loadSuggestions}
+                disabled={suggestionsLoading}
+                className="w-full inline-flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 border-dashed border-gray-200 text-sm font-semibold text-gray-500 hover:border-[#2563eb] hover:text-[#2563eb] transition disabled:opacity-60"
+              >
+                <Icon name="sparkles" className="h-4 w-4" />
+                {suggestionsLoading ? 'Recherche d’idées...' : 'Besoin d’inspiration ? Voir des idées de publication'}
+              </button>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-muted uppercase tracking-wide">Idées pour votre club — choisissez-en une pour préremplir le formulaire</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {suggestions.map(s => (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => applySuggestion(s)}
+                      className="text-left rounded-xl border border-line px-3 py-2.5 text-sm font-semibold text-ink hover:border-brand hover:bg-brand-soft/30 transition"
+                    >
+                      {s.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {suggestionsError && <p className="text-xs text-red-500">{suggestionsError}</p>}
+          </div>
+        )}
 
         {(loading || result) && (
           <ChatBubble from="user">{text.trim()}</ChatBubble>
