@@ -12,6 +12,8 @@ import IdentityReferences from './IdentityReferences'
 import IdentityPreviews from './IdentityPreviews'
 import OnboardingWizard from './OnboardingWizard'
 import DesignEngineBeta from './DesignEngineBeta'
+import { proposeMatchResultVisualConfig, proposePostVisualConfig } from '@/lib/designEngine/legacyBridge'
+import type { DesignFamilyId } from '@/lib/designEngine/types'
 import type { VisualConfig, VisualFormat, PostVisualConfig, PostVisualKind } from '@/lib/visualLayout'
 import { parsePostVisualConfig } from '@/lib/visualLayout'
 import type { TennisVisualConfig } from './posts/TennisVisualGenerator'
@@ -64,6 +66,12 @@ export default function PersonnalisationView({ club }: { club: Club }) {
 
   const [section, setSection] = useState<Section>('overview')
   const [visualTarget, setVisualTarget] = useState<VisualTarget | null>(null)
+  const [proposalFamily, setProposalFamily] = useState<DesignFamilyId>('minimal')
+  const [proposedConfig, setProposedConfig] = useState<{
+    target: VisualTarget
+    visualConfigByFormat?: { post: VisualConfig; story: VisualConfig }
+    postVisualConfigs?: Record<string, unknown>
+  } | null>(null)
 
   const [primary, setPrimary] = useState(club.primaryColor)
   const [secondary, setSecondary] = useState(club.secondaryColor)
@@ -97,6 +105,34 @@ export default function PersonnalisationView({ club }: { club: Club }) {
   function dismissWizardBanner() {
     setShowWizardBanner(false)
     try { window.localStorage.setItem(`onboarding_dismissed_${club.id}`, '1') } catch {}
+  }
+
+  // Une proposition du nouveau moteur ne doit jamais fuiter d'un écran d'édition à l'autre.
+  useEffect(() => { setProposedConfig(null) }, [visualTarget])
+
+  function generateProposal() {
+    if (!visualTarget) return
+    if (visualTarget === 'result') {
+      setProposedConfig({
+        target: 'result',
+        visualConfigByFormat: {
+          post: proposeMatchResultVisualConfig({ family: proposalFamily, format: 'post', clubId: club.id, secondaryColor: secondary }),
+          story: proposeMatchResultVisualConfig({ family: proposalFamily, format: 'story', clubId: club.id, secondaryColor: secondary }),
+        },
+      })
+    } else if (POST_VISUAL_TYPES.some(t => t.key === visualTarget)) {
+      const kind = visualTarget as PostVisualKind
+      setProposedConfig({
+        target: visualTarget,
+        postVisualConfigs: {
+          ...(club.postVisualConfigs && typeof club.postVisualConfigs === 'object' ? club.postVisualConfigs as Record<string, unknown> : {}),
+          [kind]: {
+            post: proposePostVisualConfig({ kind, family: proposalFamily, format: 'post', clubId: club.id, primaryColor: primary, secondaryColor: secondary }),
+            story: proposePostVisualConfig({ kind, family: proposalFamily, format: 'story', clubId: club.id, primaryColor: primary, secondaryColor: secondary }),
+          },
+        },
+      })
+    }
   }
 
   const currentClub: Club = { ...club, logoUrl, primaryColor: primary, secondaryColor: secondary, contentTone, customInstructions, signaturePhrase, bannedWords }
@@ -215,6 +251,15 @@ export default function PersonnalisationView({ club }: { club: Club }) {
   const contrast = contrastRatio(primary, secondary)
 
   if (visualTarget) {
+    const canPropose = visualTarget === 'result' || POST_VISUAL_TYPES.some(t => t.key === visualTarget)
+    const hasProposal = proposedConfig?.target === visualTarget
+    const resultConfigOverride = hasProposal && proposedConfig?.visualConfigByFormat
+      ? { ...buildVisualConfigPayload(), ...proposedConfig.visualConfigByFormat }
+      : buildVisualConfigPayload()
+    const postVisualConfigsOverride = hasProposal && proposedConfig?.postVisualConfigs
+      ? proposedConfig.postVisualConfigs
+      : club.postVisualConfigs
+
     return (
       <div className="max-w-7xl space-y-6">
         <button
@@ -224,9 +269,40 @@ export default function PersonnalisationView({ club }: { club: Club }) {
           <Icon name="arrowLeft" className="h-4 w-4" /> Retour aux styles par type
         </button>
 
+        {canPropose && (
+          <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-line bg-subtle/60 p-3">
+            <span className="text-xs font-semibold uppercase tracking-wide text-muted mr-1">
+              Nouveau moteur (bêta) —
+            </span>
+            <select
+              value={proposalFamily}
+              onChange={e => setProposalFamily(e.target.value as DesignFamilyId)}
+              className="rounded-lg border border-line bg-white px-2.5 py-1.5 text-sm font-medium text-ink"
+            >
+              <option value="minimal">Minimal</option>
+              <option value="editorial">Editorial</option>
+              <option value="bold">Bold</option>
+              <option value="premium">Premium</option>
+              <option value="dynamic">Dynamic</option>
+            </select>
+            <button
+              onClick={generateProposal}
+              className="rounded-lg bg-brand px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-brand-hover"
+            >
+              Générer une proposition
+            </button>
+            {hasProposal && (
+              <span className="text-xs font-semibold text-emerald-600">
+                ✓ Proposition chargée ci-dessous — modifiable librement, puis enregistrez comme d&apos;habitude.
+              </span>
+            )}
+          </div>
+        )}
+
         {visualTarget === 'result' && (
           <VisualEditor
-            club={{ ...currentClub, visualConfig: buildVisualConfigPayload() }}
+            key={hasProposal ? `proposed-${proposalFamily}` : 'saved'}
+            club={{ ...currentClub, visualConfig: resultConfigOverride }}
             isPremium={isPremium}
             onSave={handleSaveLayout}
           />
@@ -240,9 +316,10 @@ export default function PersonnalisationView({ club }: { club: Club }) {
         )}
         {POST_VISUAL_TYPES.some(t => t.key === visualTarget) && (
           <PostVisualEditor
+            key={hasProposal ? `proposed-${proposalFamily}` : 'saved'}
             kind={visualTarget as PostVisualKind}
             club={{ id: club.id, name: club.name, sport: club.sport, primaryColor: primary, secondaryColor: secondary, logoUrl: logoPreview }}
-            savedConfig={club.postVisualConfigs}
+            savedConfig={postVisualConfigsOverride}
             isPremium={isPremium}
             onSave={handleSavePostVisual}
           />
