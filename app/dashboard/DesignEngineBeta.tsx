@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 
 type Club = {
   id: string
@@ -31,6 +32,7 @@ function suggestedFamily(contentTone: string): string {
  * n'affecte aucun club qui ne l'active pas explicitement ("legacy" reste le défaut).
  */
 export default function DesignEngineBeta({ club }: { club: Club }) {
+  const router = useRouter()
   const [enabled, setEnabled] = useState(club.visualEngine === 'design-v1')
   const [family, setFamily] = useState(club.designFamily ?? suggestedFamily(club.contentTone))
   const [saving, setSaving] = useState(false)
@@ -58,6 +60,10 @@ export default function DesignEngineBeta({ club }: { club: Club }) {
       }
       setSaved(true)
       setTimeout(() => setSaved(false), 2000)
+      // Sans ça, le composant se réinitialise avec les anciennes valeurs (club.visualEngine
+      // / club.designFamily) si on quitte l'onglet et qu'on revient — la donnée serveur
+      // (fetch initial de la page) n'est jamais rafraîchie sinon.
+      router.refresh()
     } catch (err) {
       setError((err as Error).message)
     } finally {

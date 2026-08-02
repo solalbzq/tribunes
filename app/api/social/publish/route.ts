@@ -48,8 +48,12 @@ export async function POST(req: Request) {
     }
   }
 
-  // Upload du visuel (URL publique nécessaire pour Instagram)
-  let imageUrl: string | undefined
+  // Upload du visuel (URL publique nécessaire pour Instagram). Si aucun fichier n'est
+  // envoyé mais que le post a déjà un visuel (ex. rendu serveur par le Design Engine à
+  // la génération, cf. lib/designEngine/generateAndUpload.ts), on le réutilise plutôt
+  // que d'exiger un nouvel upload — sans ce repli, un visuel déjà généré côté serveur
+  // ne serait jamais publié : l'aperçu client (canvas) l'écraserait silencieusement.
+  let imageUrl: string | undefined = post?.imageUrl ?? undefined
   if (image) {
     const path = `published/${club.id}/${Date.now()}.png`
     const bytes = await image.arrayBuffer()

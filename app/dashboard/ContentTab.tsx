@@ -78,6 +78,7 @@ export default function ContentTab({ club }: { club: Club }) {
   const [generatedMatch, setGeneratedMatch] = useState<MatchData | null>(null)
   const [generatedMatchId, setGeneratedMatchId] = useState<string | null>(null)
   const [generatedPhoto, setGeneratedPhoto] = useState<File | null>(null)
+  const [generatedDesignImageUrl, setGeneratedDesignImageUrl] = useState<string | null>(null)
   const [personalizing, setPersonalizing] = useState(false)
   const [visualOnlyFormat, setVisualOnlyFormat] = useState<VisualFormat>('post')
   const [bannedWordsWarning, setBannedWordsWarning] = useState<Record<string, string[]> | null>(null)
@@ -123,6 +124,9 @@ export default function ContentTab({ club }: { club: Club }) {
       ) as PostIds
       setGeneratedPostIds(postIds)
       setBannedWordsWarning(data.bannedWordsWarning ?? null)
+      const designImageUrl: string | null =
+        (data.match?.posts as Array<{ imageUrl: string | null }> | undefined)?.find(p => p.imageUrl)?.imageUrl ?? null
+      setGeneratedDesignImageUrl(designImageUrl)
     } finally {
       setPersonalizing(false)
     }
@@ -189,13 +193,14 @@ export default function ContentTab({ club }: { club: Club }) {
           <GenerateForm
             club={club}
             initialValues={prefill?.target === 'match' ? prefill.values : undefined}
-            onSuccess={(posts, match, photo, postIds, matchId, warning) => {
+            onSuccess={(posts, match, photo, postIds, matchId, warning, designImageUrl) => {
               setGeneratedPosts(posts)
               setGeneratedPostIds(postIds)
               setGeneratedMatch(match)
               setGeneratedMatchId(matchId)
               setGeneratedPhoto(photo)
               setBannedWordsWarning(warning)
+              setGeneratedDesignImageUrl(designImageUrl)
             }}
             onVisualOnly={(match, photo) => {
               setGeneratedMatch(match)
@@ -225,6 +230,7 @@ export default function ContentTab({ club }: { club: Club }) {
           club={club}
           match={generatedMatch}
           photoFile={generatedPhoto}
+          designImageUrl={generatedDesignImageUrl}
           onPersonalize={personalizeMatch}
           personalizing={personalizing}
           bannedWordsWarning={bannedWordsWarning}
@@ -234,6 +240,7 @@ export default function ContentTab({ club }: { club: Club }) {
             setGeneratedMatch(null)
             setGeneratedMatchId(null)
             setGeneratedPhoto(null)
+            setGeneratedDesignImageUrl(null)
             setPrefill(null)
             setBannedWordsWarning(null)
           }}

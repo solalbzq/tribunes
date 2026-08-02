@@ -39,6 +39,7 @@ export default function PostsResult({
   club,
   match,
   photoFile,
+  designImageUrl,
   onReset,
   onPersonalize,
   personalizing,
@@ -49,6 +50,10 @@ export default function PostsResult({
   club: Club
   match: MatchData
   photoFile: File | null
+  /** Visuel déjà rendu et uploadé côté serveur par le Design Engine (bêta) — si présent,
+   * remplace entièrement le rendu canvas et la publication réutilise cette URL au lieu
+   * d'en capturer une nouvelle. Cf. lib/designEngine/generateAndUpload.ts. */
+  designImageUrl?: string | null
   onReset: () => void
   onPersonalize?: (overrides: { tone?: string; customInstructions?: string }) => Promise<void>
   personalizing?: boolean
@@ -66,6 +71,9 @@ export default function PostsResult({
   }
 
   async function getImageBlob(): Promise<Blob | null> {
+    // Un visuel Design Engine est déjà uploadé : ne jamais le remplacer par une capture
+    // canvas — /api/social/publish réutilise post.imageUrl quand aucun fichier n'est envoyé.
+    if (designImageUrl) return null
     const canvas = canvasRef.current
     if (!canvas) return null
     return new Promise(r => canvas.toBlob(r, 'image/png'))
@@ -110,8 +118,20 @@ export default function PostsResult({
 
       {/* Visual — toujours monté (canvas capturé pour la publication), affiché sur l'onglet Visuel */}
       <div className={active === 'visual' ? 'space-y-3' : 'hidden'}>
-        <FormatToggle value={visualFormat} onChange={setVisualFormat} />
-        <VisualGenerator club={club} match={match} photoFile={photoFile} format={visualFormat} onCanvasReady={c => { canvasRef.current = c }} />
+        {designImageUrl ? (
+          <div className="space-y-2">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-semibold text-amber-700">
+              Généré par le nouveau moteur de visuels (bêta)
+            </span>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={designImageUrl} alt="Visuel généré" className="w-full rounded-card border border-line shadow-card" />
+          </div>
+        ) : (
+          <>
+            <FormatToggle value={visualFormat} onChange={setVisualFormat} />
+            <VisualGenerator club={club} match={match} photoFile={photoFile} format={visualFormat} onCanvasReady={c => { canvasRef.current = c }} />
+          </>
+        )}
       </div>
 
       {/* Post card */}
