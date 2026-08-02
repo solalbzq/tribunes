@@ -87,6 +87,29 @@ model Club {
   customPosts         CustomPost[]
   personalizationOverrides ClubPersonalizationOverride[]
   personalizationHistory   ClubPersonalizationHistory[]
+  brandAssets              ClubBrandAsset[]
+}
+
+// Fichier importé pour la personnalisation complète (référence visuelle ou
+// charte graphique) — Lot 5. `storagePath` pointe vers un bucket PRIVÉ
+// (jamais getPublicUrl) : accès uniquement via URL signée à courte durée,
+// générée à la demande côté serveur pour le club propriétaire authentifié.
+// `analysis` est une proposition structurée validée avant tout usage —
+// jamais appliquée automatiquement à la config active (cf. lib/services/brandAssetAnalysis.ts).
+model ClubBrandAsset {
+  id          String   @id @default(cuid())
+  clubId      String
+  club        Club     @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  kind        String // 'REFERENCE' | 'CHARTER'
+  sourceNote  String? // 'own' | 'inspiration' — précision du club pour une référence (jamais une promesse de reproduction exacte)
+  storagePath String
+  mimeType    String
+  fileSize    Int
+  status      String   @default("PENDING") // PENDING | ANALYZED | FAILED
+  analysis    Json?
+  createdAt   DateTime @default(now())
+
+  @@index([clubId, kind])
 }
 
 // Override de personnalisation par type de publication (postType, aligné sur

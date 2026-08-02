@@ -8,6 +8,7 @@ import PostVisualEditor from './PostVisualEditor'
 import IdentityOverview from './IdentityOverview'
 import IdentityTypeStyles, { type VisualTarget } from './IdentityTypeStyles'
 import IdentityHistory from './IdentityHistory'
+import IdentityReferences from './IdentityReferences'
 import OnboardingWizard from './OnboardingWizard'
 import type { VisualConfig, VisualFormat, PostVisualConfig, PostVisualKind } from '@/lib/visualLayout'
 import { parsePostVisualConfig } from '@/lib/visualLayout'
@@ -36,7 +37,7 @@ type Club = {
   bannedWords?: string | null
 }
 
-type Section = 'overview' | 'brand' | 'tone' | 'types' | 'previews' | 'history'
+type Section = 'overview' | 'brand' | 'tone' | 'types' | 'references' | 'previews' | 'history'
 
 const POST_VISUAL_TYPES: { key: PostVisualKind; label: string }[] = [
   { key: 'tournament', label: 'Tournoi' },
@@ -285,6 +286,7 @@ export default function PersonnalisationView({ club }: { club: Club }) {
           { key: 'brand', label: 'Logo et couleurs', icon: 'image' },
           { key: 'tone', label: 'Ton et vocabulaire', icon: 'sparkles' },
           { key: 'types', label: 'Styles par type', icon: 'sliders' },
+          { key: 'references', label: 'Références', icon: 'sparkles' },
           { key: 'previews', label: 'Aperçus', icon: 'target' },
           { key: 'history', label: 'Historique', icon: 'clock' },
         ]}
@@ -463,6 +465,10 @@ export default function PersonnalisationView({ club }: { club: Club }) {
 
       {section === 'types' && (
         <IdentityTypeStyles isTennisPadel={isTennisPadel} onNavigateVisual={setVisualTarget} />
+      )}
+
+      {section === 'references' && (
+        <IdentityReferences onApplied={() => router.refresh()} />
       )}
 
       {section === 'previews' && (

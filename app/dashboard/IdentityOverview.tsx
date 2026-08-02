@@ -19,7 +19,7 @@ type Club = {
 
 const TONE_LABELS: Record<string, string> = { STANDARD: 'Standard', FUN: 'Fun et décontractée', SOBER: 'Sobre et factuelle' }
 
-type Section = 'overview' | 'brand' | 'tone' | 'types' | 'previews' | 'history'
+type Section = 'overview' | 'brand' | 'tone' | 'types' | 'references' | 'previews' | 'history'
 
 export default function IdentityOverview({
   club, onNavigate, onOpenOnboarding,
@@ -68,6 +68,12 @@ export default function IdentityOverview({
                   className="w-full text-left px-4 py-2 text-sm text-ink hover:bg-subtle transition"
                 >
                   Relancer la personnalisation rapide
+                </button>
+                <button
+                  onClick={() => { setMenuOpen(false); onNavigate('references') }}
+                  className="w-full text-left px-4 py-2 text-sm text-ink hover:bg-subtle transition"
+                >
+                  Ajouter des références ou une charte
                 </button>
                 <button
                   onClick={() => { setMenuOpen(false); onNavigate('history') }}

@@ -81,3 +81,34 @@ export function intentExtractionRateLimitedResponse() {
     { status: 429 }
   )
 }
+
+// Même logique pour l'analyse IA des références visuelles/chartes importées
+// (Lot 5) : ni une génération de contenu (pas de quota commercial), ni un
+// coût récurrent attendu (analyse ponctuelle par fichier) — juste un
+// garde-fou anti-abus pour éviter des ré-analyses répétées sans limite.
+const BRAND_ASSET_ANALYSIS_RATE_LIMIT = 10
+const BRAND_ASSET_ANALYSIS_WINDOW_MS = 60 * 60 * 1000
+
+export async function checkBrandAssetAnalysisRateLimit(club: {
+  id: string
+  orgId: string | null
+  userId: string
+}): Promise<{ allowed: boolean; used: number; limit: number }> {
+  const { orgId } = await resolvePlanForClub(club)
+  const since = new Date(Date.now() - BRAND_ASSET_ANALYSIS_WINDOW_MS)
+  const used = await prisma.usageEvent.count({
+    where: {
+      kind: 'brand_asset_analysis',
+      createdAt: { gte: since },
+      ...(orgId ? { club: { orgId } } : { clubId: club.id }),
+    },
+  })
+  return { allowed: used < BRAND_ASSET_ANALYSIS_RATE_LIMIT, used, limit: BRAND_ASSET_ANALYSIS_RATE_LIMIT }
+}
+
+export function brandAssetAnalysisRateLimitedResponse() {
+  return NextResponse.json(
+    { error: "Trop d'analyses en peu de temps. Réessaie dans quelques minutes.", code: 'RATE_LIMITED' },
+    { status: 429 }
+  )
+}
