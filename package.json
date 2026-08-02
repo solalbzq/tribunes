@@ -14,6 +14,7 @@
   "dependencies": {
     "@prisma/client": "^5.19.1",
     "@react-email/components": "^0.0.22",
+    "@resvg/resvg-js": "^2.6.2",
     "@supabase/ssr": "^0.12.0",
     "@supabase/supabase-js": "^2.108.2",
     "jose": "^6.2.3",
@@ -24,6 +25,7 @@
     "react-dom": "18.3.1",
     "recharts": "^3.9.0",
     "resend": "^4.0.0",
+    "satori": "^0.29.0",
     "stripe": "^16.10.0",
     "zod": "^3.23.8"
   },
