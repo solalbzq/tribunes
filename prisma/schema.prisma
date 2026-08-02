@@ -68,6 +68,11 @@ model Club {
   automationMode      String               @default("MANUAL") // MANUAL | AUTO_REVIEW | FULL_AUTO
   telegramChatId      String?              @unique
   telegramLinkCode    String?              @unique
+  // Token utilisateur Meta long-lived (chiffré, cf. lib/social/token-crypto.ts),
+  // conservé pour pouvoir le prolonger via fb_exchange_token avant expiration
+  // (cron social-token-refresh) sans repasser par tout le flux OAuth.
+  metaUserAccessToken     String?          @db.Text
+  metaUserTokenExpiresAt  DateTime?
   contentTone         String               @default("STANDARD") // STANDARD | FUN | SOBER
   customInstructions  String?              @db.Text // consignes libres injectées dans tous les prompts IA
   signaturePhrase     String? // phrase de signature optionnelle ajoutée en fin de post
@@ -161,6 +166,11 @@ model SocialConnection {
   accessToken       String    @db.Text // page access token (long-lived)
   igUserId          String? // compte IG business lié (sur une connexion facebook)
   tokenExpiresAt    DateTime?
+  // true si une publication a échoué avec une erreur d'authentification Meta
+  // (code 190 — token invalide/révoqué) : la connexion est ignorée par les
+  // tentatives de publication/retry jusqu'à resynchronisation (reconnexion ou
+  // cron social-token-refresh), qui la remet à false.
+  invalid           Boolean   @default(false)
   meta              Json?
   createdAt         DateTime  @default(now())
 
@@ -361,6 +371,15 @@ model GeneratedPost {
   imageUrl             String?
   publishedAt          DateTime?
   rejectedReason       String?
+  // Nombre de tentatives de publication effectuées (initiale + retries cron
+  // publish-retry), plafonné à MAX_RETRIES — cf. lib/services/publish-service.ts.
+  retryCount           Int                 @default(0)
+  // Message d'erreur du dernier essai de publication (distinct de rejectedReason,
+  // qui reflète un rejet humain via Telegram).
+  lastError            String?             @db.Text
+  // Résultats par connexion du dernier essai (PublishResult[]) — permet aux
+  // retries de ne pas republier sur une connexion déjà réussie (cas PARTIAL).
+  publishResults       Json?
   createdAt            DateTime            @default(now())
   telegramMessages     TelegramMessage[]
 

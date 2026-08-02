@@ -11,6 +11,14 @@
     {
       "path": "/api/cron/cleanup-posts",
       "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/cron/social-token-refresh",
+      "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/cron/publish-retry",
+      "schedule": "0 8 * * *"
     }
   ]
 }

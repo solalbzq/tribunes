@@ -37,3 +37,44 @@ export async function notifyPendingReview(
     },
   })
 }
+
+const PROVIDER_LABEL: Record<string, string> = { facebook: 'Facebook', instagram: 'Instagram' }
+
+/**
+ * Prévient le club qu'une de ses connexions réseau social nécessite une
+ * reconnexion (token expiré/révoqué, ou impossible à prolonger automatiquement).
+ * No-op si le bot n'est pas configuré ou si le club n'a pas lié de chat —
+ * l'admin reste alerté séparément via /api/admin/alerts dans tous les cas.
+ */
+export async function notifyReconnectNeeded(
+  club: { id: string; telegramChatId: string | null },
+  provider: string,
+  reason: string
+) {
+  if (!telegramConfigured() || !club.telegramChatId) return
+
+  const label = PROVIDER_LABEL[provider] ?? provider
+  await sendMessage(
+    club.telegramChatId,
+    `⚠️ Connexion ${label} à renouveler\n\n${reason}\n\nRends-toi dans Tribunes (Réglages → Réseaux) pour reconnecter ton compte.`
+  )
+}
+
+/**
+ * Prévient le club qu'une publication a définitivement échoué après épuisement
+ * des tentatives automatiques (cron publish-retry). No-op si le bot n'est pas
+ * configuré ou si le club n'a pas lié de chat.
+ */
+export async function notifyPublishFailed(
+  club: { id: string; telegramChatId: string | null },
+  post: { id: string; platform: string },
+  reason: string
+) {
+  if (!telegramConfigured() || !club.telegramChatId) return
+
+  const label = PROVIDER_LABEL[post.platform] ?? post.platform
+  await sendMessage(
+    club.telegramChatId,
+    `❌ Publication ${label} échouée\n\n${reason}\n\nLe post n'a pas pu être publié automatiquement après plusieurs tentatives. Vérifie-le dans Tribunes.`
+  )
+}

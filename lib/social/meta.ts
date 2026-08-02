@@ -34,12 +34,42 @@ export function getAuthUrl(state: string): string {
   return `https://www.facebook.com/v21.0/dialog/oauth?${params}`
 }
 
+/** Erreur Graph API Meta, avec code/subcode pour permettre une classification (cf. classifyMetaError). */
+export class MetaGraphError extends Error {
+  code?: number
+  subcode?: number
+
+  constructor(message: string, code?: number, subcode?: number) {
+    super(message)
+    this.name = 'MetaGraphError'
+    this.code = code
+    this.subcode = subcode
+  }
+}
+
+/**
+ * Catégorise une erreur Graph API pour décider du comportement de retry :
+ * - auth       : token invalide/révoqué (code 190) — reconnexion requise, pas de retry.
+ * - rate_limit : throttling Meta (codes 4/17/32/613) — transitoire, retry avec backoff (cron).
+ * - transient  : erreur réseau/inconnue — retry par défaut, prudence (jamais bloqué à tort).
+ * Pas de catégorie "permanent" distincte : Meta ne documente pas de code stable et unique
+ * pour "contenu refusé" sur ces endpoints ; on préfère classer en transient plutôt que
+ * d'inventer une distinction non vérifiée.
+ */
+export function classifyMetaError(err: unknown): 'auth' | 'rate_limit' | 'transient' {
+  if (err instanceof MetaGraphError) {
+    if (err.code === 190) return 'auth'
+    if (err.code === 4 || err.code === 17 || err.code === 32 || err.code === 613) return 'rate_limit'
+  }
+  return 'transient'
+}
+
 async function graph<T = unknown>(path: string, params: Record<string, string>): Promise<T> {
   const url = `${GRAPH}/${path}?${new URLSearchParams(params)}`
   const res = await fetch(url, { cache: 'no-store' })
   const data = await res.json()
   if (!res.ok || data.error) {
-    throw new Error(data.error?.message ?? `Graph API ${res.status}`)
+    throw new MetaGraphError(data.error?.message ?? `Graph API ${res.status}`, data.error?.code, data.error?.error_subcode)
   }
   return data as T
 }
@@ -53,9 +83,26 @@ async function graphPost<T = unknown>(path: string, params: Record<string, strin
   })
   const data = await res.json()
   if (!res.ok || data.error) {
-    throw new Error(data.error?.message ?? `Graph API ${res.status}`)
+    throw new MetaGraphError(data.error?.message ?? `Graph API ${res.status}`, data.error?.code, data.error?.error_subcode)
   }
   return data as T
+}
+
+/**
+ * Prolonge un token utilisateur (court ou long-lived, non expiré) via fb_exchange_token.
+ * Note Meta : sur un token de moins de 24h, l'appel renvoie silencieusement le même
+ * token avec la même expiration (pas d'erreur) — comportement normal de l'API, pas
+ * un bug de cette fonction. Sur un token déjà expiré, l'appel échoue : il faut alors
+ * repasser par le flux OAuth complet (cf. cron social-token-refresh).
+ */
+async function extendToken(token: string): Promise<{ token: string; expiresIn: number }> {
+  const long = await graph<{ access_token: string; expires_in?: number }>('oauth/access_token', {
+    grant_type: 'fb_exchange_token',
+    client_id: process.env.META_APP_ID!,
+    client_secret: process.env.META_APP_SECRET!,
+    fb_exchange_token: token,
+  })
+  return { token: long.access_token, expiresIn: long.expires_in ?? 60 * 24 * 3600 }
 }
 
 /** Échange le code OAuth contre un token utilisateur court, puis long-lived. */
@@ -66,13 +113,16 @@ export async function exchangeCodeForLongLivedToken(code: string): Promise<{ tok
     redirect_uri: redirectUri(),
     code,
   })
-  const long = await graph<{ access_token: string; expires_in?: number }>('oauth/access_token', {
-    grant_type: 'fb_exchange_token',
-    client_id: process.env.META_APP_ID!,
-    client_secret: process.env.META_APP_SECRET!,
-    fb_exchange_token: short.access_token,
-  })
-  return { token: long.access_token, expiresIn: long.expires_in ?? 60 * 24 * 3600 }
+  return extendToken(short.access_token)
+}
+
+/**
+ * Prolonge un token utilisateur long-lived existant avant son expiration
+ * (cron social-token-refresh). Échoue si le token est déjà expiré — dans ce
+ * cas seule une reconnexion complète (flux OAuth) permet de récupérer l'accès.
+ */
+export async function refreshLongLivedToken(token: string): Promise<{ token: string; expiresIn: number }> {
+  return extendToken(token)
 }
 
 export type MetaPage = {
@@ -82,6 +132,22 @@ export type MetaPage = {
   avatarUrl?: string
   igUserId?: string
   igUsername?: string
+}
+
+/**
+ * DEBUG TEMPORAIRE — diagnostic du cas "nopages" (Facebook Login for Business
+ * renvoie 0 Page malgré consentement). Appelé uniquement quand getPagesWithInstagram
+ * ne renvoie rien, donc aucun coût en fonctionnement normal. À retirer une fois
+ * la cause identifiée (cf. app/api/social/meta/callback/route.ts).
+ */
+export async function debugTokenInfo(userToken: string) {
+  const [accounts, permissions] = await Promise.all([
+    graph<{ data: unknown[] }>('me/accounts', { access_token: userToken, fields: 'id,name', limit: '50' })
+      .catch(e => ({ error: (e as Error).message })),
+    graph<{ data: Array<{ permission: string; status: string }> }>('me/permissions', { access_token: userToken })
+      .catch(e => ({ error: (e as Error).message })),
+  ])
+  return { accounts, permissions }
 }
 
 /** Récupère les Pages gérées + le compte IG business lié à chacune. */
@@ -120,21 +186,6 @@ export async function getPagesWithInstagram(userToken: string): Promise<MetaPage
     pages.push(page)
   }
   return pages
-}
-
-/**
- * DEBUG TEMPORAIRE — diagnostic du cas "nopages" (Business Login retourne 0
- * Page malgré consentement + type de jeton + portfolio corrects). À retirer
- * une fois la cause identifiée.
- */
-export async function debugTokenInfo(userToken: string) {
-  const [accounts, permissions] = await Promise.all([
-    graph<{ data: unknown[] }>('me/accounts', { access_token: userToken, fields: 'id,name', limit: '50' })
-      .catch(e => ({ error: (e as Error).message })),
-    graph<{ data: Array<{ permission: string; status: string }> }>('me/permissions', { access_token: userToken })
-      .catch(e => ({ error: (e as Error).message })),
-  ])
-  return { accounts, permissions }
 }
 
 /** Publie sur une Page Facebook (photo si imageUrl, sinon texte). */

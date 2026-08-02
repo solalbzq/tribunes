@@ -62,7 +62,7 @@ export async function POST(req: Request) {
     imageUrl = supabase.storage.from('club-assets').getPublicUrl(path).data.publicUrl
   }
 
-  const results = await publishToSocialConnections(connections, text, imageUrl)
+  const results = await publishToSocialConnections(club, connections, text, imageUrl)
   const allOk = results.every(r => r.ok)
 
   if (post) {

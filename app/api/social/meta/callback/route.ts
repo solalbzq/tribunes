@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { prisma } from '@/lib/prisma'
-import { exchangeCodeForLongLivedToken, getPagesWithInstagram, debugTokenInfo } from '@/lib/social/meta'
+import { exchangeCodeForLongLivedToken, debugTokenInfo } from '@/lib/social/meta'
+import { syncSocialConnectionsForClub } from '@/lib/social/connection-sync'
+import { encryptSecret } from '@/lib/social/token-crypto'
 
 export async function GET(req: NextRequest) {
   const base = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
@@ -31,46 +33,21 @@ export async function GET(req: NextRequest) {
 
   try {
     const { token, expiresIn } = await exchangeCodeForLongLivedToken(code)
-    const pages = await getPagesWithInstagram(token)
     const expiresAt = new Date(Date.now() + expiresIn * 1000)
-    const validAccountKeys = new Set<string>()
 
-    await prisma.$transaction(async tx => {
-      for (const page of pages) {
-        validAccountKeys.add(`facebook:${page.pageId}`)
-        await tx.socialConnection.upsert({
-          where: { clubId_provider_providerAccountId: { clubId: club.id, provider: 'facebook', providerAccountId: page.pageId } },
-          update: { accountName: page.pageName, accessToken: page.pageToken, avatarUrl: page.avatarUrl, igUserId: page.igUserId, tokenExpiresAt: expiresAt },
-          create: { clubId: club.id, provider: 'facebook', providerAccountId: page.pageId, accountName: page.pageName, accessToken: page.pageToken, avatarUrl: page.avatarUrl, igUserId: page.igUserId, tokenExpiresAt: expiresAt },
-        })
-
-        if (page.igUserId) {
-          validAccountKeys.add(`instagram:${page.igUserId}`)
-          await tx.socialConnection.upsert({
-            where: { clubId_provider_providerAccountId: { clubId: club.id, provider: 'instagram', providerAccountId: page.igUserId } },
-            update: { accountName: page.igUsername ?? page.pageName, accessToken: page.pageToken, avatarUrl: page.avatarUrl, tokenExpiresAt: expiresAt, meta: { pageId: page.pageId } },
-            create: { clubId: club.id, provider: 'instagram', providerAccountId: page.igUserId, accountName: page.igUsername ?? page.pageName, accessToken: page.pageToken, avatarUrl: page.avatarUrl, tokenExpiresAt: expiresAt, meta: { pageId: page.pageId } },
-          })
-        }
-      }
-
-      const existing = await tx.socialConnection.findMany({
-        where: { clubId: club.id, provider: { in: ['facebook', 'instagram'] } },
-        select: { id: true, provider: true, providerAccountId: true },
-      })
-      const staleIds = existing
-        .filter(conn => !validAccountKeys.has(`${conn.provider}:${conn.providerAccountId}`))
-        .map(conn => conn.id)
-
-      if (staleIds.length > 0) {
-        await tx.socialConnection.deleteMany({ where: { id: { in: staleIds } } })
-      }
+    // Token utilisateur long-lived conservé (chiffré) pour permettre au cron
+    // social-token-refresh de le prolonger via fb_exchange_token avant expiration,
+    // sans repasser par tout le flux OAuth (cf. lib/social/meta.ts::refreshLongLivedToken).
+    await prisma.club.update({
+      where: { id: club.id },
+      data: { metaUserAccessToken: encryptSecret(token), metaUserTokenExpiresAt: expiresAt },
     })
 
-    // DEBUG TEMPORAIRE — diagnostic du cas "nopages", à retirer une fois la cause identifiée.
-    // Le détail (comptes/permissions) reste côté serveur uniquement : ne jamais le
-    // faire transiter par l'URL de redirection (historique navigateur, logs proxy, referrer).
-    if (validAccountKeys.size === 0) {
+    const { connectedCount } = await syncSocialConnectionsForClub(club.id, token, expiresAt)
+
+    if (connectedCount === 0) {
+      // DEBUG TEMPORAIRE — le détail reste côté serveur uniquement (jamais dans
+      // l'URL de redirection : historique navigateur, logs proxy, referrer).
       const debug = await debugTokenInfo(token)
       console.error('[social/meta/callback] DEBUG nopages:', JSON.stringify(debug, null, 2))
       const res = NextResponse.redirect(`${settingsUrl}&social=nopages`)

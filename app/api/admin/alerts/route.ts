@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { ensureAdmin } from '@/lib/admin-auth'
 import { prisma } from '@/lib/prisma'
 import { relationClubInclude, findRelationValue } from '@/lib/postTypes'
+import { STUCK_PUBLISHING_MINUTES } from '@/lib/services/publish-service'
 
 /**
  * Conditions volontairement binaires (pas de tendance/seuil relatif — bruit
@@ -14,7 +15,6 @@ import { relationClubInclude, findRelationValue } from '@/lib/postTypes'
  */
 const EXPIRY_WARNING_MS = 7 * 24 * 60 * 60 * 1000
 const RECENT_FAILURE_WINDOW_MS = 24 * 60 * 60 * 1000
-const STUCK_PUBLISHING_MINUTES = 15
 
 export async function GET(request: NextRequest) {
   if (!(await ensureAdmin(request))) {
