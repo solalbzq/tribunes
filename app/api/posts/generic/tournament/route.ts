@@ -20,7 +20,7 @@ const SPORT_ENUM: Record<string, Sport> = {
   Volleyball: 'VOLLEYBALL',
 }
 
-const PLATFORMS = ['instagram', 'facebook', 'whatsapp'] as const
+const PLATFORMS = ['instagram', 'facebook'] as const
 type Platform = typeof PLATFORMS[number]
 
 /**

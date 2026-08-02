@@ -35,7 +35,7 @@ Informations :
 - Nos matchs programmés :
 ${matchList}
 
-Consignes générales (valables pour les 3 posts) :
+Consignes générales (valables pour les 2 posts) :
 - Utilise le vocabulaire tennis exact : set, jeu, ace, break, tie-break (pas "manche", pas "point" pour les sets)
 - Cite chaque joueur/joueuse nominalement et son horaire précis
 - Mentionne la catégorie du match (ex: Hommes 15/1, Dames 4/6)
@@ -45,7 +45,6 @@ ${voiceInstruction ? `- ${voiceInstruction}` : ''}
 Contraintes par plateforme :
 - Instagram : max 2200 caractères, commence par 🎾, une ligne par joueur, 5 à 8 hashtags en fin (#tennis #tournoi #${tag} #fft)
 - Facebook : plus informatif, sauts de ligne clairs, 2-3 hashtags max, inclure un appel à partager
-- WhatsApp : court (max 300 caractères), sans hashtags, ton SMS entre amis : qui joue, quand, où
 
 ${MULTI_PLATFORM_FORMAT}`
 }
@@ -82,7 +81,7 @@ Rédige les posts réseaux sociaux pour annoncer le programme des matchs intercl
 Matchs à venir :
 ${matchList}
 
-Consignes générales (valables pour les 3 posts) :
+Consignes générales (valables pour les 2 posts) :
 - Vocabulaire interclubs tennis : "rencontre", "équipe", "capitaine", "journée"
 - Un match par ligne avec l'emoji 🏠 domicile ou ✈️ extérieur
 - Mentionne la division pour chaque équipe
@@ -92,7 +91,6 @@ ${voiceInstruction ? `- ${voiceInstruction}` : ''}
 Contraintes par plateforme :
 - Instagram : dynamique, 4 à 6 hashtags (#tennis #interclubs #${tag} #fft)
 - Facebook : narratif et communautaire, peu de hashtags
-- WhatsApp : court, sans hashtags, style groupe de supporters
 
 ${MULTI_PLATFORM_FORMAT}`
 }
@@ -145,7 +143,7 @@ ${round ? `Journée : ${round}` : ''}
 Détail des matchs joués :
 ${detailList}
 
-Consignes générales (valables pour les 3 posts) :
+Consignes générales (valables pour les 2 posts) :
 - ${toneInstruction}
 - Cite le score global en évidence (${globalScore})
 - Vocabulaire tennis précis : "simple", "double", "set", "jeu"
@@ -156,7 +154,6 @@ ${mvpInstruction ? `- ${mvpInstruction}` : ''}
 Contraintes par plateforme :
 - Instagram : dynamique, 4-6 hashtags (#tennis #interclubs #${outcome} #fft #${tag})
 - Facebook : plus narratif, peut mentionner le contexte de championnat
-- WhatsApp : très court (3-4 lignes max), style message groupe
 
 ${MULTI_PLATFORM_FORMAT}`
 }

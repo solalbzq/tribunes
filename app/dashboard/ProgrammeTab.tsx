@@ -24,7 +24,7 @@ type UpcomingMatch = {
   isHome: boolean
 }
 
-type Posts = { instagram: string; facebook: string; whatsapp: string }
+type Posts = { instagram: string; facebook: string }
 type PostIds = Partial<Record<keyof Posts, string>>
 
 const EMPTY_MATCH = (): UpcomingMatch => ({

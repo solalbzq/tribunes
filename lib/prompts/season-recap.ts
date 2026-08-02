@@ -34,7 +34,7 @@ ${rankingNote ? `Classement / fait marquant : ${rankingNote}` : ''}
 Vocabulaire ${sport}-spécifique à utiliser :
 ${getVocabHints(sport)}
 
-Consignes générales (valables pour les 3 posts) :
+Consignes générales (valables pour les 2 posts) :
 - Ton bilan et rétrospectif, remercie joueurs/joueuses, staff et supporters pour la période
 - Mets en avant le positif même si le bilan est mitigé ; reste factuel sur le nombre de matchs
 ${voiceInstruction ? `- ${voiceInstruction}` : ''}
@@ -42,7 +42,6 @@ ${voiceInstruction ? `- ${voiceInstruction}` : ''}
 Contraintes par plateforme :
 - Instagram : dynamique, 4 à 6 hashtags (${vocab.hashtags.join(' ')} #${tag} #bilan)
 - Facebook : narratif, remerciements détaillés, appel à continuer à soutenir
-- WhatsApp : court, sans hashtags, ton chaleureux
 
 ${MULTI_PLATFORM_FORMAT}`
 }

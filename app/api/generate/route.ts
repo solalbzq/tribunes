@@ -116,7 +116,6 @@ Format exact attendu :
           create: [
             { platform: 'instagram', content: posts.instagram, status: initialStatus, postType: 'MATCH_RESULT' },
             { platform: 'facebook', content: posts.facebook, status: initialStatus, postType: 'MATCH_RESULT' },
-            { platform: 'whatsapp', content: posts.whatsapp, status: initialStatus, postType: 'MATCH_RESULT' },
           ],
         },
       },
@@ -138,7 +137,6 @@ Format exact attendu :
           create: [
             { platform: 'instagram', content: posts.instagram, status: initialStatus },
             { platform: 'facebook', content: posts.facebook, status: initialStatus },
-            { platform: 'whatsapp', content: posts.whatsapp, status: initialStatus },
           ],
         },
       },

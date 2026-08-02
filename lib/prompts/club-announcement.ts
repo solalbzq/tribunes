@@ -47,14 +47,13 @@ ${ctaText ? `Appel à l'action à inclure : ${ctaText}` : ''}
 Vocabulaire ${sport}-spécifique à utiliser :
 ${getVocabHints(sport)}
 
-Consignes générales (valables pour les 3 posts) :
+Consignes générales (valables pour les 2 posts) :
 - ${CATEGORY_INSTRUCTIONS[category]}
 ${voiceInstruction ? `- ${voiceInstruction}` : ''}
 
 Contraintes par plateforme :
 - Instagram : engageant, 4 à 6 hashtags (${vocab.hashtags.join(' ')} #${tag} ${categoryTag})
 - Facebook : plus détaillé, informations pratiques claires
-- WhatsApp : court, sans hashtags, ton direct
 
 ${MULTI_PLATFORM_FORMAT}`
 }

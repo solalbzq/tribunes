@@ -6,7 +6,7 @@ import PersonalizePostPanel from './PersonalizePostPanel'
 import { PageHeader, GhostButton } from './ui'
 import type { PostType } from '@/lib/postTypes'
 
-type Posts = { instagram: string; facebook: string; whatsapp: string }
+type Posts = { instagram: string; facebook: string }
 type PostIds = Partial<Record<keyof Posts, string>>
 
 const PLATFORMS = [
@@ -43,7 +43,7 @@ export default function TextPostsPanel({
   postType?: PostType
 }) {
   const [copied, setCopied] = useState<string | null>(null)
-  const [active, setActive] = useState<'instagram' | 'facebook' | 'whatsapp'>('instagram')
+  const [active, setActive] = useState<'instagram' | 'facebook'>('instagram')
 
   function copyToClipboard(text: string, key: string) {
     navigator.clipboard.writeText(text)

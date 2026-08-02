@@ -40,7 +40,7 @@ export async function POST(req: Request) {
     weekStart: weekStartRaw,
     weekEnd: weekEndRaw,
     matches: matchesRaw,
-    platforms = ['instagram', 'facebook', 'whatsapp'],
+    platforms = ['instagram', 'facebook'],
     tone,
     customInstructions,
     weeklyScheduleId: existingWeeklyId,
@@ -85,7 +85,7 @@ export async function POST(req: Request) {
   await logAiUsage(club.id, completion, 'gpt-4o', { route: 'posts/generic/weekly' })
 
   const all = splitPlatformPosts(completion.choices[0].message.content ?? '')
-  const requested = platforms as Array<'instagram' | 'facebook' | 'whatsapp'>
+  const requested = platforms as Array<'instagram' | 'facebook'>
   const posts: Record<string, string> = {}
   for (const platform of requested) posts[platform] = all[platform]
 

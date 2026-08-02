@@ -7,7 +7,7 @@ import { resolveInitialStatusUnconstrained, runAutomationSideEffectsUnconstraine
 import { validateOneTimeInstructions, resolvePersonalization } from '@/lib/personalization'
 import { getPersonalizationOverride } from '@/lib/services/personalizationOverride'
 
-const PLATFORMS = ['instagram', 'facebook', 'whatsapp'] as const
+const PLATFORMS = ['instagram', 'facebook'] as const
 type Platform = typeof PLATFORMS[number]
 
 // Bornes serveur pour un contenu par nature libre : le client (CustomPostTab)

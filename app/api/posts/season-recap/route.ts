@@ -12,7 +12,7 @@ import { getPersonalizationOverride } from '@/lib/services/personalizationOverri
 import { deletePostsForRegenerate } from '@/lib/services/postGeneration'
 import { checkBannedWordsAcrossPlatforms } from '@/lib/bannedWords'
 
-const PLATFORMS = ['instagram', 'facebook', 'whatsapp'] as const
+const PLATFORMS = ['instagram', 'facebook'] as const
 type Platform = typeof PLATFORMS[number]
 
 /**

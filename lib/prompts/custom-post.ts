@@ -62,7 +62,7 @@ ${data.desiredMood ? `Ambiance souhaitée par le club pour cette publication : "
 Vocabulaire ${sport}-spécifique à utiliser :
 ${getVocabHints(sport)}
 
-Consignes générales (valables pour les 3 posts) :
+Consignes générales (valables pour les 2 posts) :
 - N'invente aucune information factuelle absente des données ci-dessus (date, prix, lieu précis, contact...). Si une précision manque, reste volontairement général plutôt que de l'inventer.
 ${voiceInstruction ? `- ${voiceInstruction}` : ''}
 ${angleInstruction}
@@ -70,7 +70,6 @@ ${angleInstruction}
 Contraintes par plateforme :
 - Instagram : engageant, 4 à 6 hashtags (${vocab.hashtags.join(' ')} #${tag})
 - Facebook : plus détaillé, informations pratiques claires
-- WhatsApp : court, sans hashtags, ton direct
 
 ${MULTI_PLATFORM_FORMAT}`
 }

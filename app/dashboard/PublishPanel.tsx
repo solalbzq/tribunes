@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { Icon } from './icons'
 
 type Conn = { id: string; provider: string; accountName: string; avatarUrl?: string | null }
-type Posts = { instagram: string; facebook: string; whatsapp: string }
+type Posts = { instagram: string; facebook: string }
 type PostIds = Partial<Record<keyof Posts, string>>
 type Result = { id: string; provider: string; accountName: string; ok: boolean; error?: string }
 

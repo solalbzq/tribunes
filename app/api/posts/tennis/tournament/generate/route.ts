@@ -14,7 +14,7 @@ import { checkBannedWordsAcrossPlatforms } from '@/lib/bannedWords'
 import type { TournamentMatch } from '@/lib/services/fft-pdf-parser'
 import type { ChatCompletion } from 'openai/resources/chat/completions'
 
-const PLATFORMS = ['instagram', 'facebook', 'whatsapp'] as const
+const PLATFORMS = ['instagram', 'facebook'] as const
 type Platform = typeof PLATFORMS[number]
 
 async function completeWithRetry(prompt: string, retries = 3): Promise<ChatCompletion> {

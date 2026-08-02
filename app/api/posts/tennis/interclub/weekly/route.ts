@@ -23,7 +23,7 @@ export async function POST(req: Request) {
   const quota = await checkAiQuota(club)
   if (!quota.allowed) return quotaExceededResponse(quota)
 
-  const { weekStart: weekStartRaw, platforms = ['instagram', 'facebook', 'whatsapp'], tone, customInstructions } = await req.json()
+  const { weekStart: weekStartRaw, platforms = ['instagram', 'facebook'], tone, customInstructions } = await req.json()
   if (!weekStartRaw) return NextResponse.json({ error: 'weekStart manquant' }, { status: 400 })
   const oneTimeInstructions = validateOneTimeInstructions(customInstructions)
   if (!oneTimeInstructions.ok) return NextResponse.json({ error: oneTimeInstructions.error }, { status: 400 })
@@ -77,7 +77,7 @@ export async function POST(req: Request) {
   await logAiUsage(club.id, completion, 'gpt-4o')
 
   const all = splitPlatformPosts(completion.choices[0].message.content ?? '')
-  const requested = platforms as Array<'instagram' | 'facebook' | 'whatsapp'>
+  const requested = platforms as Array<'instagram' | 'facebook'>
   const posts: Record<string, string> = {}
   for (const platform of requested) posts[platform] = all[platform]
 

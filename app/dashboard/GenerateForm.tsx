@@ -7,7 +7,7 @@ import { ErrorNotice, toUiError, type UiError } from './apiError'
 import ToneSelector from './ToneSelector'
 
 type Club = { name: string; sport: string }
-type Posts = { instagram: string; facebook: string; whatsapp: string }
+type Posts = { instagram: string; facebook: string }
 type PostIds = Partial<Record<keyof Posts, string>>
 type MatchData = {
   opponent: string

@@ -9,7 +9,7 @@ import { resolveCustomPostVisualKind, type VisualFormat } from '@/lib/visualLayo
 import { FIELD } from './ui'
 import { Icon } from './icons'
 
-type Posts = { instagram: string; facebook: string; whatsapp: string }
+type Posts = { instagram: string; facebook: string }
 type PostIds = Partial<Record<keyof Posts, string>>
 
 type Club = {

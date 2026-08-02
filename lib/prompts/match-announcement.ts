@@ -37,7 +37,7 @@ ${note ? `- À mentionner : ${note}` : ''}
 Vocabulaire ${sport}-spécifique à utiliser :
 ${getVocabHints(sport)}
 
-Consignes générales (valables pour les 3 posts) :
+Consignes générales (valables pour les 2 posts) :
 - Ton hype, compte à rebours : crée l'attente et donne envie de venir supporter l'équipe
 - Rappelle clairement la date, l'heure et le lieu
 ${voiceInstruction ? `- ${voiceInstruction}` : ''}
@@ -45,7 +45,6 @@ ${voiceInstruction ? `- ${voiceInstruction}` : ''}
 Contraintes par plateforme :
 - Instagram : punchy, 4 à 6 hashtags (${vocab.hashtags.join(' ')} #${tag} #avantmatch)
 - Facebook : plus détaillé, appel à venir nombreux, informations pratiques claires
-- WhatsApp : court, sans hashtags, ton "on se motive entre nous"
 
 ${MULTI_PLATFORM_FORMAT}`
 }

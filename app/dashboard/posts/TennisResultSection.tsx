@@ -12,7 +12,7 @@ type Club = {
   name: string; sport: string; primaryColor: string; secondaryColor: string
   logoUrl: string | null; tennisVisualConfig?: TennisVisualConfig | null
 }
-type Posts = { instagram: string; facebook: string; whatsapp: string }
+type Posts = { instagram: string; facebook: string }
 type Detail = { player: string; opponent: string; score: string; won: boolean; type: 'SIMPLE' | 'DOUBLE' }
 
 export default function TennisResultSection({ club }: { club: Club }) {

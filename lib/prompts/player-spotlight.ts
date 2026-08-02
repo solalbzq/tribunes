@@ -29,7 +29,7 @@ ${periodLabel ? `- Période : ${periodLabel}` : ''}
 Vocabulaire ${sport}-spécifique à utiliser :
 ${getVocabHints(sport)}
 
-Consignes générales (valables pour les 3 posts) :
+Consignes générales (valables pour les 2 posts) :
 - Ton chaleureux et valorisant, mets vraiment en avant la personne (pas juste le club)
 - Invite les autres membres à féliciter en commentaire
 ${voiceInstruction ? `- ${voiceInstruction}` : ''}
@@ -37,7 +37,6 @@ ${voiceInstruction ? `- ${voiceInstruction}` : ''}
 Contraintes par plateforme :
 - Instagram : chaleureux, 4 à 6 hashtags (${vocab.hashtags.join(' ')} #${tag} #bravo)
 - Facebook : plus détaillé, raconte le contexte de la performance
-- WhatsApp : court, sans hashtags, ton "on est fiers de toi"
 
 ${MULTI_PLATFORM_FORMAT}`
 }

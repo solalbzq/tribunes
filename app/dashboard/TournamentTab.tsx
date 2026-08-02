@@ -17,7 +17,7 @@ type TournamentMatchRow = {
   round: string
 }
 
-type Posts = { instagram: string; facebook: string; whatsapp: string }
+type Posts = { instagram: string; facebook: string }
 type PostIds = Partial<Record<keyof Posts, string>>
 
 type Club = {

@@ -7,7 +7,7 @@ import { runAutomationSideEffects } from '@/lib/automation'
 import { validateOneTimeInstructions, resolvePersonalization } from '@/lib/personalization'
 import { getPersonalizationOverride } from '@/lib/services/personalizationOverride'
 
-const PLATFORMS = ['instagram', 'facebook', 'whatsapp'] as const
+const PLATFORMS = ['instagram', 'facebook'] as const
 type Platform = typeof PLATFORMS[number]
 const CATEGORIES: ClubAnnouncementCategory[] = ['RECRUITMENT', 'SPONSOR', 'CLUB_LIFE', 'VOLUNTEER', 'THANKS']
 

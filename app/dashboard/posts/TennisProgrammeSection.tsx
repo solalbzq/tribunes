@@ -8,7 +8,7 @@ import TextPostsPanel from '../TextPostsPanel'
 import ToneSelector from '../ToneSelector'
 import { Icon } from '../icons'
 
-type Posts = { instagram: string; facebook: string; whatsapp: string }
+type Posts = { instagram: string; facebook: string }
 type PostIds = Partial<Record<keyof Posts, string>>
 
 type Club = {

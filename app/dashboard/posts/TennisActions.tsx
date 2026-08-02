@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { Icon } from '../icons'
 import PublishPanel from '../PublishPanel'
 
-type Posts = { instagram: string; facebook: string; whatsapp: string }
+type Posts = { instagram: string; facebook: string }
 
 /**
  * Barre d'actions partagée pour tout contenu tennis :
@@ -50,7 +50,7 @@ export default function TennisActions({
     } catch { download() }
   }
 
-  const posts: Posts = aiPosts ?? { instagram: defaultCaption, facebook: defaultCaption, whatsapp: defaultCaption }
+  const posts: Posts = aiPosts ?? { instagram: defaultCaption, facebook: defaultCaption }
 
   return (
     <div className="space-y-4">

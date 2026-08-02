@@ -20,7 +20,7 @@ export async function POST(req: Request) {
   const club = await prisma.club.findUnique({ where: { userId: user.id } })
   if (!club) return NextResponse.json({ error: 'Club not found' }, { status: 404 })
 
-  const { matchResultId, platforms = ['instagram', 'facebook', 'whatsapp'], regenerate = false, tone, mvpName, customInstructions } = await req.json()
+  const { matchResultId, platforms = ['instagram', 'facebook'], regenerate = false, tone, mvpName, customInstructions } = await req.json()
   if (!matchResultId) return NextResponse.json({ error: 'matchResultId manquant' }, { status: 400 })
 
   const match = await prisma.matchResult.findUnique({
@@ -78,7 +78,7 @@ export async function POST(req: Request) {
   await logAiUsage(club.id, completion, 'gpt-4o', { route: 'interclub/result' })
 
   const all = splitPlatformPosts(completion.choices[0].message.content ?? '')
-  const requested = platforms as Array<'instagram' | 'facebook' | 'whatsapp'>
+  const requested = platforms as Array<'instagram' | 'facebook'>
   const posts: Record<string, string> = {}
   for (const platform of requested) posts[platform] = all[platform]
 

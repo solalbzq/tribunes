@@ -30,7 +30,7 @@ type Club = {
   tennisVisualConfig?: TennisVisualConfig | null
   tenupUrl?: string | null
 }
-type Platform = 'instagram' | 'facebook' | 'whatsapp'
+type Platform = 'instagram' | 'facebook'
 type MatchData = {
   opponent: string
   homeScore: number
@@ -39,7 +39,7 @@ type MatchData = {
   competition: string
   extraData?: Record<string, unknown>
 }
-type PostIds = Partial<Record<'instagram' | 'facebook' | 'whatsapp', string>>
+type PostIds = Partial<Record<'instagram' | 'facebook', string>>
 
 const PLATFORMS: { key: Platform; label: string; emoji: string }[] = [
   { key: 'instagram', label: 'Instagram', emoji: '' },
@@ -79,7 +79,7 @@ function PostDisplay({ posts }: { posts: Record<string, string> }) {
 }
 
 function MatchSection({ club, initialValues }: { club: Club; initialValues?: MatchFormInitialValues }) {
-  const [generatedPosts, setGeneratedPosts] = useState<{ instagram: string; facebook: string; whatsapp: string } | null>(null)
+  const [generatedPosts, setGeneratedPosts] = useState<{ instagram: string; facebook: string } | null>(null)
   const [generatedPostIds, setGeneratedPostIds] = useState<PostIds | null>(null)
   const [generatedMatch, setGeneratedMatch] = useState<MatchData | null>(null)
   const [generatedMatchId, setGeneratedMatchId] = useState<string | null>(null)
@@ -408,7 +408,7 @@ function TournamentSection({ club }: { club: Club }) {
           <TennisActions
             getImageBlob={getImageBlob}
             defaultCaption={`${parseResult.tournamentName} : retrouvez nos joueurs engagés ! 🎾`}
-            aiPosts={posts ? (posts as { instagram: string; facebook: string; whatsapp: string }) : null}
+            aiPosts={posts ? (posts as { instagram: string; facebook: string }) : null}
             filename="tournoi-tennis"
           />
         </>

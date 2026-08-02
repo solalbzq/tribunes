@@ -50,7 +50,7 @@ ${grade ? `- Grade du tournoi : ${formatGrade(grade)}` : ''}
 - Nos matchs programmés :
 ${matchList}
 
-Vocabulaire padel obligatoire (pour les 3 posts) :
+Vocabulaire padel obligatoire (pour les 2 posts) :
 - "duo" ou "paire" (jamais "équipe" pour un double), "partenaire" (jamais "coéquipier")
 - "smash", "bandeja", "vibora" si pertinent ; "couloir", "grille", "fond de court" pour les zones
 - Cite chaque paire nominalement (Joueur1 / Joueur2), avec horaire et court
@@ -59,7 +59,6 @@ ${voiceInstruction ? `- ${voiceInstruction}` : ''}
 Contraintes par plateforme :
 - Instagram : commence par 🎾 ou 🏸, 5-7 hashtags (#padel #padelfrance #${tag} #${(grade || 'tournoi').toLowerCase()} #fft)
 - Facebook : une ligne par duo, appel à partager
-- WhatsApp : court (max 200 caractères), sans hashtags, style groupe de joueurs
 
 ${MULTI_PLATFORM_FORMAT}`
 }
@@ -95,7 +94,7 @@ Rédige les posts réseaux sociaux pour le programme interclubs padel de la sema
 Matchs :
 ${matchList}
 
-Vocabulaire padel interclubs (pour les 3 posts) :
+Vocabulaire padel interclubs (pour les 2 posts) :
 - "rencontre par équipes" ou "interclubs", "capitaine de piste", "division" (pas "poule")
 - Un match par ligne, emoji domicile 🏠 / extérieur ✈️, mentionne la division
 ${voiceInstruction ? `- ${voiceInstruction}` : ''}
@@ -103,7 +102,6 @@ ${voiceInstruction ? `- ${voiceInstruction}` : ''}
 Contraintes par plateforme :
 - Instagram : 4-6 hashtags (#padel #interclubs #padelfrance #fft)
 - Facebook : narratif et communautaire
-- WhatsApp : court, sans hashtags, direct
 
 ${MULTI_PLATFORM_FORMAT}`
 }
@@ -154,7 +152,7 @@ ${round ? `Journée : ${round}` : ''}
 Détail (par duo) :
 ${detailList}
 
-Vocabulaire padel (pour les 3 posts) :
+Vocabulaire padel (pour les 2 posts) :
 - "paire" ou "duo" (pas "équipe" pour un binôme), "partenaire" pour l'associé
 - "set" et "jeu" pour le score (ex: 6-4, 7-5)
 - ${toneInstruction}
@@ -164,7 +162,6 @@ ${mvpInstruction ? `- ${mvpInstruction}` : ''}
 Contraintes par plateforme :
 - Instagram : 4-5 hashtags (#padel #interclubs #${outcome} #padelfrance)
 - Facebook : narratif, contexte de championnat
-- WhatsApp : 3-4 lignes max, style message de groupe
 
 ${MULTI_PLATFORM_FORMAT}`
 }

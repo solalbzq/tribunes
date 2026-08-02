@@ -41,7 +41,7 @@ type MatchData = {
   extraData?: Record<string, unknown>
 }
 
-type PostIds = Partial<Record<'instagram' | 'facebook' | 'whatsapp', string>>
+type PostIds = Partial<Record<'instagram' | 'facebook', string>>
 
 type Mode = 'assistant' | 'manual'
 
@@ -73,7 +73,7 @@ export default function ContentTab({ club }: { club: Club }) {
   const [mode, setMode] = useState<Mode>('assistant')
   const [section, setSection] = useState<Section>('match')
   const [prefill, setPrefill] = useState<Prefill | null>(null)
-  const [generatedPosts, setGeneratedPosts] = useState<{ instagram: string; facebook: string; whatsapp: string } | null>(null)
+  const [generatedPosts, setGeneratedPosts] = useState<{ instagram: string; facebook: string } | null>(null)
   const [generatedPostIds, setGeneratedPostIds] = useState<PostIds | null>(null)
   const [generatedMatch, setGeneratedMatch] = useState<MatchData | null>(null)
   const [generatedMatchId, setGeneratedMatchId] = useState<string | null>(null)

@@ -37,7 +37,7 @@ ${matchList}
 Vocabulaire ${sport}-spécifique à utiliser :
 ${getVocabHints(sport)}
 
-Consignes générales (valables pour les 3 posts) :
+Consignes générales (valables pour les 2 posts) :
 - Un match par ligne avec l'emoji 🏠 domicile ou ✈️ extérieur
 - Ton mobilisateur : appelle les supporters à venir soutenir l'équipe
 ${voiceInstruction ? `- ${voiceInstruction}` : ''}
@@ -45,7 +45,6 @@ ${voiceInstruction ? `- ${voiceInstruction}` : ''}
 Contraintes par plateforme :
 - Instagram : dynamique, 4 à 6 hashtags (${vocab.hashtags.map(h => h).join(' ')} #${tag})
 - Facebook : narratif et communautaire, peu de hashtags
-- WhatsApp : court, sans hashtags, style groupe de supporters
 
 ${MULTI_PLATFORM_FORMAT}`
 }
@@ -88,14 +87,13 @@ ${matchList}
 Vocabulaire ${sport}-spécifique à utiliser :
 ${getVocabHints(sport)}
 
-Consignes générales (valables pour les 3 posts) :
+Consignes générales (valables pour les 2 posts) :
 - Ton enthousiaste et fédérateur, appelle les supporters à venir
 ${voiceInstruction ? `- ${voiceInstruction}` : ''}
 
 Contraintes par plateforme :
 - Instagram : max 2200 caractères, commence par ${vocab.emoji}, 5 à 8 hashtags en fin (${vocab.hashtags.join(' ')} #${tag} #tournoi)
 - Facebook : plus informatif, sauts de ligne clairs, 2-3 hashtags max, inclure un appel à partager
-- WhatsApp : court (max 300 caractères), sans hashtags, ton SMS entre amis : qui joue, quand, où
 
 ${MULTI_PLATFORM_FORMAT}`
 }

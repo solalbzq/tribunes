@@ -8,7 +8,7 @@ import { PageHeader, GhostButton } from './ui'
 import type { VisualFormat } from '@/lib/visualLayout'
 import FormatToggle from './FormatToggle'
 
-type Posts = { instagram: string; facebook: string; whatsapp: string }
+type Posts = { instagram: string; facebook: string }
 type PostIds = Partial<Record<keyof Posts, string>>
 
 type Club = {
@@ -55,7 +55,7 @@ export default function PostsResult({
   bannedWordsWarning?: Record<string, string[]> | null
 }) {
   const [copied, setCopied] = useState<string | null>(null)
-  const [active, setActive] = useState<'instagram' | 'facebook' | 'whatsapp' | 'visual'>('instagram')
+  const [active, setActive] = useState<'instagram' | 'facebook' | 'visual'>('instagram')
   const [visualFormat, setVisualFormat] = useState<VisualFormat>('post')
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
 

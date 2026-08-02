@@ -14,7 +14,7 @@ import { checkBannedWordsAcrossPlatforms } from '@/lib/bannedWords'
 import type { TournamentMatch } from '@/lib/services/fft-pdf-parser'
 import type { Sport } from '@prisma/client'
 
-const PLATFORMS = ['instagram', 'facebook', 'whatsapp'] as const
+const PLATFORMS = ['instagram', 'facebook'] as const
 type Platform = typeof PLATFORMS[number]
 
 /**

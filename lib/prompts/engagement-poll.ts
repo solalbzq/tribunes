@@ -29,7 +29,7 @@ ${optionsList}
 Vocabulaire ${sport}-spécifique à utiliser :
 ${getVocabHints(sport)}
 
-Consignes générales (valables pour les 3 posts) :
+Consignes générales (valables pour les 2 posts) :
 - Ton complice et joueur, l'objectif est de faire réagir en commentaire (ou via le sondage en story pour Instagram)
 - Rappelle clairement les options de réponse
 - Ne donne pas de réponse, laisse la communauté répondre
@@ -38,7 +38,6 @@ ${voiceInstruction ? `- ${voiceInstruction}` : ''}
 Contraintes par plateforme :
 - Instagram : court et punchy, mentionne qu'un sondage est disponible en story, 3 à 5 hashtags (${vocab.hashtags.join(' ')} #${tag})
 - Facebook : invite explicitement à répondre en commentaire, ton convivial
-- WhatsApp : très court, direct, ton groupe de supporters
 
 ${MULTI_PLATFORM_FORMAT}`
 }
