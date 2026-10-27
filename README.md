@@ -13,7 +13,7 @@ La stack repose sur Next.js 14, TypeScript, Tailwind CSS, Prisma, PostgreSQL, Re
 
 ## Installation
 
-1. Cloner le projet puis ouvrir le dossier `sports-post-saas`.
+1. Cloner le projet puis ouvrir le dossier du projet.
 2. Installer les dependances : `npm install`
 3. Copier les variables d'environnement : `cp .env.local.example .env.local`
 4. Renseigner les valeurs dans `.env.local`
@@ -30,10 +30,27 @@ DATABASE_URL=postgresql://user:password@localhost:5432/sportspost
 RESEND_API_KEY=re_xxxxxxxxxxxx
 RESEND_FROM_EMAIL=bonjour@tonemail.fr
 STRIPE_SECRET_KEY=sk_test_xxxxxxxxxxxx
-STRIPE_PRICE_ID=price_xxxxxxxxxxxx
+STRIPE_PRICE_CLUB_MONTHLY=price_xxxxxxxxxxxx
+STRIPE_PRICE_CLUB_YEARLY=price_xxxxxxxxxxxx
+STRIPE_PRICE_PRO_MONTHLY=price_xxxxxxxxxxxx
+STRIPE_PRICE_PRO_YEARLY=price_xxxxxxxxxxxx
+STRIPE_WEBHOOK_SECRET=whsec_xxxxxxxxxxxx
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_xxxxxxxxxxxx
 NEXT_PUBLIC_BASE_URL=http://localhost:3000
+NEXT_PUBLIC_SUPABASE_URL=xxxxx
+NEXT_PUBLIC_SUPABASE_ANON_KEY=xxxxxxxx
+SUPABASE_SERVICE_ROLE_KEY=xxxxxx
+OPENAI_API_KEY=sk-xxxxxxxx
+META_APP_ID=xxxxxxxx
+META_APP_SECRET=xxxxxxxx
+META_CONFIG_ID=xxxxxxxx
+TELEGRAM_BOT_TOKEN=xxxxxxxxxx:xxxxxxxx
+TELEGRAM_WEBHOOK_SECRET=xxxxxxxx
+TELEGRAM_BOT_USERNAME=xxxxxxxx
+CRON_SECRET=xxxxxxxx
 ```
+
+Voir `.env.local.example` pour le détail de chaque variable. `SCRAPINGBEE_API_KEY` est optionnelle.
 
 ## Developpement
 
@@ -57,7 +74,7 @@ Le site sera disponible sur `http://localhost:3000`.
 
 1. Creer un produit dans Stripe Dashboard, par exemple `Sports Post Early Adopter`.
 2. Ajouter un prix recurrent mensuel a `10 EUR`.
-3. Recuperer l'identifiant du prix (`price_...`) et le renseigner dans `STRIPE_PRICE_ID`.
+3. Recuperer l'identifiant du prix (`price_...`) et le renseigner dans la variable `STRIPE_PRICE_*` correspondante (Club ou Pro, mensuel ou annuel).
 4. Recuperer la cle secrete Stripe (`sk_...`) et la renseigner dans `STRIPE_SECRET_KEY`.
 
 ## Scripts utiles
