@@ -4,7 +4,8 @@ import { getAdminUser } from '@/lib/admin-auth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { logAdminAction } from '@/lib/adminAudit'
 
-export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(request: NextRequest, { params: paramsPromise }: { params: Promise<{ id: string }> }) {
+  const params = await paramsPromise
   const admin = await getAdminUser()
   if (!admin) {
     return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })

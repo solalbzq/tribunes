@@ -22,8 +22,9 @@ function parsePdfWithTimeout(buffer: Buffer): Promise<{ text?: string }> {
  * configuration active du club — l'analyse est une proposition, affichée et
  * validée par l'utilisateur avant toute application (cf. route .../apply).
  */
-export async function POST(req: Request, { params }: { params: { id: string } }) {
-  const supabase = createClient()
+export async function POST(req: Request, { params: paramsPromise }: { params: Promise<{ id: string }> }) {
+  const params = await paramsPromise
+  const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 

@@ -11,14 +11,15 @@ function isKnownPostType(value: string): value is keyof typeof POST_TYPES {
 }
 
 async function getClub(req: Request) {
-  const supabase = createClient()
+  const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
   return prisma.club.findUnique({ where: { userId: user.id }, select: { id: true } })
 }
 
 /** Crée ou remplace l'override de personnalisation d'un type de publication pour le club authentifié. */
-export async function PUT(req: Request, { params }: { params: { postType: string } }) {
+export async function PUT(req: Request, { params: paramsPromise }: { params: Promise<{ postType: string }> }) {
+  const params = await paramsPromise
   const club = await getClub(req)
   if (!club) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   if (!isKnownPostType(params.postType)) return NextResponse.json({ error: 'Type de publication inconnu' }, { status: 400 })
@@ -55,7 +56,8 @@ export async function PUT(req: Request, { params }: { params: { postType: string
 }
 
 /** Supprime l'override d'un type — le post retombe entièrement sur l'identité générale du club. */
-export async function DELETE(req: Request, { params }: { params: { postType: string } }) {
+export async function DELETE(req: Request, { params: paramsPromise }: { params: Promise<{ postType: string }> }) {
+  const params = await paramsPromise
   const club = await getClub(req)
   if (!club) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   if (!isKnownPostType(params.postType)) return NextResponse.json({ error: 'Type de publication inconnu' }, { status: 400 })
