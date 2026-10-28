@@ -5,7 +5,7 @@ import { listPersonalizationHistory } from '@/lib/services/personalizationHistor
 
 /** Historique des sauvegardes de l'identité générale du club authentifié, du plus récent au plus ancien. */
 export async function GET() {
-  const supabase = createClient()
+  const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 

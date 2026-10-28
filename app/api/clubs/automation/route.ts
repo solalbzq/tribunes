@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { checkAutomationAllowed, AUTOMATION_MODES } from '@/lib/automation'
 
 export async function PATCH(req: Request) {
-  const supabase = createClient()
+  const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 

@@ -8,7 +8,8 @@ import { logAdminAction } from '@/lib/adminAudit'
 
 const VALID_PLANS: string[] = PLAN_KEYS
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, { params: paramsPromise }: { params: Promise<{ id: string }> }) {
+  const params = await paramsPromise
   if (!(await ensureAdmin(request))) {
     return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
   }
@@ -36,7 +37,8 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   return NextResponse.json({ ...org, members })
 }
 
-export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(request: NextRequest, { params: paramsPromise }: { params: Promise<{ id: string }> }) {
+  const params = await paramsPromise
   const admin = await getAdminUser()
   if (!admin) {
     return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
@@ -76,7 +78,8 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   return NextResponse.json(org)
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, { params: paramsPromise }: { params: Promise<{ id: string }> }) {
+  const params = await paramsPromise
   const admin = await getAdminUser()
   if (!admin) {
     return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })

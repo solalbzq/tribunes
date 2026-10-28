@@ -13,7 +13,7 @@ async function getClub(userId: string) {
 
 /** Liste les fichiers importés du club, chacun avec une URL signée fraîche (jamais persistée). */
 export async function GET() {
-  const supabase = createClient()
+  const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
@@ -35,7 +35,7 @@ export async function GET() {
 
 /** Importe une référence visuelle ou une charte graphique — validation stricte, stockage privé, aucune analyse déclenchée automatiquement. */
 export async function POST(req: Request) {
-  const supabase = createClient()
+  const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 

@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
     return res
   }
 
-  const supabase = createClient()
+  const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.redirect(`${base}/login`)
 
