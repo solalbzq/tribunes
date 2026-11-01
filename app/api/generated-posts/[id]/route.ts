@@ -6,9 +6,10 @@ import { clubOwnershipOr } from '@/lib/postTypes'
 
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } },
+  { params: paramsPromise }: { params: Promise<{ id: string }> },
 ) {
-  const supabase = createClient()
+  const params = await paramsPromise
+  const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()

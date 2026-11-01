@@ -34,7 +34,7 @@ function sanitizePostVisualConfigsPayload(raw: unknown, isPremium: boolean): unk
 }
 
 export async function POST(req: Request) {
-  const supabase = createClient()
+  const supabase = await createClient()
   const authHeader = req.headers.get('Authorization')
   const token = authHeader?.replace('Bearer ', '')
   const { data: { user } } = token
@@ -125,7 +125,7 @@ export async function POST(req: Request) {
 }
 
 export async function GET() {
-  const supabase = createClient()
+  const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
