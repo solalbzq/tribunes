@@ -1,8 +1,8 @@
 # Sports Post SaaS
 
-Landing page de validation pour un SaaS qui aide les clubs sportifs amateurs a generer automatiquement leurs posts reseaux sociaux apres les matchs et tournois.
-Le site collecte des emails, envoie une confirmation par email et propose une offre early adopter a 10EUR/mois via Stripe.
-La stack repose sur Next.js 14, TypeScript, Tailwind CSS, Prisma, PostgreSQL, Resend et Stripe.
+Tribunes aide les clubs sportifs amateurs a generer leurs posts reseaux sociaux (matchs, tournois, annonces).
+Les plans (Decouverte gratuit, Club, Pro) sont definis dans `lib/plans.ts` et factures via Stripe.
+La stack repose sur Next.js 15, TypeScript, Tailwind CSS, Prisma, PostgreSQL, Resend et Stripe.
 
 ## Prerequis
 
@@ -30,7 +30,11 @@ DATABASE_URL=postgresql://user:password@localhost:5432/sportspost
 RESEND_API_KEY=re_xxxxxxxxxxxx
 RESEND_FROM_EMAIL=bonjour@tonemail.fr
 STRIPE_SECRET_KEY=sk_test_xxxxxxxxxxxx
-STRIPE_PRICE_ID=price_xxxxxxxxxxxx
+STRIPE_PRICE_CLUB_MONTHLY=price_xxxxxxxxxxxx
+STRIPE_PRICE_CLUB_YEARLY=price_xxxxxxxxxxxx
+STRIPE_PRICE_PRO_MONTHLY=price_xxxxxxxxxxxx
+STRIPE_PRICE_PRO_YEARLY=price_xxxxxxxxxxxx
+STRIPE_WEBHOOK_SECRET=whsec_xxxxxxxxxxxx
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_xxxxxxxxxxxx
 NEXT_PUBLIC_BASE_URL=http://localhost:3000
 ```
@@ -55,10 +59,9 @@ Le site sera disponible sur `http://localhost:3000`.
 
 ## Configuration Stripe
 
-1. Creer un produit dans Stripe Dashboard, par exemple `Sports Post Early Adopter`.
-2. Ajouter un prix recurrent mensuel a `10 EUR`.
-3. Recuperer l'identifiant du prix (`price_...`) et le renseigner dans `STRIPE_PRICE_ID`.
-4. Recuperer la cle secrete Stripe (`sk_...`) et la renseigner dans `STRIPE_SECRET_KEY`.
+1. Creer les produits Club et Pro dans Stripe Dashboard, chacun avec un prix mensuel et un prix annuel (montants dans `lib/plans.ts`).
+2. Renseigner les 4 identifiants `price_...` dans `STRIPE_PRICE_CLUB_MONTHLY`, `STRIPE_PRICE_CLUB_YEARLY`, `STRIPE_PRICE_PRO_MONTHLY` et `STRIPE_PRICE_PRO_YEARLY`.
+3. Recuperer la cle secrete Stripe (`sk_...`) pour `STRIPE_SECRET_KEY`, et le secret du webhook pour `STRIPE_WEBHOOK_SECRET`.
 
 ## Scripts utiles
 
