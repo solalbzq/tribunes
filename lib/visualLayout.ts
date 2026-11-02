@@ -370,20 +370,49 @@ export function drawSnapGuides(ctx: CanvasRenderingContext2D, guides: SnapGuide[
  * Filigrane "Tribunes" (plan gratuit) : discret, bas droite, lisible sur tout
  * fond. `offsetBottom` permet de remonter au-dessus d'un footer éventuel.
  */
+export function watermarkDomain(baseUrl = process.env.NEXT_PUBLIC_BASE_URL): string | null {
+  if (!baseUrl) return null
+  let host: string
+  try {
+    host = new URL(baseUrl.includes('://') ? baseUrl : `https://${baseUrl}`).hostname
+  } catch {
+    return null
+  }
+  host = host.replace(/^www\./, '').toLowerCase()
+  if (!host || host === 'localhost' || host.endsWith('.localhost')) return null
+  if (/^\d+(\.\d+){3}$/.test(host) || host.includes(':')) return null
+  return host
+}
+
+export function watermarkLines(baseUrl = process.env.NEXT_PUBLIC_BASE_URL): string[] {
+  const domain = watermarkDomain(baseUrl)
+  return domain ? ['⚡ Tribunes', domain] : ['⚡ Tribunes']
+}
+
 export function drawWatermark(
   ctx: CanvasRenderingContext2D,
   size: number,
   offsetBottom = 0
 ) {
+  const lines = watermarkLines()
+  const titleSize = Math.round(size * 0.026)
+  const domainSize = Math.round(size * 0.021)
   ctx.save()
   ctx.globalAlpha = 0.55
-  ctx.font = `800 ${Math.round(size * 0.026)}px Inter, sans-serif`
   ctx.textAlign = 'right'
   ctx.textBaseline = 'bottom'
   ctx.shadowColor = 'rgba(0,0,0,0.45)'
   ctx.shadowBlur = 6
   ctx.fillStyle = '#ffffff'
-  ctx.fillText('⚡ Tribunes', size - 28, size - offsetBottom - 20)
+  const x = size - 28
+  let y = size - offsetBottom - 20
+  if (lines.length > 1) {
+    ctx.font = `700 ${domainSize}px Inter, sans-serif`
+    ctx.fillText(lines[1], x, y)
+    y -= domainSize + 4
+  }
+  ctx.font = `800 ${titleSize}px Inter, sans-serif`
+  ctx.fillText(lines[0], x, y)
   ctx.restore()
 }
 
