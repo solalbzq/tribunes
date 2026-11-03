@@ -366,10 +366,7 @@ export function drawSnapGuides(ctx: CanvasRenderingContext2D, guides: SnapGuide[
   ctx.restore()
 }
 
-/**
- * Filigrane "Tribunes" (plan gratuit) : discret, bas droite, lisible sur tout
- * fond. `offsetBottom` permet de remonter au-dessus d'un footer éventuel.
- */
+/** Domaine public du site pour le filigrane ; null en local, IP ou URL invalide. */
 export function watermarkDomain(baseUrl = process.env.NEXT_PUBLIC_BASE_URL): string | null {
   if (!baseUrl) return null
   let host: string
@@ -389,6 +386,10 @@ export function watermarkLines(baseUrl = process.env.NEXT_PUBLIC_BASE_URL): stri
   return domain ? ['⚡ Tribunes', domain] : ['⚡ Tribunes']
 }
 
+/**
+ * Filigrane "Tribunes" (plan gratuit) : discret, bas droite, lisible sur tout
+ * fond. `offsetBottom` permet de remonter au-dessus d'un footer éventuel.
+ */
 export function drawWatermark(
   ctx: CanvasRenderingContext2D,
   size: number,
