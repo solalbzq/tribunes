@@ -68,11 +68,13 @@ const TARGET_TO_SECTION: Record<DescribeTarget, Section> = {
   customPost: 'customPost',
 }
 
-export default function ContentTab({ club }: { club: Club }) {
+export default function ContentTab({ club, reuseAnnouncement }: { club: Club; reuseAnnouncement?: AnnouncementFormInitialValues }) {
   const isTennisPadel = club.sport === 'Tennis' || club.sport === 'Padel'
-  const [mode, setMode] = useState<Mode>('assistant')
-  const [section, setSection] = useState<Section>('match')
-  const [prefill, setPrefill] = useState<Prefill | null>(null)
+  const [mode, setMode] = useState<Mode>(reuseAnnouncement ? 'manual' : 'assistant')
+  const [section, setSection] = useState<Section>(reuseAnnouncement ? 'announcement' : 'match')
+  const [prefill, setPrefill] = useState<Prefill | null>(
+    reuseAnnouncement ? { target: 'announcement', values: reuseAnnouncement, sourceText: 'votre annonce de match précédente' } : null
+  )
   const [generatedPosts, setGeneratedPosts] = useState<{ instagram: string; facebook: string } | null>(null)
   const [generatedPostIds, setGeneratedPostIds] = useState<PostIds | null>(null)
   const [generatedMatch, setGeneratedMatch] = useState<MatchData | null>(null)
@@ -131,6 +133,7 @@ export default function ContentTab({ club }: { club: Club }) {
   if (isTennisPadel) {
     return (
       <TennisPadelTab
+        reuseAnnouncement={reuseAnnouncement}
         club={{
           name: club.name,
           sport: club.sport,
