@@ -21,6 +21,7 @@ export function Footer() {
                 { label: 'Comment ça marche', href: '#solution' },
                 { label: 'Offres', href: '#pricing' },
                 { label: 'Exemple', href: '#mockup' },
+                { label: 'Aide', href: '/aide' },
               ]}
             />
             <FooterCol
