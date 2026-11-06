@@ -460,10 +460,12 @@ function SourceTextBanner({ sourceText, onClear }: { sourceText: string; onClear
   )
 }
 
-export default function TennisPadelTab({ club }: { club: Club }) {
-  const [mode, setMode] = useState<Mode>('assistant')
-  const [section, setSection] = useState<Section>('match')
-  const [prefill, setPrefill] = useState<Prefill | null>(null)
+export default function TennisPadelTab({ club, reuseAnnouncement }: { club: Club; reuseAnnouncement?: AnnouncementFormInitialValues }) {
+  const [mode, setMode] = useState<Mode>(reuseAnnouncement ? 'manual' : 'assistant')
+  const [section, setSection] = useState<Section>(reuseAnnouncement ? 'announcement' : 'match')
+  const [prefill, setPrefill] = useState<Prefill | null>(
+    reuseAnnouncement ? { target: 'announcement', values: reuseAnnouncement, sourceText: 'votre annonce de match précédente' } : null
+  )
   const sport = club.sport === 'Padel' ? 'Padel' : 'Tennis'
 
   function handleSectionChange(next: Section) {

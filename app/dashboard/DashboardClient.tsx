@@ -7,6 +7,7 @@ import Logo from "@/components/Logo";
 import ClubSettings from "./ClubSettings";
 import PersonnalisationView from "./PersonnalisationView";
 import ContentTab from "./ContentTab";
+import type { AnnouncementFormInitialValues } from "./MatchAnnouncementTab";
 import SocialTab from "./SocialTab";
 import { Icon } from "./icons";
 import { formatPostType } from "@/lib/postTypes";
@@ -161,6 +162,13 @@ export default function DashboardClient({
 }) {
   const router = useRouter();
   const [view, setView] = useState<View>("home");
+  // Annonce de match à refaire : valeurs reprises de l'historique, jamais la date ni l'adversaire.
+  const [reuseAnnouncement, setReuseAnnouncement] =
+    useState<AnnouncementFormInitialValues | null>(null);
+
+  useEffect(() => {
+    if (view !== "content") setReuseAnnouncement(null);
+  }, [view]);
 
   // Ouvre l'onglet demandé au chargement (?tab=reseaux au retour du flux OAuth,
   // ?tab=personnalisation depuis l'onboarding "parcours complet"...).
@@ -311,10 +319,19 @@ export default function DashboardClient({
               initials={initials}
             />
           )}
-          {view === "content" && <ContentTab club={club} />}
+          {view === "content" && <ContentTab club={club} reuseAnnouncement={reuseAnnouncement ?? undefined} />}
           {view === "reseaux" && <SocialTab club={club} />}
           {view === "history" && (
-            <HistoryView club={club} drafts={drafts} historyPosts={historyPosts} onNavigate={setView} />
+            <HistoryView
+              club={club}
+              drafts={drafts}
+              historyPosts={historyPosts}
+              onNavigate={setView}
+              onReuseAnnouncement={(values) => {
+                setReuseAnnouncement(values);
+                setView("content");
+              }}
+            />
           )}
           {view === "personnalisation" && <PersonnalisationView club={club} />}
           {view === "settings" && <ClubSettings club={club} />}
@@ -667,11 +684,13 @@ function HistoryView({
   drafts,
   historyPosts,
   onNavigate,
+  onReuseAnnouncement,
 }: {
   club: NonNullable<Club>;
   drafts: Draft[];
   historyPosts: HistoryPost[];
   onNavigate: (v: View) => void;
+  onReuseAnnouncement: (values: AnnouncementFormInitialValues) => void;
 }) {
   const sorted = [...club.matches].sort(
     (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
@@ -745,7 +764,7 @@ function HistoryView({
         />
         <div className="space-y-3">
           {historyPosts.map((post) => (
-            <HistoryPostCard key={post.id} post={post} />
+            <HistoryPostCard key={post.id} post={post} onReuseAnnouncement={onReuseAnnouncement} />
           ))}
         </div>
       </Card>
@@ -754,7 +773,14 @@ function HistoryView({
   );
 }
 
-function HistoryPostCard({ post }: { post: HistoryPost }) {
+function HistoryPostCard({
+  post,
+  onReuseAnnouncement,
+}: {
+  post: HistoryPost;
+  onReuseAnnouncement: (values: AnnouncementFormInitialValues) => void;
+}) {
+  const announcement = post.matchAnnouncement;
   return (
     <div className="flex items-center justify-between gap-3 rounded-card border border-line p-3">
       <div className="min-w-0">
@@ -765,6 +791,21 @@ function HistoryPostCard({ post }: { post: HistoryPost }) {
           {formatPlatform(post.platform)} · {formatDateTime(post.createdAt)}
         </p>
       </div>
+      <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+      {announcement && (
+        <button
+          type="button"
+          onClick={() =>
+            onReuseAnnouncement({
+              isHome: announcement.isHome,
+              ...(announcement.competition ? { competition: announcement.competition } : {}),
+            })
+          }
+          className="rounded-btn border border-line px-2.5 py-1 text-xs font-semibold text-brand hover:bg-brand-soft"
+        >
+          Refaire un post comme celui-ci
+        </button>
+      )}
       <span
         className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${
           post.status === "PUBLISHED"
@@ -778,6 +819,7 @@ function HistoryPostCard({ post }: { post: HistoryPost }) {
       >
         {formatPostStatus(post.status)}
       </span>
+      </div>
     </div>
   );
 }
