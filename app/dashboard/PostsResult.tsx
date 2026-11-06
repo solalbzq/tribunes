@@ -1,12 +1,13 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import VisualGenerator from './VisualGenerator'
 import PublishPanel from './PublishPanel'
 import PersonalizePostPanel from './PersonalizePostPanel'
 import { PageHeader, GhostButton } from './ui'
 import type { VisualFormat } from '@/lib/visualLayout'
 import FormatToggle from './FormatToggle'
+import { canShareFiles } from '@/lib/share'
 
 type Posts = { instagram: string; facebook: string }
 type PostIds = Partial<Record<keyof Posts, string>>
@@ -57,12 +58,30 @@ export default function PostsResult({
   const [copied, setCopied] = useState<string | null>(null)
   const [active, setActive] = useState<'instagram' | 'facebook' | 'visual'>('instagram')
   const [visualFormat, setVisualFormat] = useState<VisualFormat>('post')
+  const [canShare, setCanShare] = useState(false)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
 
   function copyToClipboard(text: string, key: string) {
     navigator.clipboard.writeText(text)
     setCopied(key)
     setTimeout(() => setCopied(null), 2000)
+  }
+
+  useEffect(() => {
+    const probe = new File([''], 'post.png', { type: 'image/png' })
+    setCanShare(canShareFiles(navigator, [probe]))
+  }, [])
+
+  async function sharePost(text: string) {
+    const blob = await getImageBlob()
+    if (!blob) return
+    const file = new File([blob], 'post.png', { type: 'image/png' })
+    if (!canShareFiles(navigator, [file])) return
+    try {
+      await navigator.share({ files: [file], text })
+    } catch {
+      // partage annulé par l'utilisateur
+    }
   }
 
   async function getImageBlob(): Promise<Blob | null> {
@@ -119,13 +138,23 @@ export default function PostsResult({
         <div key={p.key} className="rounded-card border border-line bg-white p-6 shadow-card">
           <div className="mb-4 flex items-center justify-between">
             <span className="font-bold text-ink">{p.label}</span>
-            <button
-              onClick={() => copyToClipboard(posts[p.key as keyof Posts], p.key)}
-              className="inline-flex items-center gap-1.5 rounded-btn px-4 py-2 text-sm font-semibold text-white transition"
-              style={{ background: copied === p.key ? '#22c55e' : p.color }}
-            >
-              {copied === p.key ? 'Copié' : 'Copier'}
-            </button>
+            <div className="flex gap-2">
+              {canShare && (
+                <button
+                  onClick={() => sharePost(posts[p.key as keyof Posts])}
+                  className="inline-flex items-center gap-1.5 rounded-btn border border-line bg-white px-4 py-2 text-sm font-semibold text-ink transition hover:border-gray-300"
+                >
+                  Partager
+                </button>
+              )}
+              <button
+                  onClick={() => copyToClipboard(posts[p.key as keyof Posts], p.key)}
+                  className="inline-flex items-center gap-1.5 rounded-btn px-4 py-2 text-sm font-semibold text-white transition"
+                  style={{ background: copied === p.key ? '#22c55e' : p.color }}
+                >
+                  {copied === p.key ? 'Copié' : 'Copier'}
+                </button>
+            </div>
           </div>
           <div className="whitespace-pre-wrap rounded-btn bg-subtle p-4 text-sm leading-relaxed text-gray-700">
             {posts[p.key as keyof Posts]}
