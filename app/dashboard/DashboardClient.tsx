@@ -182,11 +182,11 @@ export default function DashboardClient({
     if (club) return;
     const pending = sessionStorage.getItem("pending_club");
     if (!pending) return;
-    const { name, sport } = JSON.parse(pending);
+    const { name, sport, primaryColor, contentTone } = JSON.parse(pending);
     fetch("/api/clubs", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, sport }),
+      body: JSON.stringify({ name, sport, primaryColor, contentTone }),
     }).then((r) => {
       if (r.ok) {
         sessionStorage.removeItem("pending_club");
