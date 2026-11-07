@@ -1,10 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Logo from '@/components/Logo'
+import { parseDemoPrefill } from '@/lib/demoPrefill'
+import type { ClubVoice } from '@/lib/voice'
 
 const SPORTS = ['Football', 'Rugby', 'Basketball', 'Handball', 'Volleyball', 'Tennis', 'Badminton', 'Padel', 'Autre']
 
@@ -17,9 +19,18 @@ export default function SignupPage() {
   const [sport, setSport] = useState('')
   const [structureName, setStructureName] = useState('')
   const [createStructure, setCreateStructure] = useState(false)
+  const [primaryColor, setPrimaryColor] = useState<string | null>(null)
+  const [contentTone, setContentTone] = useState<ClubVoice | null>(null)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [oauthLoading, setOauthLoading] = useState<'google' | 'apple' | null>(null)
+
+  useEffect(() => {
+    const prefill = parseDemoPrefill(new URLSearchParams(window.location.search))
+    if (prefill.club) setClubName(prefill.club)
+    if (prefill.color) setPrimaryColor(prefill.color)
+    if (prefill.tone) setContentTone(prefill.tone)
+  }, [])
 
   async function handleOAuth(provider: 'google' | 'apple') {
     setOauthLoading(provider)
@@ -48,7 +59,7 @@ export default function SignupPage() {
 
     const token = signUpData.session?.access_token
     if (!token) {
-      sessionStorage.setItem('pending_club', JSON.stringify({ name: clubName, sport, structureName: createStructure ? structureName : undefined }))
+      sessionStorage.setItem('pending_club', JSON.stringify({ name: clubName, sport, primaryColor: primaryColor ?? undefined, contentTone: contentTone ?? undefined, structureName: createStructure ? structureName : undefined }))
       router.push('/login?confirm=1')
       return
     }
@@ -57,7 +68,7 @@ export default function SignupPage() {
     const clubRes = await fetch('/api/clubs', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-      body: JSON.stringify({ name: clubName, sport }),
+      body: JSON.stringify({ name: clubName, sport, primaryColor: primaryColor ?? undefined, contentTone: contentTone ?? undefined }),
     })
     if (!clubRes.ok) { setError('Erreur lors de la création du club.'); setLoading(false); return }
 
@@ -177,6 +188,16 @@ export default function SignupPage() {
                   {SPORTS.map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
               </div>
+
+              {primaryColor && (
+                <div>
+                  <label className="block text-sm font-semibold text-[#111827] mb-1">Couleur du club</label>
+                  <input
+                    type="color" value={primaryColor} onChange={e => setPrimaryColor(e.target.value)}
+                    className="h-11 w-full border border-gray-200 rounded-xl p-1"
+                  />
+                </div>
+              )}
 
               {/* Structure optionnelle */}
               <div className="rounded-xl border border-gray-100 bg-[#f8fafc] p-4">

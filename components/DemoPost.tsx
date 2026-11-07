@@ -1,21 +1,23 @@
 'use client'
 
+import type { Route } from 'next'
 import Link from 'next/link'
 import { useState } from 'react'
 import { PostPreview } from '@/components/MockupPost'
 import { DEMO_TONES, buildDemoText, clubInitials, demoOutcome, type DemoTone } from '@/lib/demoPost'
+import { DEMO_DEFAULT_CLUB, DEMO_DEFAULT_COLOR, DEMO_DEFAULT_TONE, buildSignupHref } from '@/lib/demoPrefill'
 
 const field =
   'mt-1 w-full rounded-btn border border-line bg-white px-3 py-2.5 text-[15px] text-ink focus:border-brand focus:outline-none'
 
 export function DemoPost() {
-  const [club, setClub] = useState('Rugby Club Nîmes')
+  const [club, setClub] = useState(DEMO_DEFAULT_CLUB)
   const [opponent, setOpponent] = useState('Alès')
   const [scoreClub, setScoreClub] = useState(24)
   const [scoreOpponent, setScoreOpponent] = useState(17)
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10))
-  const [color, setColor] = useState('#2563eb')
-  const [tone, setTone] = useState<DemoTone>('enthousiaste')
+  const [color, setColor] = useState(DEMO_DEFAULT_COLOR)
+  const [tone, setTone] = useState<DemoTone>(DEMO_DEFAULT_TONE)
   const [copied, setCopied] = useState(false)
 
   const text = buildDemoText({ club, opponent, scoreClub, scoreOpponent, date, tone })
@@ -111,7 +113,7 @@ export function DemoPost() {
                 {copied ? 'Copié !' : 'Copier le texte'}
               </button>
               <Link
-                href="/signup"
+                href={buildSignupHref({ club, color, tone }) as Route}
                 className="w-full rounded-btn bg-brand px-6 py-3 text-center text-[15px] font-semibold text-white shadow-sm transition hover:bg-brand-hover sm:w-auto"
               >
                 Créer mon compte
