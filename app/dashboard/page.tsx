@@ -142,10 +142,10 @@ export default async function DashboardPage() {
         orderBy: { createdAt: 'desc' },
         take: 30,
         include: {
-          tournamentSchedule: { select: { id: true, tournamentName: true, matchDate: true } },
+          tournamentSchedule: { select: { id: true, tournamentName: true, matchDate: true, venue: true, parsedData: true } },
           weeklySchedule: { select: { id: true, weekStart: true, weekEnd: true } },
           seasonRecap: { select: { id: true, periodStart: true, periodEnd: true, wins: true, draws: true, losses: true } },
-          matchAnnouncement: { select: { id: true, opponent: true, matchDate: true, competition: true, isHome: true } },
+          matchAnnouncement: { select: { id: true, opponent: true, matchDate: true, competition: true, isHome: true, time: true, venue: true, note: true } },
           playerSpotlight: { select: { id: true, playerName: true, achievement: true } },
           clubAnnouncement: { select: { id: true, category: true, title: true } },
           engagementPoll: { select: { id: true, question: true } },
