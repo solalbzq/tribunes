@@ -7,7 +7,7 @@ import Logo from "@/components/Logo";
 import ClubSettings from "./ClubSettings";
 import PersonnalisationView from "./PersonnalisationView";
 import ContentTab from "./ContentTab";
-import type { AnnouncementFormInitialValues } from "./MatchAnnouncementTab";
+import { announcementReminder, isUpcomingEvent, tournamentReminder, type ReusePrefill } from "./reusePrefill";
 import SocialTab from "./SocialTab";
 import { Icon } from "./icons";
 import { formatPostType } from "@/lib/postTypes";
@@ -66,6 +66,8 @@ type Draft = {
     id: string;
     tournamentName: string;
     matchDate: string;
+    venue?: string;
+    parsedData?: unknown;
   } | null;
   weeklySchedule: {
     id: string;
@@ -86,6 +88,9 @@ type Draft = {
     matchDate: string;
     competition: string | null;
     isHome: boolean;
+    time?: string | null;
+    venue?: string | null;
+    note?: string | null;
   } | null;
   playerSpotlight: {
     id: string;
@@ -162,12 +167,11 @@ export default function DashboardClient({
 }) {
   const router = useRouter();
   const [view, setView] = useState<View>("home");
-  // Annonce de match à refaire : valeurs reprises de l'historique, jamais la date ni l'adversaire.
-  const [reuseAnnouncement, setReuseAnnouncement] =
-    useState<AnnouncementFormInitialValues | null>(null);
+  // Formulaire à rouvrir pré-rempli depuis l'historique (refaire une annonce, rappel de la veille).
+  const [reuse, setReuse] = useState<ReusePrefill | null>(null);
 
   useEffect(() => {
-    if (view !== "content") setReuseAnnouncement(null);
+    if (view !== "content") setReuse(null);
   }, [view]);
 
   // Ouvre l'onglet demandé au chargement (?tab=reseaux au retour du flux OAuth,
@@ -319,7 +323,7 @@ export default function DashboardClient({
               initials={initials}
             />
           )}
-          {view === "content" && <ContentTab club={club} reuseAnnouncement={reuseAnnouncement ?? undefined} />}
+          {view === "content" && <ContentTab club={club} reuse={reuse ?? undefined} />}
           {view === "reseaux" && <SocialTab club={club} />}
           {view === "history" && (
             <HistoryView
@@ -327,8 +331,8 @@ export default function DashboardClient({
               drafts={drafts}
               historyPosts={historyPosts}
               onNavigate={setView}
-              onReuseAnnouncement={(values) => {
-                setReuseAnnouncement(values);
+              onReuse={(prefill) => {
+                setReuse(prefill);
                 setView("content");
               }}
             />
@@ -684,13 +688,13 @@ function HistoryView({
   drafts,
   historyPosts,
   onNavigate,
-  onReuseAnnouncement,
+  onReuse,
 }: {
   club: NonNullable<Club>;
   drafts: Draft[];
   historyPosts: HistoryPost[];
   onNavigate: (v: View) => void;
-  onReuseAnnouncement: (values: AnnouncementFormInitialValues) => void;
+  onReuse: (prefill: ReusePrefill) => void;
 }) {
   const sorted = [...club.matches].sort(
     (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
@@ -764,7 +768,7 @@ function HistoryView({
         />
         <div className="space-y-3">
           {historyPosts.map((post) => (
-            <HistoryPostCard key={post.id} post={post} onReuseAnnouncement={onReuseAnnouncement} />
+            <HistoryPostCard key={post.id} post={post} sport={club.sport} onReuse={onReuse} />
           ))}
         </div>
       </Card>
@@ -775,12 +779,22 @@ function HistoryView({
 
 function HistoryPostCard({
   post,
-  onReuseAnnouncement,
+  sport,
+  onReuse,
 }: {
   post: HistoryPost;
-  onReuseAnnouncement: (values: AnnouncementFormInitialValues) => void;
+  sport: string;
+  onReuse: (prefill: ReusePrefill) => void;
 }) {
   const announcement = post.matchAnnouncement;
+  // Le tournoi de tennis/padel vient d'un PDF fédéral : pas de formulaire à pré-remplir.
+  const tournament = sport === "Tennis" || sport === "Padel" ? null : post.tournamentSchedule;
+  const reminder =
+    announcement && isUpcomingEvent(announcement.matchDate)
+      ? announcementReminder(announcement)
+      : tournament && isUpcomingEvent(tournament.matchDate)
+        ? tournamentReminder(tournament)
+        : null;
   return (
     <div className="flex items-center justify-between gap-3 rounded-card border border-line p-3">
       <div className="min-w-0">
@@ -796,14 +810,27 @@ function HistoryPostCard({
         <button
           type="button"
           onClick={() =>
-            onReuseAnnouncement({
-              isHome: announcement.isHome,
-              ...(announcement.competition ? { competition: announcement.competition } : {}),
+            onReuse({
+              target: "announcement",
+              sourceText: "votre annonce de match précédente",
+              values: {
+                isHome: announcement.isHome,
+                ...(announcement.competition ? { competition: announcement.competition } : {}),
+              },
             })
           }
           className="rounded-btn border border-line px-2.5 py-1 text-xs font-semibold text-brand hover:bg-brand-soft"
         >
           Refaire un post comme celui-ci
+        </button>
+      )}
+      {reminder && (
+        <button
+          type="button"
+          onClick={() => onReuse(reminder)}
+          className="rounded-btn border border-line px-2.5 py-1 text-xs font-semibold text-brand hover:bg-brand-soft"
+        >
+          Préparer le rappel de la veille
         </button>
       )}
       <span
