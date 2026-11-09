@@ -10,6 +10,7 @@ import ContentTab from "./ContentTab";
 import { announcementReminder, isUpcomingEvent, tournamentReminder, type ReusePrefill } from "./reusePrefill";
 import SocialTab from "./SocialTab";
 import { Icon } from "./icons";
+import { FEEDBACK_MAILTO } from "@/lib/contact";
 import { formatPostType } from "@/lib/postTypes";
 
 type Club = {
@@ -339,6 +340,12 @@ export default function DashboardClient({
           )}
           {view === "personnalisation" && <PersonnalisationView club={club} />}
           {view === "settings" && <ClubSettings club={club} />}
+
+          <p className="mt-10 text-center text-xs text-muted">
+            <a href={FEEDBACK_MAILTO} className="underline hover:text-ink">
+              Un souci ? Une idée ?
+            </a>
+          </p>
         </main>
       </div>
     </div>
