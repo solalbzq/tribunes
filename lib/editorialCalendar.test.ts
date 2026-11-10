@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { EDITORIAL_CALENDAR, ideasForMonth } from './editorialCalendar'
+import { EDITORIAL_CALENDAR, ideasForMonth, suggestionForDate } from './editorialCalendar'
 
 describe('EDITORIAL_CALENDAR', () => {
   it('couvre 10 mois, de septembre à juin', () => {
@@ -15,5 +15,25 @@ describe('EDITORIAL_CALENDAR', () => {
       expect(ideasForMonth(month)).toHaveLength(month.ideaIds.length)
       expect(new Set(month.ideaIds).size).toBe(month.ideaIds.length)
     }
+  })
+})
+
+describe('suggestionForDate', () => {
+  it('donne la première idée du mois courant', () => {
+    const s = suggestionForDate(new Date(2026, 10, 10))
+    expect(s?.month.name).toBe('Novembre')
+    expect(s?.idea.id).toBe(EDITORIAL_CALENDAR[2].ideaIds[0])
+  })
+
+  it('couvre chaque mois de septembre à juin', () => {
+    for (const [i, month] of EDITORIAL_CALENDAR.entries()) {
+      const jsMonth = (8 + i) % 12
+      expect(suggestionForDate(new Date(2026, jsMonth, 15))?.month.name).toBe(month.name)
+    }
+  })
+
+  it('renvoie null en juillet et en août', () => {
+    expect(suggestionForDate(new Date(2026, 6, 15))).toBeNull()
+    expect(suggestionForDate(new Date(2026, 7, 15))).toBeNull()
   })
 })

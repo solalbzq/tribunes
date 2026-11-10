@@ -1,10 +1,15 @@
 import type { AnnouncementFormInitialValues } from './MatchAnnouncementTab'
 import type { TournamentFormInitialValues } from './TournamentTab'
+import type { ClubAnnouncementFormInitialValues } from './ClubAnnouncementTab'
+import type { CustomPostFormInitialValues } from './CustomPostTab'
+import type { SuggestionTemplate } from '@/lib/services/editorialSuggestionsCatalog'
 
 /** Formulaire à rouvrir pré-rempli depuis l'historique (« Refaire un post », « Préparer le rappel de la veille »). */
 export type ReusePrefill =
   | { target: 'announcement'; values: AnnouncementFormInitialValues; sourceText: string }
   | { target: 'tournament'; values: TournamentFormInitialValues; sourceText: string }
+  | { target: 'clubAnnouncement'; values: ClubAnnouncementFormInitialValues; sourceText: string }
+  | { target: 'customPost'; values: CustomPostFormInitialValues; sourceText: string }
 
 /** Date du jour au format AAAA-MM-JJ, en heure locale. */
 function todayLocal(): string {
@@ -74,6 +79,28 @@ export function tournamentReminder(t: {
       matchDate: t.matchDate.slice(0, 10),
       ...(t.venue ? { venue: t.venue } : {}),
       ...(matches.length ? { matches } : {}),
+    },
+  }
+}
+
+/** Pré-remplissage d'une idée du calendrier éditorial, comme le fait l'assistant pour une idée suggérée. */
+export function suggestionPrefill(s: SuggestionTemplate): ReusePrefill {
+  const sourceText = `Idée suggérée : ${s.label}`
+  if (s.target?.kind === 'clubAnnouncement') {
+    return {
+      target: 'clubAnnouncement',
+      sourceText,
+      values: { category: s.target.category, title: s.subject, description: s.objective },
+    }
+  }
+  return {
+    target: 'customPost',
+    sourceText,
+    values: {
+      objective: s.objective,
+      subject: s.subject,
+      keyInformation: s.keyInformation.length ? s.keyInformation : undefined,
+      suggestedCategory: s.suggestedCategory,
     },
   }
 }

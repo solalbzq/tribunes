@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { announcementReminder, isUpcomingEvent, tournamentReminder } from './reusePrefill'
+import { announcementReminder, isUpcomingEvent, suggestionPrefill, tournamentReminder } from './reusePrefill'
+import { findSuggestionTemplate } from '@/lib/services/editorialSuggestionsCatalog'
 
 const DAY = 86400000
 const iso = (offsetDays: number) => new Date(Date.now() + offsetDays * DAY).toISOString()
@@ -40,5 +41,16 @@ describe('tournamentReminder', () => {
       venue: 'Gymnase',
       matches: [{ opponent: 'A', time: '14h', round: 'Finale' }],
     })
+  })
+})
+
+describe('suggestionPrefill', () => {
+  it('route une idée liée à une catégorie vers l’annonce du club', () => {
+    const r = suggestionPrefill(findSuggestionTemplate('recruitment')!)
+    expect(r.target).toBe('clubAnnouncement')
+  })
+  it('route les autres idées vers la publication libre', () => {
+    const r = suggestionPrefill(findSuggestionTemplate('quiz')!)
+    expect(r.target).toBe('customPost')
   })
 })
