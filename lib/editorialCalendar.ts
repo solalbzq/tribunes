@@ -24,8 +24,20 @@ export const EDITORIAL_CALENDAR: CalendarMonth[] = [
   { name: 'Juin', moment: 'Le bilan de la saison et les inscriptions de l’an prochain.', ideaIds: ['volunteer_portrait', 'recruitment', 'supporters_call', 'archive'] },
 ]
 
+const MONTH_NAMES = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre']
+
 export function ideasForMonth(month: CalendarMonth): SuggestionTemplate[] {
   return month.ideaIds
     .map((id) => SUGGESTION_CATALOG.find((s) => s.id === id))
     .filter((s): s is SuggestionTemplate => Boolean(s))
+}
+
+export type MonthSuggestion = { month: CalendarMonth; idea: SuggestionTemplate }
+
+/** Suggestion du mois courant (1re idée du calendrier) ; null si le calendrier n'a rien pour ce mois (juillet, août). */
+export function suggestionForDate(date: Date): MonthSuggestion | null {
+  const month = EDITORIAL_CALENDAR.find((m) => m.name === MONTH_NAMES[date.getMonth()])
+  if (!month) return null
+  const idea = ideasForMonth(month)[0]
+  return idea ? { month, idea } : null
 }

@@ -7,7 +7,8 @@ import Logo from "@/components/Logo";
 import ClubSettings from "./ClubSettings";
 import PersonnalisationView from "./PersonnalisationView";
 import ContentTab from "./ContentTab";
-import { announcementReminder, isUpcomingEvent, tournamentReminder, type ReusePrefill } from "./reusePrefill";
+import { announcementReminder, isUpcomingEvent, suggestionPrefill, tournamentReminder, type ReusePrefill } from "./reusePrefill";
+import { suggestionForDate } from "@/lib/editorialCalendar";
 import SocialTab from "./SocialTab";
 import { Icon } from "./icons";
 import { FEEDBACK_MAILTO } from "@/lib/contact";
@@ -321,6 +322,10 @@ export default function DashboardClient({
               drafts={drafts}
               historyPosts={historyPosts}
               onNavigate={setView}
+              onPrepare={(prefill) => {
+                setReuse(prefill);
+                setView("content");
+              }}
               initials={initials}
             />
           )}
@@ -354,12 +359,85 @@ export default function DashboardClient({
 
 /* ─────────────────────────── Home ─────────────────────────── */
 
+/** Carte « À publier ce mois-ci » : idée du calendrier éditorial, masquable pour le mois en cours. */
+function MonthSuggestionCard({
+  clubId,
+  onPrepare,
+}: {
+  clubId: string;
+  onPrepare: (prefill: ReusePrefill) => void;
+}) {
+  const [now, setNow] = useState<Date | null>(null);
+  const [hidden, setHidden] = useState(false);
+
+  useEffect(() => {
+    const today = new Date();
+    setNow(today);
+    try {
+      setHidden(
+        window.localStorage.getItem(`month_suggestion_hidden_${clubId}`) ===
+          monthKey(today),
+      );
+    } catch {}
+  }, [clubId]);
+
+  const suggestion = now ? suggestionForDate(now) : null;
+  if (!now || !suggestion || hidden) return null;
+
+  function hide() {
+    try {
+      window.localStorage.setItem(
+        `month_suggestion_hidden_${clubId}`,
+        monthKey(now as Date),
+      );
+    } catch {}
+    setHidden(true);
+  }
+
+  return (
+    <section className="rounded-card border border-line bg-white p-5 shadow-card sm:p-6">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[13px] font-semibold text-muted">
+            À publier ce mois-ci · {suggestion.month.name}
+          </p>
+          <h2 className="mt-1 text-lg font-black text-ink">
+            {suggestion.idea.label}
+          </h2>
+          <p className="mt-1 text-sm text-muted">{suggestion.month.moment}</p>
+        </div>
+        <button
+          type="button"
+          onClick={hide}
+          aria-label="Masquer cette suggestion"
+          className="shrink-0 text-xs font-semibold text-muted hover:text-ink"
+        >
+          Masquer
+        </button>
+      </div>
+      <button
+        type="button"
+        onClick={() => onPrepare(suggestionPrefill(suggestion.idea))}
+        className="mt-4 inline-flex items-center gap-2 rounded-btn bg-brand px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-hover"
+      >
+        <Icon name="sparkles" className="h-[18px] w-[18px]" />
+        Préparer ce post
+      </button>
+    </section>
+  );
+}
+
+function monthKey(d: Date): string {
+  return `${d.getFullYear()}-${d.getMonth() + 1}`;
+}
+
 function HomeView({
   club,
   userEmail,
   drafts,
   historyPosts,
   onNavigate,
+  onPrepare,
   initials,
 }: {
   club: NonNullable<Club>;
@@ -367,6 +445,7 @@ function HomeView({
   drafts: Draft[];
   historyPosts: HistoryPost[];
   onNavigate: (v: View) => void;
+  onPrepare: (prefill: ReusePrefill) => void;
   initials: string;
 }) {
   const [connections, setConnections] = useState<SocialConnection[] | null>(
@@ -439,6 +518,8 @@ function HomeView({
   });
   return (
     <div className="space-y-6 sm:space-y-8">
+      <MonthSuggestionCard clubId={club.id} onPrepare={onPrepare} />
+
       {/* Welcome + primary action */}
       <section className="overflow-hidden rounded-card border border-line bg-white shadow-card">
         <div className="relative p-6 sm:p-8">
