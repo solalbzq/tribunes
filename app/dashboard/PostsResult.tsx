@@ -7,6 +7,7 @@ import PersonalizePostPanel from './PersonalizePostPanel'
 import { PageHeader, GhostButton } from './ui'
 import type { VisualFormat } from '@/lib/visualLayout'
 import FormatToggle from './FormatToggle'
+import { toWhatsAppText } from '@/lib/whatsappText'
 
 type Posts = { instagram: string; facebook: string }
 type PostIds = Partial<Record<keyof Posts, string>>
@@ -133,6 +134,18 @@ export default function PostsResult({
           <p className="mt-3 text-right text-xs text-muted">
             {posts[p.key as keyof Posts].length} caractères
           </p>
+          {p.key === 'facebook' && (
+            <div className="mt-3">
+              <button
+                onClick={() => copyToClipboard(toWhatsAppText(posts.facebook), 'whatsapp')}
+                className="inline-flex items-center gap-1.5 rounded-btn px-4 py-2 text-sm font-semibold text-white transition"
+                style={{ background: copied === 'whatsapp' ? '#22c55e' : '#25D366' }}
+              >
+                {copied === 'whatsapp' ? 'Copié' : 'Copier pour WhatsApp'}
+              </button>
+              <p className="mt-1 text-xs text-muted">Sans hashtags, prêt à coller dans un groupe.</p>
+            </div>
+          )}
         </div>
       ))}
 
