@@ -891,6 +891,32 @@ function HistoryPostCard({
   sport: string;
   onReuse: (prefill: ReusePrefill) => void;
 }) {
+  const router = useRouter();
+  const [marking, setMarking] = useState(false);
+  const [markError, setMarkError] = useState(false);
+  const canMarkPublished = post.status === "FAILED" || post.status === "PARTIAL";
+
+  async function handleMarkPublished() {
+    setMarking(true);
+    setMarkError(false);
+    try {
+      const res = await fetch(`/api/generated-posts/${post.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "PUBLISHED" }),
+      });
+      if (!res.ok) {
+        setMarkError(true);
+        return;
+      }
+      router.refresh();
+    } catch {
+      setMarkError(true);
+    } finally {
+      setMarking(false);
+    }
+  }
+
   const announcement = post.matchAnnouncement;
   // Le tournoi de tennis/padel vient d'un PDF fédéral : pas de formulaire à pré-remplir.
   const tournament = sport === "Tennis" || sport === "Padel" ? null : post.tournamentSchedule;
@@ -937,6 +963,19 @@ function HistoryPostCard({
         >
           Préparer le rappel de la veille
         </button>
+      )}
+      {canMarkPublished && (
+        <button
+          type="button"
+          onClick={handleMarkPublished}
+          disabled={marking}
+          className="rounded-btn border border-line px-2.5 py-1 text-xs font-semibold text-brand hover:bg-brand-soft disabled:opacity-60"
+        >
+          {marking ? "Enregistrement…" : "J'ai publié ce post"}
+        </button>
+      )}
+      {markError && (
+        <span className="text-xs text-red-600">Impossible d'enregistrer, réessayez.</span>
       )}
       <span
         className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${
