@@ -5,6 +5,8 @@ import { redirect } from 'next/navigation'
 import { checkAutomationAllowed } from '@/lib/automation'
 import { clubOwnershipOr } from '@/lib/postTypes'
 import { resolvePlanForClub } from '@/lib/org'
+import { checkAiQuota } from '@/lib/quota'
+import { quotaNotice } from '@/lib/quotaNotice'
 import DashboardClient from './DashboardClient'
 
 /** Sérialise les dates des relations cross-type communes à drafts et historyPosts. */
@@ -157,6 +159,8 @@ export default async function DashboardPage() {
   const automationEnabled = club ? await checkAutomationAllowed(club) : false
   const { plan } = club ? await resolvePlanForClub(club) : { plan: 'FREE' as const }
 
+  const notice = club ? quotaNotice(await checkAiQuota(club)) : null
+
   // Sérialise les dates en string pour le passage server→client
   const serialized = club ? {
     ...club,
@@ -205,6 +209,7 @@ export default async function DashboardPage() {
       drafts={serializedDrafts}
       historyPosts={serializedHistoryPosts}
       userEmail={user.email ?? ''}
+      quotaNotice={notice?.message ?? null}
     />
   )
 }

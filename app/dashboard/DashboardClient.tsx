@@ -161,11 +161,13 @@ export default function DashboardClient({
   drafts,
   historyPosts,
   userEmail,
+  quotaNotice,
 }: {
   club: Club;
   drafts: Draft[];
   historyPosts: HistoryPost[];
   userEmail: string;
+  quotaNotice: string | null;
 }) {
   const router = useRouter();
   const [view, setView] = useState<View>("home");
@@ -314,6 +316,21 @@ export default function DashboardClient({
             <Icon name="chevron" className="h-4 w-4 text-line" />
             <span className="font-semibold text-ink">{currentLabel}</span>
           </div>
+
+          {quotaNotice && (
+            <div
+              role="status"
+              className="mb-6 flex flex-col gap-3 rounded-card border border-amber-200 bg-amber-50 p-4 sm:flex-row sm:items-center sm:justify-between"
+            >
+              <p className="text-sm font-medium text-amber-900">{quotaNotice}</p>
+              <a
+                href="/account"
+                className="inline-flex shrink-0 items-center justify-center rounded-btn bg-brand px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-hover"
+              >
+                Voir le plan Club
+              </a>
+            </div>
+          )}
 
           {view === "home" && (
             <HomeView
