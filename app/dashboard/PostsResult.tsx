@@ -8,6 +8,7 @@ import { PageHeader, GhostButton } from './ui'
 import type { VisualFormat } from '@/lib/visualLayout'
 import FormatToggle from './FormatToggle'
 import { toWhatsAppText } from '@/lib/whatsappText'
+import { checkPostBeforePublish } from '@/lib/postCheck'
 
 type Posts = { instagram: string; facebook: string }
 type PostIds = Partial<Record<keyof Posts, string>>
@@ -33,6 +34,16 @@ const PLATFORMS = [
   { key: 'facebook' as const, label: 'Facebook', icon: '', color: '#1877F2' },
   { key: 'visual' as const, label: 'Visuel', icon: '', color: '#111827' },
 ]
+
+function PostAlerts({ alerts }: { alerts: string[] }) {
+  if (alerts.length === 0) return null
+  return (
+    <div role="alert" className="mt-3 rounded-btn border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">
+      {alerts.map(a => <p key={a}>{a}</p>)}
+      <p className="mt-1 text-xs text-amber-700">Vous pouvez quand même copier le texte.</p>
+    </div>
+  )
+}
 
 export default function PostsResult({
   posts,
@@ -131,6 +142,7 @@ export default function PostsResult({
           <div className="whitespace-pre-wrap rounded-btn bg-subtle p-4 text-sm leading-relaxed text-gray-700">
             {posts[p.key as keyof Posts]}
           </div>
+          <PostAlerts alerts={checkPostBeforePublish(posts[p.key as keyof Posts])} />
           <p className="mt-3 text-right text-xs text-muted">
             {posts[p.key as keyof Posts].length} caractères
           </p>
