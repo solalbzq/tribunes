@@ -26,6 +26,29 @@ export async function PATCH(
   const body = await request.json().catch(() => null)
   const content = typeof body?.content === 'string' ? body.content.trim() : undefined
   const reject = body?.status === 'REJECTED'
+  const markPublished = body?.status === 'PUBLISHED'
+
+  if (markPublished) {
+    // Le club a publié le post lui-même (copier-coller) : on l'enregistre sans
+    // rien envoyer aux réseaux. Les échecs/partiels sortent ainsi des retries.
+    const post = await prisma.generatedPost.findFirst({
+      where: {
+        id: params.id,
+        status: { in: ['DRAFT', 'PENDING_REVIEW', 'FAILED', 'PARTIAL'] },
+        OR: clubOwnershipOr(club.id) as Prisma.GeneratedPostWhereInput[],
+      },
+      select: { id: true },
+    })
+    if (!post) {
+      return NextResponse.json({ error: 'Post introuvable' }, { status: 404 })
+    }
+    const published = await prisma.generatedPost.update({
+      where: { id: post.id },
+      data: { status: 'PUBLISHED', publishedAt: new Date() },
+      select: { id: true, status: true, publishedAt: true },
+    })
+    return NextResponse.json(published)
+  }
 
   if (content === undefined && !reject) {
     return NextResponse.json({ error: 'Contenu manquant' }, { status: 400 })
