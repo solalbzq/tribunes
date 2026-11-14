@@ -50,4 +50,44 @@ export const CLUB_ANNOUNCEMENT_TEMPLATES: ClubAnnouncementTemplate[] = [
     description:
       "Invite les adhérents à l'assemblée générale : précise la date, l'heure, le lieu et les sujets à l'ordre du jour. Rappelle que tous les membres sont les bienvenus.",
   },
+  {
+    key: 'stage-vacances',
+    label: 'Stage ou camp de vacances',
+    category: 'RECRUITMENT',
+    title: 'Stage de [période de vacances]',
+    description:
+      "Présente le stage ou camp organisé pendant les vacances : pour quel public, quelles dates, quel lieu, ce qui est prévu au programme, le tarif et comment s'inscrire.",
+  },
+  {
+    key: 'lieu-ferme',
+    label: 'Salle ou terrain fermé',
+    category: 'CLUB_LIFE',
+    title: '[Salle ou terrain] fermé : changement de lieu',
+    description:
+      "Préviens que [salle ou terrain] est fermé et explique pourquoi. Indique où et quand se tiennent les entraînements à la place, pour quelles équipes, et jusqu'à quand.",
+  },
+  {
+    key: 'soiree-club',
+    label: 'Soirée, loto ou repas du club',
+    category: 'CLUB_LIFE',
+    title: '[Soirée, loto ou repas] du club',
+    description:
+      "Invite les adhérents et leurs proches à [soirée, loto ou repas] : précise la date, l'heure, le lieu, le prix et comment réserver. Explique à quoi servira la recette si c'est le cas.",
+  },
+  {
+    key: 'recherche-encadrant',
+    label: "Recherche d'entraîneur ou d'arbitre",
+    category: 'VOLUNTEER',
+    title: 'Nous cherchons un [entraîneur ou arbitre]',
+    description:
+      "Explique que le club cherche un [entraîneur ou arbitre] : pour quelle équipe ou quel groupe, à quels horaires, si une formation est proposée, et comment contacter le bureau.",
+  },
+  {
+    key: 'resultats-recompenses',
+    label: 'Résultats et récompenses',
+    category: 'THANKS',
+    title: 'Résultats et récompenses du [tournoi interne]',
+    description:
+      "Annonce les résultats du [tournoi interne] ou la remise des récompenses, félicite les participants et remercie les bénévoles et organisateurs. Utilise uniquement les noms et résultats que tu me donnes.",
+  },
 ]
