@@ -7,8 +7,11 @@ import Logo from "@/components/Logo";
 import ClubSettings from "./ClubSettings";
 import PersonnalisationView from "./PersonnalisationView";
 import ContentTab from "./ContentTab";
+import { announcementReminder, isUpcomingEvent, suggestionPrefill, tournamentReminder, type ReusePrefill } from "./reusePrefill";
+import { suggestionForDate } from "@/lib/editorialCalendar";
 import SocialTab from "./SocialTab";
 import { Icon } from "./icons";
+import { FEEDBACK_MAILTO } from "@/lib/contact";
 import { formatPostType } from "@/lib/postTypes";
 
 type Club = {
@@ -65,6 +68,8 @@ type Draft = {
     id: string;
     tournamentName: string;
     matchDate: string;
+    venue?: string;
+    parsedData?: unknown;
   } | null;
   weeklySchedule: {
     id: string;
@@ -85,6 +90,9 @@ type Draft = {
     matchDate: string;
     competition: string | null;
     isHome: boolean;
+    time?: string | null;
+    venue?: string | null;
+    note?: string | null;
   } | null;
   playerSpotlight: {
     id: string;
@@ -153,14 +161,22 @@ export default function DashboardClient({
   drafts,
   historyPosts,
   userEmail,
+  quotaNotice,
 }: {
   club: Club;
   drafts: Draft[];
   historyPosts: HistoryPost[];
   userEmail: string;
+  quotaNotice: string | null;
 }) {
   const router = useRouter();
   const [view, setView] = useState<View>("home");
+  // Formulaire à rouvrir pré-rempli depuis l'historique (refaire une annonce, rappel de la veille).
+  const [reuse, setReuse] = useState<ReusePrefill | null>(null);
+
+  useEffect(() => {
+    if (view !== "content") setReuse(null);
+  }, [view]);
 
   // Ouvre l'onglet demandé au chargement (?tab=reseaux au retour du flux OAuth,
   // ?tab=personnalisation depuis l'onboarding "parcours complet"...).
@@ -174,11 +190,11 @@ export default function DashboardClient({
     if (club) return;
     const pending = sessionStorage.getItem("pending_club");
     if (!pending) return;
-    const { name, sport } = JSON.parse(pending);
+    const { name, sport, primaryColor, contentTone } = JSON.parse(pending);
     fetch("/api/clubs", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, sport }),
+      body: JSON.stringify({ name, sport, primaryColor, contentTone }),
     }).then((r) => {
       if (r.ok) {
         sessionStorage.removeItem("pending_club");
@@ -301,6 +317,21 @@ export default function DashboardClient({
             <span className="font-semibold text-ink">{currentLabel}</span>
           </div>
 
+          {quotaNotice && (
+            <div
+              role="status"
+              className="mb-6 flex flex-col gap-3 rounded-card border border-amber-200 bg-amber-50 p-4 sm:flex-row sm:items-center sm:justify-between"
+            >
+              <p className="text-sm font-medium text-amber-900">{quotaNotice}</p>
+              <a
+                href="/account"
+                className="inline-flex shrink-0 items-center justify-center rounded-btn bg-brand px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-hover"
+              >
+                Voir le plan Club
+              </a>
+            </div>
+          )}
+
           {view === "home" && (
             <HomeView
               club={club}
@@ -308,16 +339,35 @@ export default function DashboardClient({
               drafts={drafts}
               historyPosts={historyPosts}
               onNavigate={setView}
+              onPrepare={(prefill) => {
+                setReuse(prefill);
+                setView("content");
+              }}
               initials={initials}
             />
           )}
-          {view === "content" && <ContentTab club={club} />}
+          {view === "content" && <ContentTab club={club} reuse={reuse ?? undefined} />}
           {view === "reseaux" && <SocialTab club={club} />}
           {view === "history" && (
-            <HistoryView club={club} drafts={drafts} historyPosts={historyPosts} onNavigate={setView} />
+            <HistoryView
+              club={club}
+              drafts={drafts}
+              historyPosts={historyPosts}
+              onNavigate={setView}
+              onReuse={(prefill) => {
+                setReuse(prefill);
+                setView("content");
+              }}
+            />
           )}
           {view === "personnalisation" && <PersonnalisationView club={club} />}
           {view === "settings" && <ClubSettings club={club} />}
+
+          <p className="mt-10 text-center text-xs text-muted">
+            <a href={FEEDBACK_MAILTO} className="underline hover:text-ink">
+              Un souci ? Une idée ?
+            </a>
+          </p>
         </main>
       </div>
     </div>
@@ -326,12 +376,85 @@ export default function DashboardClient({
 
 /* ─────────────────────────── Home ─────────────────────────── */
 
+/** Carte « À publier ce mois-ci » : idée du calendrier éditorial, masquable pour le mois en cours. */
+function MonthSuggestionCard({
+  clubId,
+  onPrepare,
+}: {
+  clubId: string;
+  onPrepare: (prefill: ReusePrefill) => void;
+}) {
+  const [now, setNow] = useState<Date | null>(null);
+  const [hidden, setHidden] = useState(false);
+
+  useEffect(() => {
+    const today = new Date();
+    setNow(today);
+    try {
+      setHidden(
+        window.localStorage.getItem(`month_suggestion_hidden_${clubId}`) ===
+          monthKey(today),
+      );
+    } catch {}
+  }, [clubId]);
+
+  const suggestion = now ? suggestionForDate(now) : null;
+  if (!now || !suggestion || hidden) return null;
+
+  function hide() {
+    try {
+      window.localStorage.setItem(
+        `month_suggestion_hidden_${clubId}`,
+        monthKey(now as Date),
+      );
+    } catch {}
+    setHidden(true);
+  }
+
+  return (
+    <section className="rounded-card border border-line bg-white p-5 shadow-card sm:p-6">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[13px] font-semibold text-muted">
+            À publier ce mois-ci · {suggestion.month.name}
+          </p>
+          <h2 className="mt-1 text-lg font-black text-ink">
+            {suggestion.idea.label}
+          </h2>
+          <p className="mt-1 text-sm text-muted">{suggestion.month.moment}</p>
+        </div>
+        <button
+          type="button"
+          onClick={hide}
+          aria-label="Masquer cette suggestion"
+          className="shrink-0 text-xs font-semibold text-muted hover:text-ink"
+        >
+          Masquer
+        </button>
+      </div>
+      <button
+        type="button"
+        onClick={() => onPrepare(suggestionPrefill(suggestion.idea))}
+        className="mt-4 inline-flex items-center gap-2 rounded-btn bg-brand px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-hover"
+      >
+        <Icon name="sparkles" className="h-[18px] w-[18px]" />
+        Préparer ce post
+      </button>
+    </section>
+  );
+}
+
+function monthKey(d: Date): string {
+  return `${d.getFullYear()}-${d.getMonth() + 1}`;
+}
+
 function HomeView({
   club,
   userEmail,
   drafts,
   historyPosts,
   onNavigate,
+  onPrepare,
   initials,
 }: {
   club: NonNullable<Club>;
@@ -339,6 +462,7 @@ function HomeView({
   drafts: Draft[];
   historyPosts: HistoryPost[];
   onNavigate: (v: View) => void;
+  onPrepare: (prefill: ReusePrefill) => void;
   initials: string;
 }) {
   const [connections, setConnections] = useState<SocialConnection[] | null>(
@@ -411,6 +535,8 @@ function HomeView({
   });
   return (
     <div className="space-y-6 sm:space-y-8">
+      <MonthSuggestionCard clubId={club.id} onPrepare={onPrepare} />
+
       {/* Welcome + primary action */}
       <section className="overflow-hidden rounded-card border border-line bg-white shadow-card">
         <div className="relative p-6 sm:p-8">
@@ -667,11 +793,13 @@ function HistoryView({
   drafts,
   historyPosts,
   onNavigate,
+  onReuse,
 }: {
   club: NonNullable<Club>;
   drafts: Draft[];
   historyPosts: HistoryPost[];
   onNavigate: (v: View) => void;
+  onReuse: (prefill: ReusePrefill) => void;
 }) {
   const sorted = [...club.matches].sort(
     (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
@@ -745,7 +873,7 @@ function HistoryView({
         />
         <div className="space-y-3">
           {historyPosts.map((post) => (
-            <HistoryPostCard key={post.id} post={post} />
+            <HistoryPostCard key={post.id} post={post} sport={club.sport} onReuse={onReuse} />
           ))}
         </div>
       </Card>
@@ -754,7 +882,24 @@ function HistoryView({
   );
 }
 
-function HistoryPostCard({ post }: { post: HistoryPost }) {
+function HistoryPostCard({
+  post,
+  sport,
+  onReuse,
+}: {
+  post: HistoryPost;
+  sport: string;
+  onReuse: (prefill: ReusePrefill) => void;
+}) {
+  const announcement = post.matchAnnouncement;
+  // Le tournoi de tennis/padel vient d'un PDF fédéral : pas de formulaire à pré-remplir.
+  const tournament = sport === "Tennis" || sport === "Padel" ? null : post.tournamentSchedule;
+  const reminder =
+    announcement && isUpcomingEvent(announcement.matchDate)
+      ? announcementReminder(announcement)
+      : tournament && isUpcomingEvent(tournament.matchDate)
+        ? tournamentReminder(tournament)
+        : null;
   return (
     <div className="flex items-center justify-between gap-3 rounded-card border border-line p-3">
       <div className="min-w-0">
@@ -765,6 +910,34 @@ function HistoryPostCard({ post }: { post: HistoryPost }) {
           {formatPlatform(post.platform)} · {formatDateTime(post.createdAt)}
         </p>
       </div>
+      <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+      {announcement && (
+        <button
+          type="button"
+          onClick={() =>
+            onReuse({
+              target: "announcement",
+              sourceText: "votre annonce de match précédente",
+              values: {
+                isHome: announcement.isHome,
+                ...(announcement.competition ? { competition: announcement.competition } : {}),
+              },
+            })
+          }
+          className="rounded-btn border border-line px-2.5 py-1 text-xs font-semibold text-brand hover:bg-brand-soft"
+        >
+          Refaire un post comme celui-ci
+        </button>
+      )}
+      {reminder && (
+        <button
+          type="button"
+          onClick={() => onReuse(reminder)}
+          className="rounded-btn border border-line px-2.5 py-1 text-xs font-semibold text-brand hover:bg-brand-soft"
+        >
+          Préparer le rappel de la veille
+        </button>
+      )}
       <span
         className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${
           post.status === "PUBLISHED"
@@ -778,6 +951,7 @@ function HistoryPostCard({ post }: { post: HistoryPost }) {
       >
         {formatPostStatus(post.status)}
       </span>
+      </div>
     </div>
   );
 }
