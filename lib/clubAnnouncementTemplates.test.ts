@@ -4,9 +4,9 @@ import { CLUB_ANNOUNCEMENT_TEMPLATES } from './clubAnnouncementTemplates'
 const CATEGORIES = ['RECRUITMENT', 'SPONSOR', 'CLUB_LIFE', 'VOLUNTEER', 'THANKS']
 
 describe('CLUB_ANNOUNCEMENT_TEMPLATES', () => {
-  it('propose 5 modèles aux clés uniques', () => {
-    expect(CLUB_ANNOUNCEMENT_TEMPLATES).toHaveLength(5)
-    expect(new Set(CLUB_ANNOUNCEMENT_TEMPLATES.map((t) => t.key)).size).toBe(5)
+  it('propose 10 modèles aux clés uniques', () => {
+    expect(CLUB_ANNOUNCEMENT_TEMPLATES).toHaveLength(10)
+    expect(new Set(CLUB_ANNOUNCEMENT_TEMPLATES.map((t) => t.key)).size).toBe(10)
   })
 
   it('utilise des catégories valides et des textes remplis', () => {
