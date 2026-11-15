@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { MODEL_PAGES, getModelPage } from './modelPages'
 
 describe('MODEL_PAGES', () => {
-  it('propose 4 pages', () => {
-    expect(MODEL_PAGES).toHaveLength(4)
+  it('propose 7 pages', () => {
+    expect(MODEL_PAGES).toHaveLength(7)
   })
 
   it('a des slugs, titres et descriptions uniques', () => {
@@ -21,6 +21,9 @@ describe('MODEL_PAGES', () => {
 
   it('retrouve une page par son slug', () => {
     expect(getModelPage('annonce-tournoi')?.slug).toBe('annonce-tournoi')
+    for (const slug of ['annonce-stage', 'fermeture-salle', 'soiree-loto']) {
+      expect(getModelPage(slug)?.slug).toBe(slug)
+    }
     expect(getModelPage('inconnu')).toBeUndefined()
   })
 })

@@ -84,6 +84,60 @@ export const MODEL_PAGES: ModelPage[] = [
       { label: 'Fidèle partenaire', text: '🤝 Merci à nos partenaires qui nous accompagnent saison après saison. Pensez à eux lors de vos achats !' },
     ],
   },
+  {
+    slug: 'annonce-stage',
+    emoji: '🏅',
+    title: 'Modèles de posts pour annoncer un stage sportif',
+    description:
+      'Des exemples d’annonces de stage pour votre club ou association sportive, et la liste des informations à ne pas oublier.',
+    hook: 'Vacances scolaires, perfectionnement, découverte : donnez envie de s’inscrire au stage.',
+    tips: [
+      'Indiquez les dates, les horaires et le lieu.',
+      'Précisez l’âge ou le niveau concerné.',
+      'Donnez le tarif et la façon de s’inscrire, avec le nombre de places.',
+    ],
+    examples: [
+      { label: 'Annonce', text: '🏅 Un stage est organisé pendant les vacances, pour les jeunes de tous niveaux. Places limitées : inscriptions auprès du club.' },
+      { label: 'Il reste des places', text: '📣 Il reste quelques places pour notre stage ! Au programme : progrès, jeux et bonne humeur. Écrivez-nous pour réserver.' },
+      { label: 'Infos pratiques', text: '🎒 Pour le stage, pensez à votre tenue, une gourde et un pique-nique. Rendez-vous à l’heure indiquée à l’entrée du gymnase.' },
+    ],
+  },
+  {
+    slug: 'fermeture-salle',
+    emoji: '🚧',
+    title: 'Modèles de posts pour annoncer la fermeture d’une salle',
+    description:
+      'Des exemples de messages pour prévenir vos adhérents de la fermeture d’une salle ou d’un équipement, et des conseils pour bien les écrire.',
+    hook: 'Travaux, compétition, jour férié : prévenez vite pour que personne ne se déplace pour rien.',
+    tips: [
+      'Dites clairement quelle salle est fermée et jusqu’à quand.',
+      'Expliquez la raison en une phrase.',
+      'Indiquez si les séances sont annulées, déplacées ou maintenues ailleurs.',
+    ],
+    examples: [
+      { label: 'Fermeture ponctuelle', text: '🚧 La salle sera fermée ce week-end. Les séances sont annulées, elles reprennent normalement la semaine suivante.' },
+      { label: 'Séances déplacées', text: '📍 Pendant les travaux, les entraînements ont lieu dans une autre salle. Les horaires ne changent pas. Merci de votre compréhension.' },
+      { label: 'Réouverture', text: '✅ Bonne nouvelle : la salle rouvre ! On vous retrouve aux horaires habituels dès la reprise.' },
+    ],
+  },
+  {
+    slug: 'soiree-loto',
+    emoji: '🎟️',
+    title: 'Modèles de posts pour annoncer une soirée loto',
+    description:
+      'Des exemples d’annonces de soirée loto pour votre club ou association, et la liste des informations à ne pas oublier.',
+    hook: 'Une soirée loto fait vivre le club : donnez à tous l’envie de venir jouer.',
+    tips: [
+      'Mettez la date, l’heure d’ouverture des portes et le lieu.',
+      'Précisez le prix des cartons et les lots à gagner.',
+      'Annoncez la buvette et si la réservation est conseillée.',
+    ],
+    examples: [
+      { label: 'Annonce', text: '🎟️ Soirée loto du club ! Venez tenter votre chance en famille ou entre amis. Buvette sur place, réservation conseillée.' },
+      { label: 'Les lots', text: '🎁 De nombreux lots sont à gagner lors de notre loto. Le bénéfice aide à financer les activités des jeunes du club.' },
+      { label: 'Veille de loto', text: '📅 C’est demain soir ! Ouverture des portes avant le début des parties. À très vite pour passer un bon moment.' },
+    ],
+  },
 ]
 
 export function getModelPage(slug: string): ModelPage | undefined {
