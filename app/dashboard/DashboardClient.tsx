@@ -10,6 +10,7 @@ import ContentTab from "./ContentTab";
 import { announcementReminder, isUpcomingEvent, suggestionPrefill, tournamentReminder, type ReusePrefill } from "./reusePrefill";
 import { suggestionForDate } from "@/lib/editorialCalendar";
 import SocialTab from "./SocialTab";
+import InstallBanner from "./InstallBanner";
 import { Icon } from "./icons";
 import { FEEDBACK_MAILTO } from "@/lib/contact";
 import { formatPostType } from "@/lib/postTypes";
@@ -316,6 +317,8 @@ export default function DashboardClient({
             <Icon name="chevron" className="h-4 w-4 text-line" />
             <span className="font-semibold text-ink">{currentLabel}</span>
           </div>
+
+          <InstallBanner />
 
           {quotaNotice && (
             <div
