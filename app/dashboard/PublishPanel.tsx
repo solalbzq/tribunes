@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { Icon } from './icons'
 import { checkPostBeforePublish } from '@/lib/postCheck'
+import type { PostType } from '@/lib/postTypes'
 
 type Conn = { id: string; provider: string; accountName: string; avatarUrl?: string | null }
 type Posts = { instagram: string; facebook: string }
@@ -13,10 +14,14 @@ export default function PublishPanel({
   posts,
   postIds,
   getImageBlob,
+  postType,
+  venue,
 }: {
   posts: Posts
   postIds?: PostIds | null
   getImageBlob: () => Promise<Blob | null>
+  postType?: PostType
+  venue?: string
 }) {
   const [connections, setConnections] = useState<Conn[] | null>(null)
   const [configured, setConfigured] = useState(true)
@@ -79,9 +84,10 @@ export default function PublishPanel({
   }
 
   const chosenProviders = new Set((connections ?? []).filter(c => selected.has(c.id)).map(c => c.provider))
+  const checkOptions = { postType, venue }
   const alerts = Array.from(new Set([
-    ...(chosenProviders.has('facebook') ? checkPostBeforePublish(posts.facebook) : []),
-    ...(chosenProviders.has('instagram') ? checkPostBeforePublish(posts.instagram) : []),
+    ...(chosenProviders.has('facebook') ? checkPostBeforePublish(posts.facebook, checkOptions) : []),
+    ...(chosenProviders.has('instagram') ? checkPostBeforePublish(posts.instagram, checkOptions) : []),
   ]))
 
   // États de chargement / non connecté

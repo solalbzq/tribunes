@@ -5,6 +5,7 @@ import PublishPanel from './PublishPanel'
 import PersonalizePostPanel from './PersonalizePostPanel'
 import { PageHeader, GhostButton } from './ui'
 import type { PostType } from '@/lib/postTypes'
+import { checkPostBeforePublish } from '@/lib/postCheck'
 
 type Posts = { instagram: string; facebook: string }
 type PostIds = Partial<Record<keyof Posts, string>>
@@ -29,6 +30,7 @@ export default function TextPostsPanel({
   personalizing,
   bannedWordsWarning,
   postType,
+  venue,
 }: {
   posts: Posts
   postIds?: PostIds | null
@@ -41,6 +43,8 @@ export default function TextPostsPanel({
   bannedWordsWarning?: Record<string, string[]> | null
   /** Active "Enregistrer ces réglages pour ce type" dans le panneau de personnalisation ponctuelle. */
   postType?: PostType
+  /** Lieu saisi dans le formulaire (avant-match) : vide = alerte « lieu manquant ». */
+  venue?: string
 }) {
   const [copied, setCopied] = useState<string | null>(null)
   const [active, setActive] = useState<'instagram' | 'facebook'>('instagram')
@@ -102,6 +106,15 @@ export default function TextPostsPanel({
           <div className="whitespace-pre-wrap rounded-btn bg-subtle p-4 text-sm leading-relaxed text-gray-700">
             {posts[p.key]}
           </div>
+          {(() => {
+            const alerts = checkPostBeforePublish(posts[p.key], { postType, venue })
+            return alerts.length > 0 && (
+              <div role="alert" className="mt-3 rounded-btn border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">
+                {alerts.map(a => <p key={a}>{a}</p>)}
+                <p className="mt-1 text-xs text-amber-700">Vous pouvez quand même copier le texte.</p>
+              </div>
+            )
+          })()}
           <p className="mt-3 text-right text-xs text-muted">{posts[p.key].length} caractères</p>
         </div>
       ))}
@@ -114,7 +127,7 @@ export default function TextPostsPanel({
         <PersonalizePostPanel onRegenerate={onPersonalize} regenerating={personalizing} postType={postType} />
       )}
 
-      <PublishPanel posts={posts} postIds={postIds} getImageBlob={getImageBlob ?? (async () => null)} />
+      <PublishPanel posts={posts} postIds={postIds} postType={postType} venue={venue} getImageBlob={getImageBlob ?? (async () => null)} />
     </div>
   )
 }
