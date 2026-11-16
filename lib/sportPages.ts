@@ -82,6 +82,48 @@ export const SPORT_PAGES: SportPage[] = [
       { label: 'Vie du club', text: '🤾 Les inscriptions sont ouvertes pour la nouvelle saison, de l’école de hand aux seniors. #Handball' },
     ],
   },
+  {
+    slug: 'rugby',
+    sport: 'Rugby',
+    emoji: '🏉',
+    title: 'Posts de résultats et de matchs pour votre club de rugby',
+    description:
+      'Résultat, annonce de match, troisième mi-temps : Tribunes prépare les publications de votre club de rugby en quelques secondes, à relire avant de publier.',
+    hook: 'Un score, quelques essais, une belle troisième mi-temps : votre publication de rugby est prête en quelques secondes.',
+    examples: [
+      { label: 'Résultat de match', text: '🏉 Victoire 24-17 à domicile ! Trois essais et une défense solide. Merci au public et rendez-vous à la troisième mi-temps. #Rugby' },
+      { label: 'Annonce de match', text: '🏉 Match de nos seniors dimanche à 15h au stade. Venez les encourager ! #Rugby' },
+      { label: 'École de rugby', text: '🏉 L’école de rugby reprend samedi matin pour les enfants dès 6 ans. Venez essayer ! #Rugby' },
+    ],
+  },
+  {
+    slug: 'badminton',
+    sport: 'Badminton',
+    emoji: '🏸',
+    title: 'Posts de rencontres et de tournois pour votre club de badminton',
+    description:
+      'Rencontre par équipes, tournoi, créneaux libres : Tribunes prépare les publications de votre club de badminton en quelques secondes.',
+    hook: 'Une rencontre par équipes, un tournoi de doubles : racontez-les à vos adhérents sans y passer la soirée.',
+    examples: [
+      { label: 'Résultat de rencontre', text: '🏸 Belle rencontre de notre équipe 1 : victoire 5 matchs à 3 ! Bravo à toutes et tous. #Badminton' },
+      { label: 'Tournoi', text: '🏸 Notre tournoi interne de doubles approche. Inscriptions ouvertes au gymnase, tous niveaux bienvenus. #Badminton' },
+      { label: 'Créneaux libres', text: '🏸 Créneaux de jeu libre le mardi et le jeudi soir. Venez avec votre raquette, les volants sont fournis. #Badminton' },
+    ],
+  },
+  {
+    slug: 'judo',
+    sport: 'Judo',
+    emoji: '🥋',
+    title: 'Posts de compétitions et de cours pour votre club de judo',
+    description:
+      'Compétition, passage de ceinture, reprise des cours : Tribunes prépare les publications de votre club de judo en quelques secondes.',
+    hook: 'Une compétition, un passage de ceinture, la reprise des cours : votre publication de judo est prête en quelques secondes.',
+    examples: [
+      { label: 'Compétition', text: '🥋 Belle journée de compétition pour nos jeunes judokas : plusieurs podiums et beaucoup de combats courageux. Bravo à tous ! #Judo' },
+      { label: 'Passage de ceinture', text: '🥋 Passage de ceintures samedi au dojo. Bonne chance à tous les candidats, les familles sont les bienvenues. #Judo' },
+      { label: 'Reprise des cours', text: '🥋 Les cours reprennent lundi, de l’éveil judo aux adultes. Premier essai gratuit au dojo. #Judo' },
+    ],
+  },
 ]
 
 export function getSportPage(slug: string): SportPage | undefined {

@@ -13,7 +13,7 @@ type Club = {
   tenupUrl?: string | null
 }
 
-const SPORTS = ['Football', 'Rugby', 'Basketball', 'Handball', 'Volleyball', 'Tennis', 'Badminton', 'Padel', 'Autre']
+const SPORTS = ['Football', 'Rugby', 'Basketball', 'Handball', 'Volleyball', 'Tennis', 'Badminton', 'Judo', 'Padel', 'Autre']
 
 export default function ClubSettings({ club }: { club: Club }) {
   const router = useRouter()

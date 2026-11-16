@@ -8,7 +8,7 @@ import Logo from '@/components/Logo'
 import { parseDemoPrefill } from '@/lib/demoPrefill'
 import type { ClubVoice } from '@/lib/voice'
 
-const SPORTS = ['Football', 'Rugby', 'Basketball', 'Handball', 'Volleyball', 'Tennis', 'Badminton', 'Padel', 'Autre']
+const SPORTS = ['Football', 'Rugby', 'Basketball', 'Handball', 'Volleyball', 'Tennis', 'Badminton', 'Judo', 'Padel', 'Autre']
 
 export default function SignupPage() {
   const router = useRouter()
