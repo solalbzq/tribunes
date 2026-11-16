@@ -19,6 +19,7 @@ describe('SPORT_PAGES', () => {
 
   it('retrouve une page par son slug', () => {
     expect(getSportPage('handball')?.sport).toBe('Handball')
+    expect(getSportPage('judo')?.sport).toBe('Judo')
     expect(getSportPage('inconnu')).toBeUndefined()
   })
 })

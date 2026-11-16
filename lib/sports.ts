@@ -104,6 +104,33 @@ export const SPORT_VOCAB: Record<string, SportVocab> = {
     keyStats: 'tu peux mentionner les mi-temps, les 7 mètres, les arrêts du gardien',
     hashtags: ['#Handball', '#Hand', '#HandballAmateur'],
   },
+  Rugby: {
+    emoji: '🏉',
+    scoreUnit: 'point',
+    winWord: 'victoire',
+    lossWord: 'défaite',
+    drawWord: 'match nul',
+    keyStats: 'tu peux mentionner les essais, les transformations, la mêlée, les temps forts de chaque mi-temps',
+    hashtags: ['#Rugby', '#RugbyAmateur', '#Essai'],
+  },
+  Badminton: {
+    emoji: '🏸',
+    scoreUnit: 'match',
+    winWord: 'victoire',
+    lossWord: 'défaite',
+    drawWord: 'égalité',
+    keyStats: 'tu peux mentionner les sets (manches), les échanges marquants, les simples et les doubles',
+    hashtags: ['#Badminton', '#Bad', '#BadmintonAmateur'],
+  },
+  Judo: {
+    emoji: '🥋',
+    scoreUnit: 'combat',
+    winWord: 'victoire',
+    lossWord: 'défaite',
+    drawWord: 'égalité',
+    keyStats: "tu peux mentionner les combats gagnés, les ippon, les catégories de poids, les médailles et la rencontre par équipes",
+    hashtags: ['#Judo', '#JudoClub', '#Ippon'],
+  },
 }
 
 export function getSportVocab(sport: string): SportVocab {
@@ -203,6 +230,26 @@ export function getVocabHints(sport: string): string {
 - Gardien, tir de 7 mètres, jet franc
 - Pivot, ailier, arrière, demi-centre
 - "Tir en suspension", "contre-attaque"`
+
+    case 'Rugby':
+      return `- Un essai vaut 5 points, la transformation 2 points, la pénalité 3 points
+- Deux mi-temps de 40 minutes
+- Mêlée, touche, ruck, maul, plaquage
+- Avants et trois-quarts, demi de mêlée, talonneur`
+
+    case 'Badminton':
+      return `- On joue en sets (manches) de 21 points, au meilleur des 3
+- Volant (et non balle), raquette, filet
+- Simple, double, double mixte
+- Smash, clear, amorti, service court
+- Rencontre par équipes : "rencontre", "capitaine"`
+
+    case 'Judo':
+      return `- Ippon = point maximal qui met fin au combat
+- Waza-ari, projection, immobilisation, tatami
+- Combats par catégories de poids, ceinture, dojo
+- Compter en combats gagnés (pas en points ni en buts)
+- Rencontre par équipes : "rencontre", "équipe"`
 
     default:
       return ''
