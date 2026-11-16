@@ -18,14 +18,14 @@ export function isAdminUser(user: Pick<User, 'app_metadata'> | null | undefined)
  * besoin de l'objet request, mais ça évite de toucher chaque route appelante.
  */
 export async function ensureAdmin(_request?: unknown) {
-  const supabase = createClient()
+  const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   return isAdminUser(user)
 }
 
 /** Comme ensureAdmin, mais renvoie l'identité (pour la journaliser) au lieu d'un booléen. */
 export async function getAdminUser(): Promise<User | null> {
-  const supabase = createClient()
+  const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   return isAdminUser(user) ? user : null
 }

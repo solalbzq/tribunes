@@ -36,11 +36,22 @@ const EMPTY_ROW = (): TournamentMatchRow => ({
   round: '',
 })
 
-export default function TournamentTab({ club }: { club: Club }) {
-  const [tournamentName, setTournamentName] = useState('')
-  const [matchDate, setMatchDate] = useState('')
-  const [venue, setVenue] = useState('')
-  const [rows, setRows] = useState<TournamentMatchRow[]>([EMPTY_ROW()])
+export type TournamentFormInitialValues = Partial<{
+  tournamentName: string
+  matchDate: string
+  venue: string
+  matches: { opponent: string; time: string; category?: string; round?: string }[]
+}>
+
+export default function TournamentTab({ club, initialValues }: { club: Club; initialValues?: TournamentFormInitialValues }) {
+  const [tournamentName, setTournamentName] = useState(initialValues?.tournamentName ?? '')
+  const [matchDate, setMatchDate] = useState(initialValues?.matchDate ?? '')
+  const [venue, setVenue] = useState(initialValues?.venue ?? '')
+  const [rows, setRows] = useState<TournamentMatchRow[]>(
+    initialValues?.matches?.length
+      ? initialValues.matches.map(m => ({ ...EMPTY_ROW(), opponent: m.opponent, time: m.time, category: m.category ?? '', round: m.round ?? '' }))
+      : [EMPTY_ROW()]
+  )
   const [visualFormat, setVisualFormat] = useState<VisualFormat>('post')
   const [generating, setGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)

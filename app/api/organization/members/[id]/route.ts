@@ -13,8 +13,9 @@ async function getOwnerMembership(userId: string, targetMemberId: string) {
   return { target, callerMembership }
 }
 
-export async function PATCH(request: Request, { params }: { params: { id: string } }) {
-  const supabase = createClient()
+export async function PATCH(request: Request, { params: paramsPromise }: { params: Promise<{ id: string }> }) {
+  const params = await paramsPromise
+  const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
@@ -38,8 +39,9 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   return NextResponse.json(updated)
 }
 
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
-  const supabase = createClient()
+export async function DELETE(request: Request, { params: paramsPromise }: { params: Promise<{ id: string }> }) {
+  const params = await paramsPromise
+  const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 

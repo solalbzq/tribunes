@@ -4,7 +4,8 @@ import { useState } from 'react'
 import GenerateForm, { type MatchFormInitialValues } from './GenerateForm'
 import PostsResult from './PostsResult'
 import ProgrammeTab from './ProgrammeTab'
-import TournamentTab from './TournamentTab'
+import TournamentTab, { type TournamentFormInitialValues } from './TournamentTab'
+import type { ReusePrefill } from './reusePrefill'
 import SeasonRecapTab, { type SeasonRecapFormInitialValues } from './SeasonRecapTab'
 import MatchAnnouncementTab, { type AnnouncementFormInitialValues } from './MatchAnnouncementTab'
 import PlayerSpotlightTab, { type PlayerSpotlightFormInitialValues } from './PlayerSpotlightTab'
@@ -57,6 +58,7 @@ type Prefill =
   | { target: 'seasonRecap'; values: SeasonRecapFormInitialValues; sourceText: string }
   | { target: 'engagementPoll'; values: EngagementPollFormInitialValues; sourceText: string }
   | { target: 'customPost'; values: CustomPostFormInitialValues; sourceText: string }
+  | { target: 'tournament'; values: TournamentFormInitialValues; sourceText: string }
 
 const TARGET_TO_SECTION: Record<DescribeTarget, Section> = {
   match: 'match',
@@ -68,11 +70,11 @@ const TARGET_TO_SECTION: Record<DescribeTarget, Section> = {
   customPost: 'customPost',
 }
 
-export default function ContentTab({ club }: { club: Club }) {
+export default function ContentTab({ club, reuse }: { club: Club; reuse?: ReusePrefill }) {
   const isTennisPadel = club.sport === 'Tennis' || club.sport === 'Padel'
-  const [mode, setMode] = useState<Mode>('assistant')
-  const [section, setSection] = useState<Section>('match')
-  const [prefill, setPrefill] = useState<Prefill | null>(null)
+  const [mode, setMode] = useState<Mode>(reuse ? 'manual' : 'assistant')
+  const [section, setSection] = useState<Section>(reuse ? (reuse.target === 'tournament' ? 'tournament' : TARGET_TO_SECTION[reuse.target]) : 'match')
+  const [prefill, setPrefill] = useState<Prefill | null>(reuse ?? null)
   const [generatedPosts, setGeneratedPosts] = useState<{ instagram: string; facebook: string } | null>(null)
   const [generatedPostIds, setGeneratedPostIds] = useState<PostIds | null>(null)
   const [generatedMatch, setGeneratedMatch] = useState<MatchData | null>(null)
@@ -131,6 +133,7 @@ export default function ContentTab({ club }: { club: Club }) {
   if (isTennisPadel) {
     return (
       <TennisPadelTab
+        reuse={reuse}
         club={{
           name: club.name,
           sport: club.sport,
@@ -241,7 +244,14 @@ export default function ContentTab({ club }: { club: Club }) {
       )}
 
       {section === 'programme' && <ProgrammeTab club={club} />}
-      {section === 'tournament' && <TournamentTab club={club} />}
+      {section === 'tournament' && (
+        <div className="max-w-5xl space-y-3">
+          {prefill?.target === 'tournament' && (
+            <SourceTextBanner sourceText={prefill.sourceText} onClear={() => setPrefill(null)} />
+          )}
+          <TournamentTab club={club} initialValues={prefill?.target === 'tournament' ? prefill.values : undefined} />
+        </div>
+      )}
       {section === 'recap' && (
         <div className="max-w-5xl space-y-3">
           {prefill?.target === 'seasonRecap' && (

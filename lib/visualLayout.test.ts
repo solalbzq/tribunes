@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { hasCustomPostVisualOverride, resolveCustomPostVisualKind } from './visualLayout'
+import { watermarkLines, hasCustomPostVisualOverride, resolveCustomPostVisualKind } from './visualLayout'
 
 describe('resolveCustomPostVisualKind / hasCustomPostVisualOverride', () => {
   it('falls back to clubAnnouncement when postVisualConfigs is absent', () => {
@@ -28,5 +28,16 @@ describe('resolveCustomPostVisualKind / hasCustomPostVisualOverride', () => {
   it('does not treat an empty customPost entry as an override', () => {
     expect(resolveCustomPostVisualKind({ customPost: {} })).toBe('clubAnnouncement')
     expect(resolveCustomPostVisualKind({ customPost: { post: {} } })).toBe('clubAnnouncement')
+  })
+})
+
+describe('filigrane', () => {
+  it('affiche le domaine court', () => {
+    expect(watermarkLines('https://www.tribunes.fr/')).toEqual(['⚡ Tribunes', 'tribunes.fr'])
+  })
+  it('sans domaine pour localhost, IP, absent ou invalide', () => {
+    for (const u of ['http://localhost:3000', 'http://127.0.0.1:3000', undefined, '', 'http://']) {
+      expect(watermarkLines(u)).toEqual(['⚡ Tribunes'])
+    }
   })
 })

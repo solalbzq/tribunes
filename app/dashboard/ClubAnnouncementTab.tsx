@@ -5,6 +5,7 @@ import TextPostsPanel from './TextPostsPanel'
 import ToneSelector from './ToneSelector'
 import ClubAnnouncementVisualGenerator from './ClubAnnouncementVisualGenerator'
 import type { ClubAnnouncementCategory } from '@/lib/prompts/club-announcement'
+import { CLUB_ANNOUNCEMENT_TEMPLATES, type ClubAnnouncementTemplate } from '@/lib/clubAnnouncementTemplates'
 import FormatToggle from './FormatToggle'
 import type { VisualFormat } from '@/lib/visualLayout'
 import { FIELD } from './ui'
@@ -55,6 +56,12 @@ export default function ClubAnnouncementTab({ club, initialValues }: { club: Clu
     const canvas = canvasRef.current
     if (!canvas) return null
     return new Promise(r => canvas.toBlob(r, 'image/png'))
+  }
+
+  function applyTemplate(t: ClubAnnouncementTemplate) {
+    setCategory(t.category)
+    setTitle(t.title)
+    setDescription(t.description)
   }
 
   const canGenerate = Boolean(title && description)
@@ -128,6 +135,22 @@ export default function ClubAnnouncementTab({ club, initialValues }: { club: Clu
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-5xl">
       <div className="space-y-4">
+        <div>
+          <label className="block text-xs text-gray-400 mb-1">Modèles</label>
+          <div className="flex flex-wrap gap-2">
+            {CLUB_ANNOUNCEMENT_TEMPLATES.map(t => (
+              <button
+                key={t.key}
+                type="button"
+                onClick={() => applyTemplate(t)}
+                className="px-3 py-1.5 rounded-xl text-xs font-semibold border border-gray-200 bg-white text-gray-600 hover:border-[#2563eb] hover:text-[#2563eb] transition"
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div>
           <label className="block text-xs text-gray-400 mb-1">Type d&apos;annonce</label>
           <div className="flex gap-2">

@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { PLAN_KEYS } from '@/lib/plans'
 import {
@@ -360,9 +361,9 @@ export default function AdminDashboardPage() {
         </div>
 
         <div className="mt-6 flex flex-col gap-2">
-          <a href="/" className="rounded-lg px-4 py-3 text-white/75 transition hover:bg-white/5">
+          <Link href="/" className="rounded-lg px-4 py-3 text-white/75 transition hover:bg-white/5">
             🔗 Voir le site →
-          </a>
+          </Link>
           <button
             type="button"
             onClick={handleLogout}

@@ -28,8 +28,9 @@ function parseSnapshot(raw: unknown): PersonalizationSnapshot | null {
 }
 
 /** Restaure une version précédente de l'identité générale du club — l'ancienne configuration reste elle-même dans l'historique (append-only, jamais écrasée). */
-export async function POST(req: Request, { params }: { params: { id: string } }) {
-  const supabase = createClient()
+export async function POST(req: Request, { params: paramsPromise }: { params: Promise<{ id: string }> }) {
+  const params = await paramsPromise
+  const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 

@@ -1,4 +1,5 @@
 import Logo from '@/components/Logo'
+import { SPORT_PAGES } from '@/lib/sportPages'
 
 export function Footer() {
   return (
@@ -13,14 +14,19 @@ export function Footer() {
             </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-10 sm:grid-cols-3">
+          <div className="grid grid-cols-2 gap-10 sm:grid-cols-4">
             <FooterCol
               title="Produit"
               links={[
                 { label: 'Comment ça marche', href: '#solution' },
                 { label: 'Offres', href: '#pricing' },
                 { label: 'Exemple', href: '#mockup' },
+                { label: 'Calendrier de saison', href: '/calendrier-editorial' },
               ]}
+            />
+            <FooterCol
+              title="Pour quel sport ?"
+              links={SPORT_PAGES.map((p) => ({ label: p.sport, href: `/sport/${p.slug}` }))}
             />
             <FooterCol
               title="Compte"

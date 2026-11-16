@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma'
 
 /** Liste les overrides de personnalisation déjà enregistrés pour le club authentifié — un par type au maximum. */
 export async function GET() {
-  const supabase = createClient()
+  const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 

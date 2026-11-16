@@ -5,6 +5,8 @@ import { redirect } from 'next/navigation'
 import { checkAutomationAllowed } from '@/lib/automation'
 import { clubOwnershipOr } from '@/lib/postTypes'
 import { resolvePlanForClub } from '@/lib/org'
+import { checkAiQuota } from '@/lib/quota'
+import { quotaNotice } from '@/lib/quotaNotice'
 import DashboardClient from './DashboardClient'
 
 /** Sérialise les dates des relations cross-type communes à drafts et historyPosts. */
@@ -31,7 +33,7 @@ function serializeSharedRelations<
 }
 
 export default async function DashboardPage() {
-  const supabase = createClient()
+  const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
@@ -142,10 +144,10 @@ export default async function DashboardPage() {
         orderBy: { createdAt: 'desc' },
         take: 30,
         include: {
-          tournamentSchedule: { select: { id: true, tournamentName: true, matchDate: true } },
+          tournamentSchedule: { select: { id: true, tournamentName: true, matchDate: true, venue: true, parsedData: true } },
           weeklySchedule: { select: { id: true, weekStart: true, weekEnd: true } },
           seasonRecap: { select: { id: true, periodStart: true, periodEnd: true, wins: true, draws: true, losses: true } },
-          matchAnnouncement: { select: { id: true, opponent: true, matchDate: true, competition: true, isHome: true } },
+          matchAnnouncement: { select: { id: true, opponent: true, matchDate: true, competition: true, isHome: true, time: true, venue: true, note: true } },
           playerSpotlight: { select: { id: true, playerName: true, achievement: true } },
           clubAnnouncement: { select: { id: true, category: true, title: true } },
           engagementPoll: { select: { id: true, question: true } },
@@ -156,6 +158,8 @@ export default async function DashboardPage() {
 
   const automationEnabled = club ? await checkAutomationAllowed(club) : false
   const { plan } = club ? await resolvePlanForClub(club) : { plan: 'FREE' as const }
+
+  const notice = club ? quotaNotice(await checkAiQuota(club)) : null
 
   // Sérialise les dates en string pour le passage server→client
   const serialized = club ? {
@@ -205,6 +209,7 @@ export default async function DashboardPage() {
       drafts={serializedDrafts}
       historyPosts={serializedHistoryPosts}
       userEmail={user.email ?? ''}
+      quotaNotice={notice?.message ?? null}
     />
   )
 }

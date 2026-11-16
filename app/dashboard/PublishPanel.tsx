@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { Icon } from './icons'
+import { checkPostBeforePublish } from '@/lib/postCheck'
 
 type Conn = { id: string; provider: string; accountName: string; avatarUrl?: string | null }
 type Posts = { instagram: string; facebook: string }
@@ -45,6 +46,7 @@ export default function PublishPanel({
 
   async function publish() {
     if (!connections) return
+    if (alerts.length > 0 && !window.confirm(`${alerts.join('\n')}\n\nPublier quand même ?`)) return
     setPublishing(true); setResults(null)
     const chosen = connections.filter(c => selected.has(c.id))
     const blob = await getImageBlob()
@@ -75,6 +77,12 @@ export default function PublishPanel({
     setResults(all)
     setPublishing(false)
   }
+
+  const chosenProviders = new Set((connections ?? []).filter(c => selected.has(c.id)).map(c => c.provider))
+  const alerts = Array.from(new Set([
+    ...(chosenProviders.has('facebook') ? checkPostBeforePublish(posts.facebook) : []),
+    ...(chosenProviders.has('instagram') ? checkPostBeforePublish(posts.instagram) : []),
+  ]))
 
   // États de chargement / non connecté
   if (connections === null) {
@@ -139,6 +147,13 @@ export default function PublishPanel({
           )
         })}
       </div>
+
+      {alerts.length > 0 && (
+        <div role="alert" className="mt-4 rounded-btn border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">
+          {alerts.map(a => <p key={a}>{a}</p>)}
+          <p className="mt-1 text-xs text-amber-700">Vous pouvez publier quand même : on vous demandera de confirmer.</p>
+        </div>
+      )}
 
       <button
         onClick={publish}

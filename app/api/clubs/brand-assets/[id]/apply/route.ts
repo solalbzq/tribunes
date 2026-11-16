@@ -11,8 +11,9 @@ import { recordPersonalizationHistory } from '@/lib/services/personalizationHist
  * éventuellement corrigé dans l'écran de validation. Chaque champ reste
  * optionnel, seuls les champs envoyés sont modifiés.
  */
-export async function POST(req: Request, { params }: { params: { id: string } }) {
-  const supabase = createClient()
+export async function POST(req: Request, { params: paramsPromise }: { params: Promise<{ id: string }> }) {
+  const params = await paramsPromise
+  const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 

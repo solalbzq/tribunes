@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CONTACT_EMAIL } from "@/lib/contact";
 
 export const metadata = {
   title: "Mentions légales — Tribunes",
@@ -32,8 +33,8 @@ export default function MentionsLegalesPage() {
               <li>Adresse : 143 Rue des Moulins, 30640 Beauvoisin, France</li>
               <li>
                 Email :{" "}
-                <a href="mailto:solal@bzq.fr" className="text-[#2563eb]">
-                  solal@bzq.fr
+                <a href={`mailto:${CONTACT_EMAIL}`} className="text-[#2563eb]">
+                  {CONTACT_EMAIL}
                 </a>
               </li>
             </ul>
@@ -96,8 +97,8 @@ export default function MentionsLegalesPage() {
             <p className="mt-2">
               Pour toute question relative au site ou au service, contactez-nous
               à{" "}
-              <a href="mailto:solal@bzq.fr" className="text-[#2563eb]">
-                solal@bzq.fr
+              <a href={`mailto:${CONTACT_EMAIL}`} className="text-[#2563eb]">
+                {CONTACT_EMAIL}
               </a>
               .
             </p>

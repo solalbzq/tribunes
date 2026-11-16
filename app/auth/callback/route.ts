@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
   const next = rawNext && rawNext.startsWith('/') && !rawNext.startsWith('//') ? rawNext : '/dashboard'
 
   if (code) {
-    const supabase = createClient()
+    const supabase = await createClient()
     const { data, error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error) {
       const destination = data.user?.app_metadata?.role === 'admin' ? '/admin' : next

@@ -2,6 +2,7 @@ import { Nav } from '@/components/Nav'
 import { Footer } from '@/components/Footer'
 import { Hero } from '@/components/Hero'
 import { MockupPost } from '@/components/MockupPost'
+import { DemoPost } from '@/components/DemoPost'
 import { Pricing } from '@/components/Pricing'
 import { Problems } from '@/components/Problems'
 import { Solution } from '@/components/Solution'
@@ -14,6 +15,7 @@ export default function HomePage() {
         <Hero />
         <Problems />
         <Solution />
+        <DemoPost />
         <MockupPost />
         <Pricing />
       </main>

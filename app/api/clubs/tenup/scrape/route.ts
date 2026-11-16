@@ -12,7 +12,7 @@ import type { TournamentMatch } from '@/lib/services/fft-pdf-parser'
 import { logScrapeUsage } from '@/lib/usage'
 
 export async function POST(req: Request) {
-  const supabase = createClient()
+  const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 

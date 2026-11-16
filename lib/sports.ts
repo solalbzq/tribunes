@@ -75,7 +75,7 @@ export const SPORT_VOCAB: Record<string, SportVocab> = {
     lossWord: 'défaite',
     drawWord: 'égalité',
     keyStats: 'tu peux mentionner les sets, les breaks, les moments clés du match',
-    hashtags: ['#Tennis', '#Interclubs', '#Tennis'],
+    hashtags: ['#Tennis', '#Interclubs'],
   },
   Basketball: {
     emoji: '🏀',
@@ -84,7 +84,7 @@ export const SPORT_VOCAB: Record<string, SportVocab> = {
     lossWord: 'défaite',
     drawWord: 'égalité',
     keyStats: 'tu peux mentionner les quarts-temps, les paniers à 3 points, la dynamique',
-    hashtags: ['#Basketball', '#Basket', '#NBA'],
+    hashtags: ['#Basketball', '#Basket', '#BasketAmateur'],
   },
   Volleyball: {
     emoji: '🏐',
@@ -93,7 +93,7 @@ export const SPORT_VOCAB: Record<string, SportVocab> = {
     lossWord: 'défaite',
     drawWord: 'égalité',
     keyStats: 'tu peux mentionner les sets gagnés/perdus, les points importants, les aces',
-    hashtags: ['#Volleyball', '#Volley', '#AmourDuJeu'],
+    hashtags: ['#Volleyball', '#Volley', '#VolleyAmateur'],
   },
   Handball: {
     emoji: '🤾',
@@ -102,7 +102,7 @@ export const SPORT_VOCAB: Record<string, SportVocab> = {
     lossWord: 'défaite',
     drawWord: 'match nul',
     keyStats: 'tu peux mentionner les mi-temps, les 7 mètres, les arrêts du gardien',
-    hashtags: ['#Handball', '#Hand', '#AmourDuJeu'],
+    hashtags: ['#Handball', '#Hand', '#HandballAmateur'],
   },
 }
 

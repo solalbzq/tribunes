@@ -17,6 +17,7 @@ import ClubAnnouncementTab, { type ClubAnnouncementFormInitialValues } from '../
 import EngagementPollTab, { type EngagementPollFormInitialValues } from '../EngagementPollTab'
 import CustomPostTab, { type CustomPostFormInitialValues } from '../CustomPostTab'
 import DescribeIntentTab from '../DescribeIntentTab'
+import type { ReusePrefill } from '../reusePrefill'
 import { PageHeader, Segmented, GhostButton } from '../ui'
 import { Icon } from '../icons'
 import { ErrorNotice, toUiError, type UiError } from '../apiError'
@@ -460,10 +461,16 @@ function SourceTextBanner({ sourceText, onClear }: { sourceText: string; onClear
   )
 }
 
-export default function TennisPadelTab({ club }: { club: Club }) {
-  const [mode, setMode] = useState<Mode>('assistant')
-  const [section, setSection] = useState<Section>('match')
-  const [prefill, setPrefill] = useState<Prefill | null>(null)
+export default function TennisPadelTab({ club, reuse }: { club: Club; reuse?: ReusePrefill }) {
+  const reuseAnnouncement = reuse?.target === 'announcement' ? reuse : undefined
+  const reusePrefill = reuseAnnouncement ?? (reuse?.target === 'clubAnnouncement' || reuse?.target === 'customPost' ? reuse : undefined)
+  const [mode, setMode] = useState<Mode>(reusePrefill ? 'manual' : 'assistant')
+  const [section, setSection] = useState<Section>(reusePrefill ? TARGET_TO_SECTION[reusePrefill.target] : 'match')
+  const [prefill, setPrefill] = useState<Prefill | null>(
+    reusePrefill
+      ? { ...reusePrefill, sourceText: reuseAnnouncement ? 'votre annonce de match précédente' : reusePrefill.sourceText } as Prefill
+      : null
+  )
   const sport = club.sport === 'Padel' ? 'Padel' : 'Tennis'
 
   function handleSectionChange(next: Section) {

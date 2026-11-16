@@ -4,6 +4,7 @@ import { useState } from 'react'
 import ToneSelector from './ToneSelector'
 import { Icon } from './icons'
 import type { PostType } from '@/lib/postTypes'
+import { QUICK_INSTRUCTIONS, MAX_CUSTOM_INSTRUCTIONS, hasInstruction, toggleInstruction, isInstructionBlocked } from '@/lib/quickInstructions'
 
 const VOICE_LABELS: Record<string, string> = { FUN: 'Fun', SOBER: 'Sobre' }
 
@@ -82,15 +83,35 @@ export default function PersonalizePostPanel({
 
       <div>
         <label className="block text-sm font-semibold text-[#111827] mb-1">Consignes spécifiques (optionnel)</label>
+        <div className="flex flex-wrap gap-2 mb-2">
+          {QUICK_INSTRUCTIONS.map(({ label, text }) => {
+            const active = hasInstruction(customInstructions, text)
+            const blocked = isInstructionBlocked(customInstructions, text)
+            return (
+              <button
+                key={label}
+                type="button"
+                aria-pressed={active}
+                disabled={blocked}
+                onClick={() => setCustomInstructions(c => toggleInstruction(c, text))}
+                className={`rounded-full border px-3 py-1 text-xs font-semibold transition disabled:opacity-40 ${
+                  active ? 'border-brand bg-brand-soft text-brand' : 'border-line text-muted hover:border-brand hover:text-brand'
+                }`}
+              >
+                {active ? '✓ ' : '+ '}{label}
+              </button>
+            )
+          })}
+        </div>
         <textarea
           value={customInstructions}
           onChange={e => setCustomInstructions(e.target.value)}
           rows={3}
-          maxLength={300}
+          maxLength={MAX_CUSTOM_INSTRUCTIONS}
           className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#2563eb]/30"
           placeholder="Ex: mentionne le nom du sponsor du match, reste très court..."
         />
-        <p className="mt-1 text-right text-xs text-gray-400">{customInstructions.length}/300</p>
+        <p className="mt-1 text-right text-xs text-gray-400">{customInstructions.length}/{MAX_CUSTOM_INSTRUCTIONS}</p>
       </div>
 
       <button
